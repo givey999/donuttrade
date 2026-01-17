@@ -32,6 +32,17 @@ This is a Minecraft chat listener module built on Mineflayer. It connects to a M
 - Message filtering via `addFilter(fn)` before event emission
 - Emits `message` objects with `{ username, message, type, timestamp }`
 
+**PaymentHandler** (`src/payments.js`) - Payment tracking
+- Parses incoming payments from system messages (`username paid you $amount`)
+- Logs to `logs/payments-in.log` as JSON lines
+- Handles K/M/B/T suffixes (e.g., `1.5K.` = 1500, `2M.` = 2000000)
+- Note: Incoming amounts are approximate due to server rounding
+
+**Console Input** (`src/index.js`) - Stdin command handler
+- Type commands directly in console to send to Minecraft
+- Outgoing `/pay` commands logged to `logs/payments-out.log`
+- Parses K/M/B/T suffixes case-insensitively
+
 ### Data Flow
 
 ```
@@ -46,4 +57,14 @@ Config lives in `config/config.json` (copy from `config.example.json`). Required
 - `auth.username` - Microsoft account email
 - `auth.type` - Should be `"microsoft"` for authenticated servers
 
-First run prompts for Microsoft OAuth in browser; tokens are cached by prismarine-auth.
+First run prompts for Microsoft OAuth in browser; tokens are cached in `%APPDATA%\.minecraft\nmp-cache\` (Windows).
+
+### Log Files
+
+- `logs/payments-in.log` - Incoming payments (JSON lines)
+- `logs/payments-out.log` - Outgoing payments (JSON lines)
+
+Log entry format:
+```json
+{"timestamp":"...","username":"player","amount":1000,"amountRaw":"1K."}
+```
