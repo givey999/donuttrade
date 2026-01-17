@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const MinecraftChatBot = require('./bot');
 const ChatHandler = require('./chat');
+const PaymentHandler = require('./payments');
 
 // Load configuration
 const configPath = path.join(__dirname, '..', 'config', 'config.json');
@@ -19,6 +20,9 @@ const bot = new MinecraftChatBot(config);
 
 // Create chat handler
 const chat = new ChatHandler(bot);
+
+// Create payment handler
+const payments = new PaymentHandler();
 
 // Event handlers
 bot.on('connected', (username) => {
@@ -44,6 +48,9 @@ chat.on('raw', (text, position) => {
   if (position === 'system') {
     console.log(`[System] ${text}`);
   }
+
+  // Process potential payment messages
+  payments.processMessage(text);
 });
 
 // Example command handler
@@ -69,4 +76,4 @@ console.log('Starting Minecraft Chat Bot...');
 bot.connect();
 
 // Export for external use
-module.exports = { bot, chat, MinecraftChatBot, ChatHandler };
+module.exports = { bot, chat, payments, MinecraftChatBot, ChatHandler, PaymentHandler };
