@@ -1,0 +1,16 @@
+{
+  "server": {
+    "host": "your-server.example.com",
+    "port": 25565,
+    "version": "1.21.4"
+  },
+  "auth": {
+    "type": "microsoft",
+    "username": "your-email@example.com"
+  },
+  "reconnect": {
+    "enabled": true,
+    "initialDelay": 5000,
+    "maxDelay": 300000
+  }
+}
