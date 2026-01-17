@@ -191,6 +191,33 @@ Token refresh is handled automatically by prismarine-auth.
 
 ---
 
+## Payment Tracking
+
+The `PaymentHandler` (`src/payments.js`) monitors chat for payment messages and logs them to `logs/payments.log`.
+
+**Message format parsed:** `username paid you $amount`
+
+**Amount suffixes:**
+- No suffix: raw number (e.g., `20.` = $20)
+- `K`: thousands (e.g., `1.5K.` = $1,500)
+- `M`: millions (e.g., `1.23M.` = $1,230,000)
+- `B`: billions (e.g., `2.5B.` = $2,500,000,000)
+- `T`: trillions (e.g., `1.0T.` = $1,000,000,000,000)
+
+### Known Limitation: Amounts Are Approximate
+
+The server displays rounded amounts, not exact values. The logged `amount` field is an approximation.
+
+| Displayed | Parsed | Actual |
+|-----------|--------|--------|
+| `1.52K.` | 1,520 | 1,525 |
+| `127.43K.` | 127,430 | 127,437 |
+| `1.23M.` | 1,230,000 | 1,234,567 |
+
+**Warning:** Do not use logged amounts for exact accounting. The precision loss increases with larger amounts.
+
+---
+
 ## Next Steps
 
 Potential enhancements:

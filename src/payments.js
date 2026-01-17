@@ -22,11 +22,35 @@ class PaymentHandler {
   }
 
   _parseAmount(amountStr) {
-    // Remove commas and parse as float
-    // Handle formats like "20", "1,000", "1.5", etc.
-    const cleaned = amountStr.replace(/,/g, '').trim();
+    // Format: "20.", "1.5K.", "127.43K.", "1.23M."
+    // K = thousands, M = millions, trailing period
+    //
+    // WARNING: Server displays rounded amounts, not exact values.
+    // Example: "1.52K." could be 1520-1529, "1.23M." could be 1,230,000-1,239,999
+    // Do not use for exact accounting.
+    let cleaned = amountStr.replace(/,/g, '').trim();
+
+    // Remove trailing period
+    cleaned = cleaned.replace(/\.$/, '');
+
+    // Check for K/M/B/T suffix
+    let multiplier = 1;
+    if (cleaned.endsWith('K')) {
+      multiplier = 1000;
+      cleaned = cleaned.slice(0, -1);
+    } else if (cleaned.endsWith('M')) {
+      multiplier = 1000000;
+      cleaned = cleaned.slice(0, -1);
+    } else if (cleaned.endsWith('B')) {
+      multiplier = 1000000000;
+      cleaned = cleaned.slice(0, -1);
+    } else if (cleaned.endsWith('T')) {
+      multiplier = 1000000000000;
+      cleaned = cleaned.slice(0, -1);
+    }
+
     const parsed = parseFloat(cleaned);
-    return isNaN(parsed) ? null : parsed;
+    return isNaN(parsed) ? null : parsed * multiplier;
   }
 
   logPayment(payment) {
