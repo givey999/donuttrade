@@ -3,7 +3,7 @@ const path = require('path');
 
 class PaymentHandler {
   constructor(logPath) {
-    this.logPath = logPath || path.join(__dirname, '..', 'logs', 'payments.log');
+    this.logPath = logPath || path.join(__dirname, '..', 'logs', 'payments-in.log');
     this.paymentPattern = /^(.+?) paid you \$(.+)$/;
   }
 
