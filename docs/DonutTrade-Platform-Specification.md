@@ -34,7 +34,7 @@ DonutTrade is a web-based trading platform that enables players of the DonutSMP 
 - Users withdraw money or items through admin-fulfilled requests
 
 **Key Design Decisions:**
-- **Authentication**: Microsoft OAuth with verified Minecraft username linkage
+- **Authentication**: Microsoft OAuth → Xbox Live → Minecraft Services API chain (automatically retrieves verified Minecraft username and UUID)
 - **Item Catalog**: Admin-configurable and expandable over time
 - **Commission**: Admin-configurable rate on all marketplace transactions
 - **Notifications**: In-app only (no email/SMS)
@@ -92,38 +92,110 @@ DonutTrade is a web-based trading platform that enables players of the DonutSMP 
 
 ### 3.1 Authentication Use Cases
 
-#### UC-AUTH-01: New User Registration
+#### UC-AUTH-01: New User Registration (Java Edition)
 **Actor**: Guest
-**Precondition**: User has a Microsoft account linked to Minecraft
+**Precondition**: User has a Microsoft account with Minecraft Java Edition
 **Flow**:
 1. User clicks "Login with Microsoft" on landing page
-2. User completes Microsoft OAuth flow
-3. System receives Microsoft ID and email
-4. System prompts user to enter their Minecraft username
-5. System generates a unique verification code (e.g., "VERIFY-X7K9")
-6. System displays instruction: "Whisper this code to our bot in-game: /tell BotName VERIFY-X7K9"
-7. User sends whisper to bot in Minecraft
-8. Bot detects whisper, validates code, reports to system
-9. System links Microsoft account to verified Minecraft username and UUID
-10. Account created; user redirected to dashboard
+2. User is redirected to Microsoft login (with Xbox Live scope consent)
+3. User sees permission request: "Access Xbox Live" / "XboxLive.Signin"
+4. User grants permission and completes Microsoft OAuth
+5. System receives Microsoft authorization code
+6. Server exchanges code for Microsoft access token
+7. Server exchanges Microsoft token for Xbox Live (XBL) token
+8. Server exchanges XBL token for XSTS token (Minecraft relying party)
+9. Server exchanges XSTS token for Minecraft access token
+10. Server calls Minecraft Profile API to retrieve username and UUID
+11. System creates user account with:
+    - `minecraft_username`: Retrieved from Minecraft API (e.g., "PlayerName")
+    - `minecraft_uuid`: Retrieved from Minecraft API
+    - `microsoft_id`: From Microsoft OAuth
+    - `edition`: "java"
+12. System issues platform session tokens
+13. User redirected to dashboard
 
-**Postcondition**: User account exists with verified Minecraft identity
+**Postcondition**: User account exists with verified Minecraft Java Edition identity
 
-#### UC-AUTH-02: Returning User Login
+#### UC-AUTH-02: New User Registration (Bedrock Edition)
+**Actor**: Guest
+**Precondition**: User has a Microsoft account with Minecraft Bedrock Edition (no Java)
+**Flow**:
+1. User clicks "Login with Microsoft" on landing page
+2. User completes Microsoft OAuth with Xbox Live scope consent
+3. Server completes token exchange chain (MS → XBL → XSTS → MC)
+4. Server calls Minecraft Profile API
+5. API returns 404 (user doesn't own Java Edition)
+6. Server retrieves Xbox Gamertag from Xbox Profile API
+7. System creates user account with:
+    - `minecraft_username`: "." + Xbox Gamertag (e.g., ".PlayerName")
+    - `minecraft_uuid`: Xbox User ID (XUID)
+    - `microsoft_id`: From Microsoft OAuth
+    - `edition`: "bedrock"
+8. System issues platform session tokens
+9. User redirected to dashboard
+
+**Postcondition**: User account exists with verified Bedrock Edition identity (prefixed with `.`)
+
+#### UC-AUTH-03: User Does Not Own Minecraft
+**Actor**: Guest
+**Precondition**: User has Microsoft account but no Minecraft ownership
+**Flow**:
+1. User clicks "Login with Microsoft"
+2. User completes Microsoft OAuth with Xbox Live scope consent
+3. Server completes token exchange chain
+4. Server calls Minecraft Profile API → 404 NOT_FOUND
+5. Server calls Entitlements API → Empty items array
+6. System displays error: "No Minecraft account found. You must own Minecraft to use DonutTrade."
+7. User shown link to purchase Minecraft
+
+**Postcondition**: No account created; user informed of requirement
+
+#### UC-AUTH-04: Returning User Login
 **Actor**: Registered User
 **Flow**:
 1. User clicks "Login with Microsoft"
-2. User completes Microsoft OAuth
-3. System matches Microsoft ID to existing account
-4. User redirected to dashboard
+2. User completes Microsoft OAuth (may be instant if session exists)
+3. Server completes token exchange chain
+4. Server retrieves Minecraft profile
+5. System matches Microsoft ID to existing account
+6. System updates stored tokens (refresh tokens)
+7. System verifies username hasn't changed (or updates if changed)
+8. System issues new platform session tokens
+9. User redirected to dashboard
 
-#### UC-AUTH-03: Session Persistence
+**Postcondition**: User logged in with refreshed session
+
+#### UC-AUTH-05: Session Persistence
 **Actor**: Registered User
 **Flow**:
 1. User logs in with "Remember me" option
-2. System issues long-lived refresh token (30 days)
-3. On return visits, system auto-refreshes session
-4. User remains logged in across browser sessions
+2. System stores Microsoft refresh token (encrypted) in database
+3. System issues platform refresh token (30 days) in HttpOnly cookie
+4. On return visits within 30 days:
+   - System refreshes platform access token automatically
+5. On platform refresh token expiry:
+   - System attempts to use stored Microsoft refresh token
+   - If valid: re-authenticate through Xbox/Minecraft chain silently
+   - If expired: user must re-authenticate with Microsoft
+
+**Postcondition**: User remains logged in across browser sessions
+
+#### UC-AUTH-06: XSTS Authentication Error
+**Actor**: Guest
+**Precondition**: User has Microsoft account with Xbox Live issues
+**Flow**:
+1. User clicks "Login with Microsoft"
+2. User completes Microsoft OAuth
+3. Server attempts XSTS token exchange
+4. XSTS returns error code (XErr)
+5. System displays appropriate error message:
+   - XErr 2148916233: "No Xbox account found. Please create one at xbox.com"
+   - XErr 2148916238: "Child accounts must be added to a Family by an adult"
+   - XErr 2148916235: "Xbox Live is not available in your country"
+   - XErr 2148916227: "This Xbox account has been banned"
+6. User shown relevant help link
+
+**Postcondition**: No account created; user informed of issue
 
 ### 3.2 Balance Deposit Use Cases
 
@@ -370,65 +442,498 @@ DonutTrade is a web-based trading platform that enables players of the DonutSMP 
 
 ## 4. Authentication System
 
-### 4.1 Microsoft OAuth Flow
+### 4.1 Prerequisites: Azure AD Application Setup
+
+Before implementing authentication, you must register an application in Azure Active Directory.
+
+#### 4.1.1 Azure AD App Registration
+
+1. Navigate to **Azure Portal** → **Microsoft Entra ID** → **App registrations** → **New registration**
+2. Configure the application:
+   - **Name**: `DonutTrade` (or your preferred name)
+   - **Supported account types**: Select **"Personal Microsoft accounts only"** (consumer accounts)
+   - **Redirect URI**:
+     - Platform: `Web`
+     - URL: `https://yourdomain.com/auth/microsoft/callback` (production)
+     - Add `http://localhost:3000/auth/microsoft/callback` for development
+
+3. After creation, note the **Application (client) ID** - this is your `CLIENT_ID`
+
+4. Under **Authentication** → **Advanced settings**:
+   - Set **"Allow public client flows"** to **Yes** (required for certain flows)
+
+5. Under **Certificates & secrets**:
+   - Create a new **Client secret**
+   - Note the secret value immediately (shown only once) - this is your `CLIENT_SECRET`
+
+#### 4.1.2 Minecraft API Permission (CRITICAL)
+
+**IMPORTANT**: Newly created Azure applications must apply for permission to use the Minecraft Services API. Without this approval, calls to `api.minecraftservices.com` will return **HTTP 403 Forbidden**.
+
+**Steps to request access:**
+1. Visit the Microsoft application permission request form (search for "Minecraft Services API permission request")
+2. Submit your Application (client) ID
+3. Wait for approval (can take several days to weeks)
+4. Test your application only after receiving confirmation
+
+#### 4.1.3 Required OAuth Scopes
+
+| Scope | Required | Purpose |
+|-------|----------|---------|
+| `XboxLive.signin` | **Yes** | Authenticate with Xbox Live services |
+| `XboxLive.offline_access` | Recommended | Obtain refresh tokens for Xbox Live |
+| `offline_access` | Recommended | Obtain Microsoft refresh tokens |
+
+**Scope string for authorization request:**
+```
+XboxLive.signin XboxLive.offline_access offline_access
+```
+
+#### 4.1.4 Environment Variables
+
+```env
+# Azure AD Application
+MICROSOFT_CLIENT_ID=your-application-client-id
+MICROSOFT_CLIENT_SECRET=your-client-secret
+MICROSOFT_REDIRECT_URI=https://yourdomain.com/auth/microsoft/callback
+
+# For development
+MICROSOFT_REDIRECT_URI_DEV=http://localhost:3000/auth/microsoft/callback
+```
+
+### 4.2 Authentication Flow Overview
+
+The authentication process involves a **4-step token exchange chain**:
 
 ```
-┌──────────┐     ┌──────────┐     ┌───────────────┐     ┌──────────┐
-│  User    │     │ Platform │     │   Microsoft   │     │   Bot    │
-│ Browser  │     │  Server  │     │    OAuth      │     │(In-Game) │
-└────┬─────┘     └────┬─────┘     └───────┬───────┘     └────┬─────┘
-     │                │                   │                   │
-     │ Click Login    │                   │                   │
-     │───────────────>│                   │                   │
-     │                │                   │                   │
-     │                │ Redirect to MS    │                   │
-     │<───────────────│                   │                   │
-     │                │                   │                   │
-     │ Authenticate   │                   │                   │
-     │───────────────────────────────────>│                   │
-     │                │                   │                   │
-     │ Auth Code      │                   │                   │
-     │<───────────────────────────────────│                   │
-     │                │                   │                   │
-     │ Callback       │                   │                   │
-     │───────────────>│                   │                   │
-     │                │                   │                   │
-     │                │ Exchange Code     │                   │
-     │                │──────────────────>│                   │
-     │                │                   │                   │
-     │                │ Access Token      │                   │
-     │                │<──────────────────│                   │
-     │                │                   │                   │
-     │                │ Get MC Profile    │                   │
-     │                │──────────────────>│                   │
-     │                │                   │                   │
-     │                │ UUID + Username   │                   │
-     │                │<──────────────────│                   │
-     │                │                   │                   │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Complete Authentication Chain                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Step 1              Step 2              Step 3              Step 4         │
+│  ┌─────────┐        ┌─────────┐        ┌─────────┐        ┌─────────────┐  │
+│  │Microsoft│   →    │Xbox Live│   →    │  XSTS   │   →    │  Minecraft  │  │
+│  │  OAuth  │        │  Auth   │        │  Token  │        │  Services   │  │
+│  └─────────┘        └─────────┘        └─────────┘        └─────────────┘  │
+│       │                  │                  │                    │          │
+│       ▼                  ▼                  ▼                    ▼          │
+│  MS Access Token    XBL Token          XSTS Token          MC Access Token │
+│  (+ Refresh Token)  (+ User Hash)      (+ User Hash)       (+ Profile)     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 Minecraft Username Verification
+### 4.3 API Endpoints Reference
 
-For accounts where Microsoft profile doesn't return Minecraft data (edge cases), a secondary verification is used:
+#### Microsoft OAuth2 Endpoints
+| Endpoint | URL |
+|----------|-----|
+| Authorization | `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize` |
+| Token Exchange | `https://login.microsoftonline.com/consumers/oauth2/v2.0/token` |
+| Device Code (alternative) | `https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode` |
 
-1. System generates unique code: `VERIFY-{random8chars}`
-2. Code stored with expiration (15 minutes)
-3. User sends in-game whisper: `/tell BotName VERIFY-X7K9M2P1`
-4. Bot detects whisper, extracts code and sender username
-5. Bot reports to API: `{ code: "VERIFY-X7K9M2P1", username: "PlayerName" }`
-6. API validates code, links username to account
+**CRITICAL**: You **MUST** use the `/consumers` tenant. Using `/common` or a specific tenant ID will fail with the `XboxLive.signin` scope.
 
-### 4.3 Session Management
+#### Xbox Live Endpoints
+| Endpoint | URL |
+|----------|-----|
+| Xbox Live Authentication | `https://user.auth.xboxlive.com/user/authenticate` |
+| XSTS Token Service | `https://xsts.auth.xboxlive.com/xsts/authorize` |
+
+#### Minecraft Services Endpoints
+| Endpoint | URL |
+|----------|-----|
+| Login with Xbox | `https://api.minecraftservices.com/authentication/login_with_xbox` |
+| Get Profile | `https://api.minecraftservices.com/minecraft/profile` |
+| Check Entitlements | `https://api.minecraftservices.com/entitlements/mcstore` |
+
+### 4.4 Detailed Authentication Steps
+
+#### Step 1: Microsoft OAuth2 Authorization
+
+**Authorization Request (redirect user to):**
+```
+GET https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize
+    ?client_id={CLIENT_ID}
+    &response_type=code
+    &redirect_uri={REDIRECT_URI}
+    &scope=XboxLive.signin%20XboxLive.offline_access%20offline_access
+    &state={RANDOM_STATE_VALUE}
+```
+
+**Token Exchange (after callback with code):**
+```http
+POST https://login.microsoftonline.com/consumers/oauth2/v2.0/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id={CLIENT_ID}
+&client_secret={CLIENT_SECRET}
+&grant_type=authorization_code
+&code={AUTHORIZATION_CODE}
+&redirect_uri={REDIRECT_URI}
+```
+
+**Response:**
+```json
+{
+  "token_type": "Bearer",
+  "scope": "XboxLive.signin XboxLive.offline_access",
+  "expires_in": 3600,
+  "access_token": "EwAIA+pvBgAA...",
+  "refresh_token": "M.R3_BAY..."
+}
+```
+
+#### Step 2: Xbox Live Authentication
+
+**Request:**
+```http
+POST https://user.auth.xboxlive.com/user/authenticate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "Properties": {
+    "AuthMethod": "RPS",
+    "SiteName": "user.auth.xboxlive.com",
+    "RpsTicket": "d={MICROSOFT_ACCESS_TOKEN}"
+  },
+  "RelyingParty": "http://auth.xboxlive.com",
+  "TokenType": "JWT"
+}
+```
+
+**IMPORTANT**: For custom Azure applications, prefix the Microsoft access token with `d=`.
+
+**Response:**
+```json
+{
+  "IssueInstant": "2026-01-18T14:30:00.000Z",
+  "NotAfter": "2026-02-01T14:30:00.000Z",
+  "Token": "eyJlbmMiOiJBMTI4Q0JD...",
+  "DisplayClaims": {
+    "xui": [{ "uhs": "2535428504324680" }]
+  }
+}
+```
+
+The `uhs` (user hash) is required for subsequent requests.
+
+#### Step 3: XSTS Token
+
+**Request:**
+```http
+POST https://xsts.auth.xboxlive.com/xsts/authorize
+Content-Type: application/json
+Accept: application/json
+
+{
+  "Properties": {
+    "SandboxId": "RETAIL",
+    "UserTokens": ["{XBL_TOKEN}"]
+  },
+  "RelyingParty": "rp://api.minecraftservices.com/",
+  "TokenType": "JWT"
+}
+```
+
+**Response:**
+```json
+{
+  "IssueInstant": "2026-01-18T14:30:00.000Z",
+  "NotAfter": "2026-01-19T06:30:00.000Z",
+  "Token": "eyJhbGciOiJIUzI1NiIs...",
+  "DisplayClaims": {
+    "xui": [{ "uhs": "2535428504324680" }]
+  }
+}
+```
+
+#### Step 4: Minecraft Services Authentication
+
+**Request:**
+```http
+POST https://api.minecraftservices.com/authentication/login_with_xbox
+Content-Type: application/json
+
+{
+  "identityToken": "XBL3.0 x={USER_HASH};{XSTS_TOKEN}",
+  "ensureLegacyEnabled": true
+}
+```
+
+**Response:**
+```json
+{
+  "username": "1234567890abcdef",
+  "roles": [],
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 86400
+}
+```
+
+**Note**: The `username` field here is NOT the Minecraft username - it's an internal identifier.
+
+### 4.5 Retrieving Player Profile
+
+#### Java Edition Profile
+
+**Request:**
+```http
+GET https://api.minecraftservices.com/minecraft/profile
+Authorization: Bearer {MINECRAFT_ACCESS_TOKEN}
+```
+
+**Response (user owns Java Edition):**
+```json
+{
+  "id": "069a79f444e94726a5befca90e38aaf5",
+  "name": "Notch",
+  "skins": [
+    {
+      "id": "skin-id",
+      "state": "ACTIVE",
+      "url": "http://textures.minecraft.net/texture/...",
+      "variant": "CLASSIC"
+    }
+  ],
+  "capes": []
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `id` | Player's UUID (without hyphens) |
+| `name` | **Minecraft Java Edition username** |
+
+**Response (user does NOT own Minecraft):**
+```json
+{
+  "error": "NOT_FOUND",
+  "errorMessage": "The user doesn't have any Minecraft profile"
+}
+```
+
+#### Checking Game Ownership (Entitlements)
+
+**Request:**
+```http
+GET https://api.minecraftservices.com/entitlements/mcstore
+Authorization: Bearer {MINECRAFT_ACCESS_TOKEN}
+```
+
+**Response:**
+```json
+{
+  "items": [
+    {"name": "product_minecraft", "signature": "..."},
+    {"name": "game_minecraft", "signature": "..."}
+  ],
+  "signature": "...",
+  "keyId": "..."
+}
+```
+
+**Entitlement Names:**
+| Entitlement | Edition |
+|-------------|---------|
+| `product_minecraft`, `game_minecraft` | Java Edition |
+| `product_minecraft_bedrock`, `game_minecraft_bedrock` | Bedrock Edition |
+
+**Note**: Xbox Game Pass users may have an empty `items` array but still have a valid Minecraft profile.
+
+### 4.6 Bedrock Player Support
+
+Bedrock Edition players use their **Xbox Gamertag** as their username. These are prefixed with `.` (period) on DonutSMP to distinguish from Java Edition players.
+
+#### Retrieving Xbox Gamertag
+
+For Bedrock players, use the Xbox Profile API:
+
+**Request:**
+```http
+GET https://profile.xboxlive.com/users/me/profile/settings?settings=Gamertag
+Authorization: XBL3.0 x={USER_HASH};{XSTS_TOKEN}
+x-xbl-contract-version: 2
+```
+
+**Alternative**: Use a different `RelyingParty` when getting XSTS token for Bedrock:
+```json
+"RelyingParty": "https://pocket.realms.minecraft.net/"
+```
+
+#### Handling Both Editions
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     User Edition Detection                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Complete authentication flow (Steps 1-4)                    │
+│                                                                  │
+│  2. Call GET /minecraft/profile                                 │
+│     ├── Success → User has Java Edition                         │
+│     │   └── Store: minecraft_username = response.name           │
+│     │             minecraft_uuid = response.id                  │
+│     │             edition = "java"                              │
+│     │                                                           │
+│     └── 404 NOT_FOUND → User doesn't own Java Edition          │
+│         └── Call Xbox Profile API for Gamertag                 │
+│             └── Store: minecraft_username = "." + gamertag     │
+│                       minecraft_uuid = xuid                     │
+│                       edition = "bedrock"                       │
+│                                                                  │
+│  3. Check entitlements for verification (optional)              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 4.7 Token Lifetimes & Refresh Strategy
+
+| Token | Lifetime | Refresh Strategy |
+|-------|----------|------------------|
+| Microsoft Access Token | 60-90 minutes | Use refresh token |
+| Microsoft Refresh Token | Up to 90 days | Re-authenticate if expired |
+| Xbox Live (XBL) Token | ~14 days | Re-exchange from MS token |
+| XSTS Token | ~16 hours | Re-exchange from XBL token |
+| Minecraft Access Token | 24 hours | Re-exchange from XSTS token |
+
+**Refresh Microsoft Token:**
+```http
+POST https://login.microsoftonline.com/consumers/oauth2/v2.0/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id={CLIENT_ID}
+&client_secret={CLIENT_SECRET}
+&grant_type=refresh_token
+&refresh_token={REFRESH_TOKEN}
+&scope=XboxLive.signin XboxLive.offline_access offline_access
+```
+
+**Recommended Strategy:**
+1. Store Microsoft refresh token securely in database (encrypted)
+2. On each user session, check if Minecraft token is valid
+3. If expired, re-run Steps 2-4 using stored Xbox tokens or refresh Microsoft token
+4. Refresh Microsoft token proactively before 90-day expiry
+
+### 4.8 Error Handling
+
+#### XSTS Error Codes (XErr)
+
+| XErr Code | Meaning | User Action Required |
+|-----------|---------|---------------------|
+| 2148916227 | Account banned from Xbox Live | Account is permanently banned - cannot use platform |
+| 2148916229 | Account requires adult verification | User must verify age at account.xbox.com |
+| 2148916233 | No Xbox account exists | User must create Xbox account at xbox.com/create |
+| 2148916235 | Xbox Live unavailable in user's country | Geographic restriction - cannot use platform |
+| 2148916238 | Child account (under 18) | Account must be added to a Family by an adult |
+
+#### HTTP Error Codes
+
+| Code | Meaning | Action |
+|------|---------|--------|
+| 401 | Missing or invalid token | Re-authenticate |
+| 403 | App not authorized for Minecraft API | Ensure API permission approved |
+| 404 | Profile not found | User doesn't own Minecraft |
+| 429 | Rate limited | Implement backoff, retry later |
+
+### 4.9 Rate Limits
+
+| API | Rate Limit |
+|-----|------------|
+| Minecraft Services API | 600 requests per 10 minutes |
+| Profile queries | ~200 requests per minute |
+| Same profile query | Cache for at least 60 seconds |
+
+### 4.10 Platform Session Management
+
+After successful Minecraft authentication, the platform issues its own session tokens:
 
 | Token Type | Lifetime | Storage | Purpose |
 |------------|----------|---------|---------|
-| Access Token | 15 minutes | Memory | API authentication |
-| Refresh Token | 30 days | HttpOnly Cookie | Session renewal |
+| Platform Access Token | 15 minutes | Memory/localStorage | API authentication |
+| Platform Refresh Token | 30 days | HttpOnly Cookie | Session renewal |
 | CSRF Token | Per request | Cookie + Header | Request validation |
 
-### 4.4 Bedrock Player Support
+**Session Flow:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Session Management                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. User completes Microsoft/Xbox/Minecraft auth                │
+│  2. Platform creates/updates user record with:                  │
+│     - minecraft_username                                        │
+│     - minecraft_uuid                                            │
+│     - microsoft_id                                              │
+│     - Encrypted Microsoft refresh token                         │
+│  3. Platform issues JWT access token (15 min)                   │
+│  4. Platform issues refresh token in HttpOnly cookie (30 days)  │
+│  5. Client includes access token in Authorization header        │
+│  6. On access token expiry, client calls /auth/refresh          │
+│  7. On refresh token expiry, user must re-authenticate          │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-Bedrock Edition players (Xbox/mobile) authenticate through the same Microsoft OAuth flow. Their usernames are prefixed with `.` (period) to distinguish from Java Edition players, as specified in the original requirements.
+### 4.11 Complete Authentication Sequence Diagram
+
+```
+┌────────┐     ┌────────┐     ┌──────────┐     ┌────────┐     ┌──────┐     ┌──────────┐
+│ User   │     │Platform│     │Microsoft │     │Xbox Live│    │ XSTS │     │Minecraft │
+│Browser │     │ Server │     │  OAuth   │     │  Auth   │    │      │     │ Services │
+└───┬────┘     └───┬────┘     └────┬─────┘     └────┬────┘    └──┬───┘     └────┬─────┘
+    │              │               │                │            │              │
+    │ Click Login  │               │                │            │              │
+    │─────────────>│               │                │            │              │
+    │              │               │                │            │              │
+    │   Redirect   │               │                │            │              │
+    │<─────────────│               │                │            │              │
+    │              │               │                │            │              │
+    │         Authorize            │                │            │              │
+    │─────────────────────────────>│                │            │              │
+    │              │               │                │            │              │
+    │      Auth Code Callback      │                │            │              │
+    │<─────────────────────────────│                │            │              │
+    │              │               │                │            │              │
+    │  Code        │               │                │            │              │
+    │─────────────>│               │                │            │              │
+    │              │               │                │            │              │
+    │              │ Exchange Code │                │            │              │
+    │              │──────────────>│                │            │              │
+    │              │               │                │            │              │
+    │              │  MS Tokens    │                │            │              │
+    │              │<──────────────│                │            │              │
+    │              │               │                │            │              │
+    │              │          XBL Auth              │            │              │
+    │              │───────────────────────────────>│            │              │
+    │              │               │                │            │              │
+    │              │          XBL Token             │            │              │
+    │              │<───────────────────────────────│            │              │
+    │              │               │                │            │              │
+    │              │                    XSTS Auth                │              │
+    │              │────────────────────────────────────────────>│              │
+    │              │               │                │            │              │
+    │              │                    XSTS Token               │              │
+    │              │<────────────────────────────────────────────│              │
+    │              │               │                │            │              │
+    │              │                           MC Login                         │
+    │              │───────────────────────────────────────────────────────────>│
+    │              │               │                │            │              │
+    │              │                           MC Token                         │
+    │              │<───────────────────────────────────────────────────────────│
+    │              │               │                │            │              │
+    │              │                          Get Profile                       │
+    │              │───────────────────────────────────────────────────────────>│
+    │              │               │                │            │              │
+    │              │                      Username + UUID                       │
+    │              │<───────────────────────────────────────────────────────────│
+    │              │               │                │            │              │
+    │ Platform JWT │               │                │            │              │
+    │<─────────────│               │                │            │              │
+    │              │               │                │            │              │
+```
 
 ---
 
@@ -979,19 +1484,30 @@ Primary user accounts linked to Minecraft identities.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | UUID | PK, DEFAULT uuid_generate_v4() | Unique identifier |
-| minecraft_username | VARCHAR(16) | NOT NULL, UNIQUE | Verified MC username |
-| minecraft_uuid | VARCHAR(36) | NOT NULL, UNIQUE | Minecraft UUID |
-| microsoft_id | VARCHAR(255) | UNIQUE | Microsoft OAuth ID |
-| email | VARCHAR(255) | | Microsoft email |
-| balance | DECIMAL(20,2) | DEFAULT 0.00 | Available balance |
-| created_at | TIMESTAMP | DEFAULT NOW() | Registration time |
-| updated_at | TIMESTAMP | DEFAULT NOW() | Last update time |
+| minecraft_username | VARCHAR(32) | NOT NULL, UNIQUE | Verified MC username (Bedrock prefixed with `.`) |
+| minecraft_uuid | VARCHAR(36) | NOT NULL, UNIQUE | Minecraft UUID (Java) or XUID (Bedrock) |
+| edition | VARCHAR(10) | NOT NULL, DEFAULT 'java' | 'java' or 'bedrock' |
+| microsoft_id | VARCHAR(255) | NOT NULL, UNIQUE | Microsoft OAuth subject ID |
+| email | VARCHAR(255) | | Microsoft email (optional) |
+| microsoft_refresh_token | TEXT | | Encrypted Microsoft refresh token for silent re-auth |
+| xbox_user_hash | VARCHAR(50) | | Xbox User Hash (uhs) for token refresh |
+| balance | DECIMAL(20,2) | NOT NULL, DEFAULT 0.00 | Available balance |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Registration time |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Last update time |
+| last_login_at | TIMESTAMP | | Last successful login |
 | banned_at | TIMESTAMP | | Ban timestamp (NULL = not banned) |
 | ban_reason | TEXT | | Reason for ban |
 
 **Indexes**:
 - `idx_users_minecraft_username` on `minecraft_username`
 - `idx_users_minecraft_uuid` on `minecraft_uuid`
+- `idx_users_microsoft_id` on `microsoft_id`
+
+**Notes**:
+- `minecraft_username` for Bedrock players is prefixed with `.` (e.g., `.GamerTag123`)
+- `minecraft_uuid` stores the Java UUID (without hyphens) or Xbox XUID for Bedrock
+- `microsoft_refresh_token` must be encrypted at rest (AES-256-GCM recommended)
+- `xbox_user_hash` cached for faster token refresh without full re-authentication
 
 #### 7.2.2 roles
 Custom admin roles.
@@ -1251,6 +1767,44 @@ Audit log for all admin actions.
 **Indexes**:
 - `idx_admin_logs_created_at` on `created_at DESC`
 
+#### 7.2.17 sessions
+User authentication sessions (platform-level, not Microsoft/Xbox tokens).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | Session identifier |
+| user_id | UUID | FK → users.id, NOT NULL, ON DELETE CASCADE | Session owner |
+| refresh_token_hash | VARCHAR(64) | NOT NULL, UNIQUE | SHA-256 hash of refresh token |
+| user_agent | TEXT | | Browser/client user agent |
+| ip_address | INET | | Client IP address |
+| expires_at | TIMESTAMP | NOT NULL | Session expiration time |
+| created_at | TIMESTAMP | DEFAULT NOW() | Session creation time |
+| last_used_at | TIMESTAMP | DEFAULT NOW() | Last activity time |
+
+**Indexes**:
+- `idx_sessions_user_id` on `user_id`
+- `idx_sessions_expires_at` on `expires_at`
+- `idx_sessions_refresh_token_hash` on `refresh_token_hash`
+
+**Notes**:
+- Refresh tokens are stored as SHA-256 hashes, never plaintext
+- Sessions should be cleaned up by a scheduled job when `expires_at < NOW()`
+- `last_used_at` updated on each token refresh
+
+#### 7.2.18 auth_states
+Temporary storage for OAuth state parameters (CSRF protection).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| state | VARCHAR(64) | PK | Random state parameter |
+| redirect_url | VARCHAR(500) | | URL to redirect after auth |
+| created_at | TIMESTAMP | DEFAULT NOW() | State creation time |
+| expires_at | TIMESTAMP | NOT NULL | State expiration (15 minutes) |
+
+**Notes**:
+- States should be deleted after use or on expiration
+- Used to prevent CSRF attacks during OAuth flow
+
 ---
 
 ## 8. API Specification
@@ -1296,12 +1850,29 @@ Authorization: Bearer <access_token>
 #### Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/auth/microsoft` | Initiate Microsoft OAuth |
-| GET | `/auth/microsoft/callback` | OAuth callback |
-| POST | `/auth/verify-minecraft` | Verify MC username |
-| GET | `/auth/me` | Get current user |
-| POST | `/auth/refresh` | Refresh access token |
-| POST | `/auth/logout` | Logout |
+| GET | `/auth/microsoft` | Initiate Microsoft OAuth (redirects to Microsoft login with Xbox Live scope) |
+| GET | `/auth/microsoft/callback` | OAuth callback - completes MS→XBL→XSTS→MC token chain |
+| GET | `/auth/me` | Get current user (includes minecraft_username, edition) |
+| POST | `/auth/refresh` | Refresh platform access token |
+| POST | `/auth/logout` | Logout (clears session, optionally revokes tokens) |
+
+**Authentication Flow Detail:**
+```
+GET /auth/microsoft
+  → Redirects to: https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize
+  → Scopes: XboxLive.signin XboxLive.offline_access offline_access
+
+GET /auth/microsoft/callback?code=...&state=...
+  → Server performs 4-step token exchange
+  → Creates/updates user with Minecraft profile
+  → Returns: { access_token, refresh_token (in cookie), user }
+
+GET /auth/me
+  → Returns: {
+      id, minecraft_username, minecraft_uuid, edition,
+      balance, created_at
+    }
+```
 
 #### User
 | Method | Endpoint | Description |
@@ -1457,8 +2028,46 @@ Location: `packages/bot-bridge/`
 | ORM | Prisma | Type-safe, excellent migrations, good DX |
 | Cache/Queue | Redis 7+ | Session storage, job queues, rate limiting |
 | Job Queue | BullMQ | Robust job processing for withdrawals |
-| Auth | Passport.js | Microsoft OAuth strategy available |
 | Validation | Zod | Runtime type validation |
+
+### 10.1.1 Authentication Stack
+
+| Component | Technology | Rationale |
+|-----------|------------|-----------|
+| OAuth Library | @fastify/oauth2 | Native Fastify integration for Microsoft OAuth |
+| HTTP Client | undici or axios | For Xbox Live and Minecraft Services API calls |
+| JWT | @fastify/jwt | Platform session token generation/validation |
+| Encryption | Node.js crypto | AES-256-GCM for encrypting refresh tokens |
+| Session Cookies | @fastify/cookie | HttpOnly, Secure, SameSite cookie handling |
+| CSRF Protection | @fastify/csrf-protection | Double-submit cookie pattern |
+
+**Authentication Dependencies (package.json):**
+```json
+{
+  "dependencies": {
+    "@fastify/oauth2": "^7.x",
+    "@fastify/jwt": "^8.x",
+    "@fastify/cookie": "^9.x",
+    "@fastify/csrf-protection": "^6.x",
+    "undici": "^6.x"
+  }
+}
+```
+
+**Environment Variables for Auth:**
+```env
+# Azure AD Application (from Prerequisites)
+MICROSOFT_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+MICROSOFT_CLIENT_SECRET=your-client-secret-here
+MICROSOFT_REDIRECT_URI=https://yourdomain.com/auth/microsoft/callback
+
+# Platform JWT Secrets
+JWT_ACCESS_SECRET=random-32-byte-hex-string
+JWT_REFRESH_SECRET=different-random-32-byte-hex-string
+
+# Encryption Key for Microsoft Refresh Tokens
+TOKEN_ENCRYPTION_KEY=32-byte-hex-key-for-aes-256-gcm
+```
 
 ### 10.2 Frontend
 
@@ -1516,11 +2125,33 @@ miau/
 ## 11. Security Considerations
 
 ### 11.1 Authentication Security
-- Microsoft OAuth 2.0 with PKCE flow
-- Short-lived access tokens (15 minutes)
-- Refresh tokens in HttpOnly, Secure, SameSite cookies
-- CSRF protection with double-submit cookies
-- Session invalidation on suspicious activity
+
+#### 11.1.1 OAuth & Token Chain Security
+- **Microsoft OAuth 2.0**: Authorization code flow with `state` parameter for CSRF protection
+- **Tenant restriction**: Only `/consumers` tenant accepted (blocks organization accounts)
+- **Scope limitation**: Only request necessary scopes (`XboxLive.signin`, `XboxLive.offline_access`)
+- **Token validation**: Verify all tokens before use; validate expiration times
+- **Error handling**: Handle XSTS errors gracefully without exposing internal details
+
+#### 11.1.2 Token Storage & Encryption
+- **Microsoft refresh tokens**: Encrypted with AES-256-GCM before database storage
+- **Encryption key management**: Store `TOKEN_ENCRYPTION_KEY` in environment variables, never in code
+- **Platform refresh tokens**: Stored as SHA-256 hashes, never plaintext
+- **Access tokens**: Short-lived (15 minutes), stored in memory only
+- **Key rotation**: Implement key rotation strategy for encryption keys
+
+#### 11.1.3 Session Security
+- **HttpOnly cookies**: Refresh tokens in HttpOnly, Secure, SameSite=Strict cookies
+- **CSRF protection**: Double-submit cookie pattern for state-changing requests
+- **Session binding**: Bind sessions to user agent and IP (warn on change, don't block)
+- **Concurrent sessions**: Allow multiple sessions per user with session management UI
+- **Session invalidation**: On password change (if applicable), security concern, or user logout
+
+#### 11.1.4 Identity Verification
+- **No manual username entry**: Minecraft username retrieved directly from Minecraft Services API
+- **UUID verification**: Store and verify Minecraft UUID, not just username (usernames can change)
+- **Edition detection**: Properly distinguish Java (UUID) vs Bedrock (XUID) players
+- **Profile refresh**: Periodically refresh Minecraft profile to detect username changes
 
 ### 11.2 Financial Security
 - All balance operations use database transactions
@@ -1575,8 +2206,15 @@ miau/
 | **Listing** | An item put up for sale on the marketplace |
 | **Marketplace** | Where users buy and sell items |
 | **Premium Listing** | 48-hour listing with extended duration |
-| **UUID** | Minecraft's unique identifier for players |
+| **UUID** | Minecraft's unique identifier for players (Java Edition) |
 | **Withdrawal** | Removing money or items from the platform to in-game |
+| **XBL Token** | Xbox Live authentication token, obtained from Microsoft access token |
+| **XSTS Token** | Xbox Security Token Service token, used to authenticate with Minecraft Services |
+| **XUID** | Xbox User ID, unique identifier for Xbox/Bedrock Edition players |
+| **User Hash (uhs)** | Xbox user hash included in XBL/XSTS tokens, required for Minecraft authentication |
+| **Gamertag** | Xbox username, used as Minecraft username for Bedrock Edition players |
+| **Edition** | Whether a user plays Java Edition or Bedrock Edition of Minecraft |
+| **Relying Party** | The service that will accept the XSTS token (e.g., `rp://api.minecraftservices.com/`) |
 
 ---
 
@@ -1585,6 +2223,7 @@ miau/
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-01-18 | Claude | Initial specification |
+| 1.1 | 2026-01-23 | Claude | Complete authentication system overhaul: Microsoft → Xbox Live → XSTS → Minecraft Services API chain; Azure AD prerequisites; token storage schema; Bedrock/Java edition handling |
 
 ---
 
