@@ -197,6 +197,63 @@ DonutTrade is a web-based trading platform that enables players of the DonutSMP 
 
 **Postcondition**: No account created; user informed of issue
 
+#### UC-AUTH-07: Dual Edition User - Edition Choice
+**Actor**: Guest
+**Precondition**: User has a Microsoft account owning BOTH Minecraft Java Edition AND Bedrock Edition
+**Flow**:
+1. User clicks "Login with Microsoft" on landing page
+2. User completes Microsoft OAuth with Xbox Live scope consent
+3. Server completes token exchange chain (MS → XBL → XSTS → MC)
+4. Server calls Minecraft Profile API → Success (user owns Java Edition)
+5. Server retrieves Java username and UUID
+6. Server checks entitlements API for Bedrock Edition ownership
+7. Server detects user owns BOTH editions (has both `game_minecraft` and `game_minecraft_bedrock` entitlements)
+8. Server retrieves Xbox Gamertag from Xbox Profile API
+9. System creates user account with BOTH identities stored:
+    - `java_username`: Minecraft Java username (e.g., "PlayerName")
+    - `java_uuid`: Minecraft Java UUID
+    - `bedrock_username`: "." + Xbox Gamertag (e.g., ".GamerTag123")
+    - `bedrock_xuid`: Xbox User ID (XUID)
+    - `active_edition`: NULL (not yet chosen)
+    - `microsoft_id`: From Microsoft OAuth
+10. System redirects user to Edition Choice page (`/auth/choose-edition`)
+11. User sees uncancelable page displaying both identities:
+    - Java Edition identity: "PlayerName"
+    - Bedrock Edition identity: ".GamerTag123"
+12. User reads explanation of the choice and its implications
+13. User selects their preferred edition and confirms selection
+14. System updates user account:
+    - Sets `active_edition` to chosen edition ('java' or 'bedrock')
+    - Sets `minecraft_username` based on choice
+    - Sets `minecraft_uuid` based on choice (UUID for Java, XUID for Bedrock)
+15. System issues platform session tokens
+16. User redirected to dashboard
+
+**Postcondition**: User account exists with verified dual-edition ownership, one edition active for trading
+
+**Important Notes**:
+- The Edition Choice page is uncancelable - user cannot navigate away without making a selection
+- Once chosen, only an administrator can change the active edition
+- Both identities remain stored in the database for verification and potential future changes
+- Bedrock username is always prefixed with "." regardless of dual ownership
+
+#### UC-AUTH-08: Returning Dual Edition User Login
+**Actor**: Registered User (dual-edition owner)
+**Flow**:
+1. User clicks "Login with Microsoft"
+2. User completes Microsoft OAuth (may be instant if session exists)
+3. Server completes token exchange chain
+4. Server retrieves both Minecraft profile and Xbox Gamertag
+5. System matches Microsoft ID to existing account
+6. System updates stored tokens and verifies both identities still match
+7. If `active_edition` is set:
+   - System issues new platform session tokens
+   - User redirected to dashboard
+8. If `active_edition` is NULL (incomplete registration):
+   - User redirected to Edition Choice page to complete setup
+
+**Postcondition**: User logged in with refreshed session; or redirected to complete edition choice
+
 ### 3.2 Balance Deposit Use Cases
 
 #### UC-DEP-01: Deposit Money via In-Game Payment
@@ -766,28 +823,79 @@ x-xbl-contract-version: 2
 #### Handling Both Editions
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     User Edition Detection                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. Complete authentication flow (Steps 1-4)                    │
-│                                                                  │
-│  2. Call GET /minecraft/profile                                 │
-│     ├── Success → User has Java Edition                         │
-│     │   └── Store: minecraft_username = response.name           │
-│     │             minecraft_uuid = response.id                  │
-│     │             edition = "java"                              │
-│     │                                                           │
-│     └── 404 NOT_FOUND → User doesn't own Java Edition          │
-│         └── Call Xbox Profile API for Gamertag                 │
-│             └── Store: minecraft_username = "." + gamertag     │
-│                       minecraft_uuid = xuid                     │
-│                       edition = "bedrock"                       │
-│                                                                  │
-│  3. Check entitlements for verification (optional)              │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       User Edition Detection Flow                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  1. Complete authentication flow (Steps 1-4)                            │
+│                                                                          │
+│  2. Call GET /minecraft/profile                                         │
+│     ├── Success → User has Java Edition                                 │
+│     │   └── Store Java identity: username, uuid                         │
+│     │       └── Continue to step 3                                      │
+│     │                                                                    │
+│     └── 404 NOT_FOUND → User doesn't own Java Edition                  │
+│         └── Skip to step 4 (Bedrock-only path)                         │
+│                                                                          │
+│  3. Call GET /entitlements/mcstore                                      │
+│     ├── Has 'game_minecraft_bedrock' → DUAL OWNER (both editions)      │
+│     │   └── Continue to step 4 to retrieve Bedrock identity            │
+│     │                                                                    │
+│     └── No Bedrock entitlement → JAVA-ONLY OWNER                       │
+│         └── Store: minecraft_username = java_username                   │
+│                   minecraft_uuid = java_uuid                            │
+│                   active_edition = "java"                               │
+│                   → DONE (redirect to dashboard)                        │
+│                                                                          │
+│  4. Call Xbox Profile API for Gamertag                                  │
+│     └── Store Bedrock identity: "." + gamertag, xuid                   │
+│                                                                          │
+│  5. Determine user path:                                                │
+│     ├── DUAL OWNER (from step 3):                                      │
+│     │   └── Store BOTH identities, active_edition = NULL               │
+│     │       → Redirect to Edition Choice page (/auth/choose-edition)   │
+│     │                                                                    │
+│     └── BEDROCK-ONLY (from step 2 failure):                            │
+│         └── Store: minecraft_username = "." + gamertag                 │
+│                   minecraft_uuid = xuid                                 │
+│                   active_edition = "bedrock"                            │
+│                   → DONE (redirect to dashboard)                        │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
+
+#### Edition Choice for Dual Owners
+
+When a user owns both Java and Bedrock editions, they must choose which identity to use on the platform. This choice is presented on an uncancelable page after initial authentication.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      Dual Edition Choice Flow                             │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  1. User completes Microsoft/Xbox/Minecraft auth                        │
+│  2. System detects dual ownership via entitlements API                  │
+│  3. System stores BOTH identities in users table                        │
+│  4. System redirects to /auth/choose-edition                            │
+│  5. User sees Edition Choice page (uncancelable - no back/skip option)  │
+│  6. User selects preferred edition and confirms                         │
+│  7. System sets active_edition and populates minecraft_username/uuid    │
+│  8. System issues JWT and redirects to dashboard                        │
+│                                                                          │
+│  Note: After initial choice, only admins can change the active edition  │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Returning Dual-Owner Login
+
+When a dual-owner returns to the platform:
+1. Complete authentication flow
+2. Match Microsoft ID to existing account
+3. Verify both identities still match (usernames may have changed)
+4. Update stored tokens
+5. If `active_edition` is set → issue session tokens, redirect to dashboard
+6. If `active_edition` is NULL (incomplete registration) → redirect to Edition Choice page
 
 ### 4.7 Token Lifetimes & Refresh Strategy
 
@@ -1185,6 +1293,103 @@ After successful Minecraft authentication, the platform issues its own session t
 └─────────────────────────────────────────────────────────────┘
 ```
 
+#### 5.3.7 Edition Choice Page (`/auth/choose-edition`)
+**Access**: Authenticated users with dual-edition ownership who haven't chosen an edition
+**Restrictions**: This page cannot be bypassed or cancelled - user must make a selection
+
+**Layout**:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│                     Choose Your Edition                          │
+│                                                                  │
+│  You own both Minecraft Java Edition and Bedrock Edition.       │
+│  Please choose which identity you want to use for trading       │
+│  on DonutTrade.                                                 │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  ☕ JAVA EDITION                                           │  │
+│  │                                                            │  │
+│  │  Username: PlayerName                                     │  │
+│  │  UUID: 069a79f4-44e9-4726-a5be-fca90e38aaf5              │  │
+│  │                                                            │  │
+│  │  This is your Minecraft Java Edition identity.            │  │
+│  │                                                            │  │
+│  │                              [ Select Java Edition ]       │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│                           - OR -                                │
+│                                                                  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  🪨 BEDROCK EDITION                                        │  │
+│  │                                                            │  │
+│  │  Username: .GamerTag123                                   │  │
+│  │  Xbox Gamertag: GamerTag123                               │  │
+│  │                                                            │  │
+│  │  This is your Minecraft Bedrock Edition identity.         │  │
+│  │  The "." prefix identifies Bedrock players on DonutSMP.   │  │
+│  │                                                            │  │
+│  │                            [ Select Bedrock Edition ]      │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ⚠️ IMPORTANT: What does this choice mean?                      │
+│                                                                  │
+│  • This determines which Minecraft username is used for        │
+│    deposits, withdrawals, and trading on DonutTrade            │
+│                                                                  │
+│  • Deposits must come from the selected identity's username    │
+│                                                                  │
+│  • Withdrawals will be sent to the selected identity           │
+│                                                                  │
+│  • This choice can only be changed by contacting an admin      │
+│                                                                  │
+│  • Choose the edition you primarily play on DonutSMP           │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Behavior**:
+- Page displays after successful Microsoft authentication for dual-edition users
+- No "back" button, no "skip" option, no navigation menu displayed
+- Browser back button redirects back to this page if choice not made
+- Only the two selection buttons are actionable
+- On selection:
+  1. Confirmation modal appears (see below)
+  2. On confirm: API call to `POST /auth/choose-edition` with `{ edition: 'java' | 'bedrock' }`
+  3. On success: Redirect to dashboard with session tokens
+  4. On cancel: Return to selection screen
+
+**Confirmation Modal**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  Confirm Your Selection                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  You selected: Java Edition                                 │
+│                                                              │
+│  Your trading identity will be:                             │
+│  Username: PlayerName                                       │
+│                                                              │
+│  This choice can only be changed by contacting a platform   │
+│  administrator.                                              │
+│                                                              │
+│  Are you sure you want to continue?                         │
+│                                                              │
+│              [ Cancel ]         [ Confirm Selection ]        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Mobile Layout**:
+- Cards stack vertically
+- Full-width buttons
+- Important notice section remains visible (scrollable if needed)
+- Touch-friendly tap targets (min 44px)
+
 ### 5.4 Mobile Responsiveness
 
 **Breakpoints**:
@@ -1348,6 +1553,84 @@ Similar to item deposits but in reverse:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+**Edition Management (Dual Owners Only)**:
+
+For users who own both editions, admins can view both identities and change the active edition:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Edition Information                                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Owns Java Edition:     ✓ Yes                               │
+│  Owns Bedrock Edition:  ✓ Yes                               │
+│                                                              │
+│  Active Edition:        Java Edition                        │
+│  Trading Username:      PlayerName                          │
+│                                                              │
+│  ─────────────────────────────────────────────────────────  │
+│                                                              │
+│  Java Identity:                                              │
+│    Username: PlayerName                                     │
+│    UUID: 069a79f4-44e9-4726-a5be-fca90e38aaf5              │
+│                                                              │
+│  Bedrock Identity:                                           │
+│    Username: .GamerTag123                                   │
+│    Gamertag: GamerTag123                                    │
+│    XUID: 2535428504324680                                   │
+│                                                              │
+│  Edition set: 2026-01-18 14:32 (by user)                   │
+│                                                              │
+│  [ Change Active Edition ]                                   │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Change Edition Modal**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Change Active Edition for Player123                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Current Active Edition: Java Edition                       │
+│  Current Trading Username: PlayerName                       │
+│                                                              │
+│  New Active Edition:                                         │
+│  ○ Java Edition (PlayerName)                                │
+│  ● Bedrock Edition (.GamerTag123)                           │
+│                                                              │
+│  Reason for change: [ User requested switch to Bedrock    ] │
+│                     (Required)                               │
+│                                                              │
+│  ⚠️ Warning: This will change the user's trading identity.   │
+│  Pending deposits or withdrawals may need manual review.    │
+│                                                              │
+│              [ Cancel ]         [ Change Edition ]           │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Admin API Endpoint**:
+```
+PATCH /admin/users/:id/edition
+Body: { "edition": "java" | "bedrock", "reason": "User requested switch" }
+Requires Permission: users.change_edition
+```
+
+**Audit Log Entry for Edition Change**:
+```
+[2026-01-18 15:45:22] Admin1 (192.168.1.1)
+Action: user.edition_change
+Target: User abc123
+Details: {
+  previous_edition: "java",
+  new_edition: "bedrock",
+  previous_username: "PlayerName",
+  new_username: ".GamerTag123",
+  reason: "User requested switch to Bedrock"
+}
+```
+
 ### 6.5 Catalog Management (`/admin/catalog`)
 
 **Item List**:
@@ -1398,6 +1681,7 @@ Similar to item deposits but in reverse:
 | users.view | ✓ | ✓ | ✓ |
 | users.edit | ✓ | ✓ | ✗ |
 | users.ban | ✓ | ✓ | ✗ |
+| users.change_edition | ✓ | ✗ | ✗ |
 | deposits.view | ✓ | ✓ | ✓ |
 | deposits.fulfill | ✓ | ✗ | ✓ |
 | withdrawals.view | ✓ | ✓ | ✓ |
@@ -1410,6 +1694,7 @@ Similar to item deposits but in reverse:
 - `users.view` - View user profiles
 - `users.edit` - Edit user details, adjust balances
 - `users.ban` - Ban/unban users
+- `users.change_edition` - Change active edition for dual-owner users
 - `deposits.view` - View deposit requests
 - `deposits.fulfill` - Mark item deposits as fulfilled
 - `withdrawals.view` - View withdrawal requests
@@ -1484,28 +1769,50 @@ Primary user accounts linked to Minecraft identities.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | UUID | PK, DEFAULT uuid_generate_v4() | Unique identifier |
-| minecraft_username | VARCHAR(32) | NOT NULL, UNIQUE | Verified MC username (Bedrock prefixed with `.`) |
-| minecraft_uuid | VARCHAR(36) | NOT NULL, UNIQUE | Minecraft UUID (Java) or XUID (Bedrock) |
-| edition | VARCHAR(10) | NOT NULL, DEFAULT 'java' | 'java' or 'bedrock' |
+| minecraft_username | VARCHAR(32) | UNIQUE | Active MC username for trading (Bedrock prefixed with `.`); NULL if dual-owner hasn't chosen |
+| minecraft_uuid | VARCHAR(36) | UNIQUE | Active Minecraft UUID (Java) or XUID (Bedrock); NULL if dual-owner hasn't chosen |
+| active_edition | VARCHAR(10) | | 'java', 'bedrock', or NULL (not yet chosen for dual owners) |
+| java_username | VARCHAR(32) | | Java Edition username (stored for all Java/dual owners) |
+| java_uuid | VARCHAR(36) | | Java Edition UUID (stored for all Java/dual owners) |
+| bedrock_username | VARCHAR(32) | | Bedrock Edition username with "." prefix (stored for all Bedrock/dual owners) |
+| bedrock_xuid | VARCHAR(50) | | Xbox User ID for Bedrock (stored for all Bedrock/dual owners) |
+| owns_java | BOOLEAN | NOT NULL, DEFAULT false | Whether user owns Java Edition |
+| owns_bedrock | BOOLEAN | NOT NULL, DEFAULT false | Whether user owns Bedrock Edition |
 | microsoft_id | VARCHAR(255) | NOT NULL, UNIQUE | Microsoft OAuth subject ID |
 | email | VARCHAR(255) | | Microsoft email (optional) |
 | microsoft_refresh_token | TEXT | | Encrypted Microsoft refresh token for silent re-auth |
 | xbox_user_hash | VARCHAR(50) | | Xbox User Hash (uhs) for token refresh |
+| xbox_gamertag | VARCHAR(50) | | Xbox Gamertag (raw, without "." prefix) |
 | balance | DECIMAL(20,2) | NOT NULL, DEFAULT 0.00 | Available balance |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Registration time |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Last update time |
 | last_login_at | TIMESTAMP | | Last successful login |
 | banned_at | TIMESTAMP | | Ban timestamp (NULL = not banned) |
 | ban_reason | TEXT | | Reason for ban |
+| edition_set_at | TIMESTAMP | | When active_edition was chosen/changed |
+| edition_set_by | UUID | FK → users.id | Admin who changed edition (NULL if user's initial choice) |
 
 **Indexes**:
 - `idx_users_minecraft_username` on `minecraft_username`
 - `idx_users_minecraft_uuid` on `minecraft_uuid`
 - `idx_users_microsoft_id` on `microsoft_id`
+- `idx_users_java_uuid` on `java_uuid` WHERE `java_uuid IS NOT NULL`
+- `idx_users_bedrock_xuid` on `bedrock_xuid` WHERE `bedrock_xuid IS NOT NULL`
+
+**Constraints**:
+- CHECK: `active_edition IN ('java', 'bedrock') OR active_edition IS NULL`
+- CHECK: `(owns_java = true) OR (owns_bedrock = true)` -- must own at least one edition
+- CHECK: If `active_edition = 'java'` then `owns_java = true`
+- CHECK: If `active_edition = 'bedrock'` then `owns_bedrock = true`
 
 **Notes**:
-- `minecraft_username` for Bedrock players is prefixed with `.` (e.g., `.GamerTag123`)
-- `minecraft_uuid` stores the Java UUID (without hyphens) or Xbox XUID for Bedrock
+- `minecraft_username` and `minecraft_uuid` are the ACTIVE identity used for trading
+- For dual owners, these are populated from `java_*` or `bedrock_*` fields based on `active_edition`
+- For single-edition users, `active_edition` is set immediately and only relevant identity fields are populated
+- `minecraft_username` for Bedrock-active users is prefixed with `.` (e.g., `.GamerTag123`)
+- `bedrock_username` is ALWAYS stored with `.` prefix for consistency
+- `active_edition` is NULL only for dual-owners who haven't completed the Edition Choice page
+- `edition_set_by` is NULL for the user's initial choice, set to admin's user_id if changed by admin
 - `microsoft_refresh_token` must be encrypted at rest (AES-256-GCM recommended)
 - `xbox_user_hash` cached for faster token refresh without full re-authentication
 
@@ -1855,6 +2162,8 @@ Authorization: Bearer <access_token>
 | GET | `/auth/me` | Get current user (includes minecraft_username, edition) |
 | POST | `/auth/refresh` | Refresh platform access token |
 | POST | `/auth/logout` | Logout (clears session, optionally revokes tokens) |
+| GET | `/auth/edition-status` | Check if user needs to choose edition (for dual owners) |
+| POST | `/auth/choose-edition` | Set active edition for dual-owner (initial choice only) |
 
 **Authentication Flow Detail:**
 ```
@@ -1869,9 +2178,32 @@ GET /auth/microsoft/callback?code=...&state=...
 
 GET /auth/me
   → Returns: {
-      id, minecraft_username, minecraft_uuid, edition,
-      balance, created_at
+      id, minecraft_username, minecraft_uuid, active_edition,
+      owns_java, owns_bedrock, balance, created_at
     }
+
+GET /auth/edition-status
+  → For dual owners who haven't chosen: {
+      needs_choice: true,
+      java_identity: {
+        username: "PlayerName",
+        uuid: "069a79f444e94726a5befca90e38aaf5"
+      },
+      bedrock_identity: {
+        username: ".GamerTag123",
+        gamertag: "GamerTag123",
+        xuid: "2535428504324680"
+      }
+    }
+  → For users who have chosen or single-edition: {
+      needs_choice: false
+    }
+
+POST /auth/choose-edition
+  Body: { "edition": "java" | "bedrock" }
+  → Success: { success: true, access_token, user }
+  → Error (already chosen): { error: "EDITION_ALREADY_SET", message: "Contact an admin to change your edition" }
+  → Error (not dual owner): { error: "NOT_DUAL_OWNER", message: "Edition choice is only for users with both editions" }
 ```
 
 #### User
@@ -2201,6 +2533,7 @@ miau/
 | **Catalog** | Admin-configurable list of tradeable items |
 | **Commission** | Percentage fee taken from marketplace sales |
 | **Deposit** | Adding money or items to the platform |
+| **Dual Owner** | A user who owns both Minecraft Java Edition and Bedrock Edition |
 | **Fulfillment** | Admin process of completing deposit/withdrawal in-game |
 | **Inventory** | User's items available for trading on the platform |
 | **Listing** | An item put up for sale on the marketplace |
@@ -2214,6 +2547,7 @@ miau/
 | **User Hash (uhs)** | Xbox user hash included in XBL/XSTS tokens, required for Minecraft authentication |
 | **Gamertag** | Xbox username, used as Minecraft username for Bedrock Edition players |
 | **Edition** | Whether a user plays Java Edition or Bedrock Edition of Minecraft |
+| **Edition Choice** | The mandatory selection page shown to dual owners to choose their trading identity |
 | **Relying Party** | The service that will accept the XSTS token (e.g., `rp://api.minecraftservices.com/`) |
 
 ---
@@ -2224,6 +2558,7 @@ miau/
 |---------|------|--------|---------|
 | 1.0 | 2026-01-18 | Claude | Initial specification |
 | 1.1 | 2026-01-23 | Claude | Complete authentication system overhaul: Microsoft → Xbox Live → XSTS → Minecraft Services API chain; Azure AD prerequisites; token storage schema; Bedrock/Java edition handling |
+| 1.2 | 2026-01-24 | Claude | Added dual-edition user support: UC-AUTH-07/08 for edition choice flow; Edition Choice page UI specification; expanded users table schema with dual-identity columns; admin edition management; users.change_edition permission |
 
 ---
 
