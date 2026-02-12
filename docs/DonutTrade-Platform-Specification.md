@@ -1,7 +1,7 @@
 # DonutTrade Platform - Complete Specification Document
 
-**Version:** 1.0
-**Date:** January 2026
+**Version:** 2.0
+**Date:** February 2026 (Updated for multi-method authentication)
 **Status:** Draft for Review
 
 ---
@@ -34,7 +34,7 @@ DonutTrade is a web-based trading platform that enables players of the DonutSMP 
 - Users withdraw money or items through admin-fulfilled requests
 
 **Key Design Decisions:**
-- **Authentication**: Microsoft OAuth → Xbox Live → Minecraft Services API chain (automatically retrieves verified Minecraft username and UUID)
+- **Authentication**: Three methods — Microsoft OAuth, Discord OAuth, Email/Password — with in-game payment verification to prove Minecraft account ownership
 - **Item Catalog**: Admin-configurable and expandable over time
 - **Commission**: Admin-configurable rate on all marketplace transactions
 - **Notifications**: In-app only (no email/SMS)
@@ -92,167 +92,161 @@ DonutTrade is a web-based trading platform that enables players of the DonutSMP 
 
 ### 3.1 Authentication Use Cases
 
-#### UC-AUTH-01: New User Registration (Java Edition)
+#### UC-AUTH-01: New User Registration via Microsoft OAuth
 **Actor**: Guest
-**Precondition**: User has a Microsoft account with Minecraft Java Edition
+**Precondition**: User has a personal Microsoft account
 **Flow**:
-1. User clicks "Login with Microsoft" on landing page
-2. User is redirected to Microsoft login (with Xbox Live scope consent)
-3. User sees permission request: "Access Xbox Live" / "XboxLive.Signin"
-4. User grants permission and completes Microsoft OAuth
-5. System receives Microsoft authorization code
-6. Server exchanges code for Microsoft access token
-7. Server exchanges Microsoft token for Xbox Live (XBL) token
-8. Server exchanges XBL token for XSTS token (Minecraft relying party)
-9. Server exchanges XSTS token for Minecraft access token
-10. Server calls Minecraft Profile API to retrieve username and UUID
-11. System creates user account with:
-    - `minecraft_username`: Retrieved from Minecraft API (e.g., "PlayerName")
-    - `minecraft_uuid`: Retrieved from Minecraft API
-    - `microsoft_id`: From Microsoft OAuth
-    - `edition`: "java"
-12. System issues platform session tokens
+1. User clicks "Sign up with Microsoft" on the signup page
+2. User is redirected to Microsoft OAuth consent screen (scopes: openid, email, profile)
+3. User grants permission and completes Microsoft OAuth
+4. System receives authorization code and exchanges for tokens
+5. System extracts Microsoft user ID and email from ID token
+6. System checks if a user with this Microsoft ID already exists
+7. Since this is a new user, system creates a pending user record with `authProvider: 'microsoft'`
+8. User is redirected to the Minecraft username entry page (unskippable)
+9. User enters their Minecraft username (with Bedrock disclaimer displayed)
+10. User is redirected to the payment verification page (unskippable)
+11. User pays a random amount (1-1000) to the verification bot in-game within 15 minutes
+12. Verification bot detects the payment and reports it to the API
+13. System marks user as verified, issues session tokens
+14. User redirected to dashboard
+
+**Postcondition**: User account exists with Microsoft identity and verified Minecraft username
+
+#### UC-AUTH-02: New User Registration via Discord OAuth
+**Actor**: Guest
+**Precondition**: User has a Discord account
+**Flow**:
+1. User clicks "Sign up with Discord" on the signup page
+2. User is redirected to Discord OAuth consent screen (scopes: identify, email)
+3. User authorizes the DonutTrade application
+4. System exchanges code for access token and fetches Discord user info
+5. System checks if a user with this Discord ID already exists
+6. Since this is a new user, system creates a pending user record with `authProvider: 'discord'`
+7. User is redirected to the Minecraft username entry page (unskippable)
+8. User enters their Minecraft username (with Bedrock disclaimer displayed)
+9. User is redirected to the payment verification page (unskippable)
+10. User pays a random amount (1-1000) to the verification bot in-game within 15 minutes
+11. Verification bot detects the payment and reports it to the API
+12. System marks user as verified, issues session tokens
 13. User redirected to dashboard
 
-**Postcondition**: User account exists with verified Minecraft Java Edition identity
+**Postcondition**: User account exists with Discord identity and verified Minecraft username
 
-#### UC-AUTH-02: New User Registration (Bedrock Edition)
+#### UC-AUTH-03: New User Registration via Email/Password
 **Actor**: Guest
-**Precondition**: User has a Microsoft account with Minecraft Bedrock Edition (no Java)
 **Flow**:
-1. User clicks "Login with Microsoft" on landing page
-2. User completes Microsoft OAuth with Xbox Live scope consent
-3. Server completes token exchange chain (MS → XBL → XSTS → MC)
-4. Server calls Minecraft Profile API
-5. API returns 404 (user doesn't own Java Edition)
-6. Server retrieves Xbox Gamertag from Xbox Profile API
-7. System creates user account with:
-    - `minecraft_username`: "." + Xbox Gamertag (e.g., ".PlayerName")
-    - `minecraft_uuid`: Xbox User ID (XUID)
-    - `microsoft_id`: From Microsoft OAuth
-    - `edition`: "bedrock"
-8. System issues platform session tokens
-9. User redirected to dashboard
+1. User clicks "Sign up with Email" on the signup page
+2. User fills out the registration form: email, password, retype password, Minecraft username
+3. System validates form (password match, strength, email format, username format)
+4. System sends verification email with 6-digit code via Resend
+5. User is redirected to email verification page (unskippable)
+6. User enters the 6-digit code from their email
+7. System verifies the code
+8. User is redirected to the payment verification page (unskippable)
+9. User pays a random amount (1-1000) to the verification bot in-game within 15 minutes
+10. Verification bot detects the payment and reports it to the API
+11. System marks user as verified, issues session tokens
+12. User redirected to dashboard
 
-**Postcondition**: User account exists with verified Bedrock Edition identity (prefixed with `.`)
+**Postcondition**: User account exists with email identity and verified Minecraft username
 
-#### UC-AUTH-03: User Does Not Own Minecraft
-**Actor**: Guest
-**Precondition**: User has Microsoft account but no Minecraft ownership
+#### UC-AUTH-04: Minecraft Username Entry (Shared Step)
+**Actor**: New user (any auth method)
 **Flow**:
-1. User clicks "Login with Microsoft"
-2. User completes Microsoft OAuth with Xbox Live scope consent
-3. Server completes token exchange chain
-4. Server calls Minecraft Profile API → 404 NOT_FOUND
-5. Server calls Entitlements API → Empty items array
-6. System displays error: "No Minecraft account found. You must own Minecraft to use DonutTrade."
-7. User shown link to purchase Minecraft
+1. User reaches the username entry page after identity verification
+2. Page displays the Bedrock edition disclaimer prominently
+3. User enters their Minecraft username
+   - Java users enter username directly (e.g., "PlayerName")
+   - Bedrock users enter username with "." prefix (e.g., ".PlayerName")
+4. System validates username format and checks for uniqueness
+5. System saves the username and redirects to payment verification
 
-**Postcondition**: No account created; user informed of requirement
+**Postcondition**: Minecraft username associated with the user's account
 
-#### UC-AUTH-04: Returning User Login
+#### UC-AUTH-05: Payment Verification (Shared Step)
+**Actor**: New user (any auth method)
+**Flow**:
+1. User reaches the payment verification page
+2. System generates a random amount between 1 and 1000
+3. Page displays: "Pay $[amount] to [BotUsername] using: /pay [BotUsername] [amount]"
+4. A 15-minute countdown timer is displayed
+5. User logs into DonutSMP and sends the payment in-game
+6. Verification bot detects the matching payment
+7. System marks the user as verified and issues session tokens
+8. User is redirected to dashboard
+
+**Postcondition**: User has proven ownership of their Minecraft account
+
+#### UC-AUTH-06: Verification Timeout and Retry
+**Actor**: New user (any auth method)
+**Flow**:
+1. User reaches payment verification page but does not pay within 15 minutes
+2. System marks the verification as expired (soft delete)
+3. User sees "Verification expired" page with a "Try Again" button
+4. User clicks "Try Again"
+5. System generates a new random amount and resets the 15-minute timer
+6. User data (identity, username) is preserved — no need to re-enter
+7. User pays the new amount in-game
+
+**Postcondition**: User can retry verification without re-entering any information
+
+#### UC-AUTH-07: Returning User Login (Microsoft)
 **Actor**: Registered User
 **Flow**:
 1. User clicks "Login with Microsoft"
 2. User completes Microsoft OAuth (may be instant if session exists)
-3. Server completes token exchange chain
-4. Server retrieves Minecraft profile
-5. System matches Microsoft ID to existing account
-6. System updates stored tokens (refresh tokens)
-7. System verifies username hasn't changed (or updates if changed)
-8. System issues new platform session tokens
-9. User redirected to dashboard
+3. System matches Microsoft ID to existing verified account
+4. System issues new platform session tokens
+5. User redirected to dashboard
 
 **Postcondition**: User logged in with refreshed session
 
-#### UC-AUTH-05: Session Persistence
+#### UC-AUTH-08: Returning User Login (Discord)
 **Actor**: Registered User
 **Flow**:
-1. User logs in with "Remember me" option
-2. System stores Microsoft refresh token (encrypted) in database
-3. System issues platform refresh token (30 days) in HttpOnly cookie
-4. On return visits within 30 days:
+1. User clicks "Login with Discord"
+2. User completes Discord OAuth
+3. System matches Discord ID to existing verified account
+4. System issues new platform session tokens
+5. User redirected to dashboard
+
+**Postcondition**: User logged in with refreshed session
+
+#### UC-AUTH-09: Returning User Login (Email/Password)
+**Actor**: Registered User
+**Flow**:
+1. User enters email and password on login form
+2. System validates credentials (bcrypt compare)
+3. System issues new platform session tokens
+4. User redirected to dashboard
+
+**Postcondition**: User logged in
+
+#### UC-AUTH-10: Forgot Password
+**Actor**: Registered User (email auth only)
+**Flow**:
+1. User clicks "Forgot Password" on login page
+2. User enters email address
+3. System sends password reset email with one-time token
+4. User clicks link in email
+5. User enters new password (must meet requirements)
+6. System updates password hash
+7. User redirected to login page
+
+**Postcondition**: Password updated; user can log in with new password
+
+#### UC-AUTH-11: Session Persistence
+**Actor**: Registered User
+**Flow**:
+1. User logs in via any method
+2. System issues platform refresh token (30 days) in HttpOnly cookie
+3. On return visits within 30 days:
    - System refreshes platform access token automatically
-5. On platform refresh token expiry:
-   - System attempts to use stored Microsoft refresh token
-   - If valid: re-authenticate through Xbox/Minecraft chain silently
-   - If expired: user must re-authenticate with Microsoft
+4. On platform refresh token expiry:
+   - User must re-authenticate via their original auth method
 
 **Postcondition**: User remains logged in across browser sessions
-
-#### UC-AUTH-06: XSTS Authentication Error
-**Actor**: Guest
-**Precondition**: User has Microsoft account with Xbox Live issues
-**Flow**:
-1. User clicks "Login with Microsoft"
-2. User completes Microsoft OAuth
-3. Server attempts XSTS token exchange
-4. XSTS returns error code (XErr)
-5. System displays appropriate error message:
-   - XErr 2148916233: "No Xbox account found. Please create one at xbox.com"
-   - XErr 2148916238: "Child accounts must be added to a Family by an adult"
-   - XErr 2148916235: "Xbox Live is not available in your country"
-   - XErr 2148916227: "This Xbox account has been banned"
-6. User shown relevant help link
-
-**Postcondition**: No account created; user informed of issue
-
-#### UC-AUTH-07: Dual Edition User - Edition Choice
-**Actor**: Guest
-**Precondition**: User has a Microsoft account owning BOTH Minecraft Java Edition AND Bedrock Edition
-**Flow**:
-1. User clicks "Login with Microsoft" on landing page
-2. User completes Microsoft OAuth with Xbox Live scope consent
-3. Server completes token exchange chain (MS → XBL → XSTS → MC)
-4. Server calls Minecraft Profile API → Success (user owns Java Edition)
-5. Server retrieves Java username and UUID
-6. Server checks entitlements API for Bedrock Edition ownership
-7. Server detects user owns BOTH editions (has both `game_minecraft` and `game_minecraft_bedrock` entitlements)
-8. Server retrieves Xbox Gamertag from Xbox Profile API
-9. System creates user account with BOTH identities stored:
-    - `java_username`: Minecraft Java username (e.g., "PlayerName")
-    - `java_uuid`: Minecraft Java UUID
-    - `bedrock_username`: "." + Xbox Gamertag (e.g., ".GamerTag123")
-    - `bedrock_xuid`: Xbox User ID (XUID)
-    - `active_edition`: NULL (not yet chosen)
-    - `microsoft_id`: From Microsoft OAuth
-10. System redirects user to Edition Choice page (`/auth/choose-edition`)
-11. User sees uncancelable page displaying both identities:
-    - Java Edition identity: "PlayerName"
-    - Bedrock Edition identity: ".GamerTag123"
-12. User reads explanation of the choice and its implications
-13. User selects their preferred edition and confirms selection
-14. System updates user account:
-    - Sets `active_edition` to chosen edition ('java' or 'bedrock')
-    - Sets `minecraft_username` based on choice
-    - Sets `minecraft_uuid` based on choice (UUID for Java, XUID for Bedrock)
-15. System issues platform session tokens
-16. User redirected to dashboard
-
-**Postcondition**: User account exists with verified dual-edition ownership, one edition active for trading
-
-**Important Notes**:
-- The Edition Choice page is uncancelable - user cannot navigate away without making a selection
-- Once chosen, only an administrator can change the active edition
-- Both identities remain stored in the database for verification and potential future changes
-- Bedrock username is always prefixed with "." regardless of dual ownership
-
-#### UC-AUTH-08: Returning Dual Edition User Login
-**Actor**: Registered User (dual-edition owner)
-**Flow**:
-1. User clicks "Login with Microsoft"
-2. User completes Microsoft OAuth (may be instant if session exists)
-3. Server completes token exchange chain
-4. Server retrieves both Minecraft profile and Xbox Gamertag
-5. System matches Microsoft ID to existing account
-6. System updates stored tokens and verifies both identities still match
-7. If `active_edition` is set:
-   - System issues new platform session tokens
-   - User redirected to dashboard
-8. If `active_edition` is NULL (incomplete registration):
-   - User redirected to Edition Choice page to complete setup
-
-**Postcondition**: User logged in with refreshed session; or redirected to complete edition choice
 
 ### 3.2 Balance Deposit Use Cases
 
@@ -499,549 +493,203 @@ DonutTrade is a web-based trading platform that enables players of the DonutSMP 
 
 ## 4. Authentication System
 
-### 4.1 Prerequisites: Azure AD Application Setup
+> **NOTE (February 2026):** This section has been rewritten to reflect the new multi-method authentication system. The previous Microsoft → Xbox → XSTS → Minecraft API chain has been replaced with three simpler methods. See `docs/Auth-Migration-Changelog.md` for details on what changed and why. See `docs/Authentication-Methods-Guide.md` for the complete guide to each method.
+
+### 4.1 Authentication Overview
+
+DonutTrade supports three authentication methods. All converge into a shared flow: Minecraft username entry → in-game payment verification.
+
+```
+              ┌──────────────────────────────────────┐
+              │          3 SIGNUP METHODS             │
+              │                                       │
+              │  1. Microsoft OAuth (identity only)   │
+              │  2. Discord OAuth                     │
+              │  3. Email + Password                  │
+              └──────────┬───────────────────────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │  Enter Minecraft     │
+              │  Username            │
+              │  (Bedrock: add ".")  │
+              └──────────┬───────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │  Pay random amount   │
+              │  (1-1000) to bot     │
+              │  within 15 minutes   │
+              └──────────┬───────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │  Account Verified    │
+              │  → Dashboard         │
+              └──────────────────────┘
+```
+
+### 4.2 Prerequisites: Azure AD Application Setup
 
 Before implementing authentication, you must register an application in Azure Active Directory.
 
-#### 4.1.1 Azure AD App Registration
+#### 4.2.1 Azure AD App Registration (for Microsoft OAuth)
 
 1. Navigate to **Azure Portal** → **Microsoft Entra ID** → **App registrations** → **New registration**
 2. Configure the application:
-   - **Name**: `DonutTrade` (or your preferred name)
-   - **Supported account types**: Select **"Personal Microsoft accounts only"** (consumer accounts)
-   - **Redirect URI**:
-     - Platform: `Web`
-     - URL: `https://yourdomain.com/auth/microsoft/callback` (production)
-     - Add `http://localhost:3000/auth/microsoft/callback` for development
+   - **Name**: `DonutTrade`
+   - **Supported account types**: **"Personal Microsoft accounts only"**
+   - **Redirect URI**: `https://yourdomain.com/auth/microsoft/callback` (Web platform)
+3. Under **Certificates & secrets**: Create a **Client secret**
 
-3. After creation, note the **Application (client) ID** - this is your `CLIENT_ID`
-
-4. Under **Authentication** → **Advanced settings**:
-   - Set **"Allow public client flows"** to **Yes** (required for certain flows)
-
-5. Under **Certificates & secrets**:
-   - Create a new **Client secret**
-   - Note the secret value immediately (shown only once) - this is your `CLIENT_SECRET`
-
-#### 4.1.2 Minecraft API Permission (CRITICAL)
-
-**IMPORTANT**: Newly created Azure applications must apply for permission to use the Minecraft Services API. Without this approval, calls to `api.minecraftservices.com` will return **HTTP 403 Forbidden**.
-
-**Steps to request access:**
-1. Visit the Microsoft application permission request form (search for "Minecraft Services API permission request")
-2. Submit your Application (client) ID
-3. Wait for approval (can take several days to weeks)
-4. Test your application only after receiving confirmation
-
-#### 4.1.3 Required OAuth Scopes
+#### 4.2.2 Required OAuth Scopes
 
 | Scope | Required | Purpose |
 |-------|----------|---------|
-| `XboxLive.signin` | **Yes** | Authenticate with Xbox Live services |
-| `XboxLive.offline_access` | Recommended | Obtain refresh tokens for Xbox Live |
+| `openid` | **Yes** | OpenID Connect (sign users in) |
+| `email` | **Yes** | Access user's email address |
+| `profile` | **Yes** | Access user's basic profile |
 | `offline_access` | Recommended | Obtain Microsoft refresh tokens |
 
-**Scope string for authorization request:**
+**Scope string:**
 ```
-XboxLive.signin XboxLive.offline_access offline_access
+openid email profile offline_access
 ```
 
-#### 4.1.4 Environment Variables
+**Note:** `XboxLive.signin` is **NOT** used. Microsoft OAuth is identity-only — no Xbox Live or Minecraft API calls.
+
+#### 4.2.3 Discord Application Setup
+
+1. Navigate to **Discord Developer Portal** → **Applications** → **New Application**
+2. Under **OAuth2**: Add redirect URL `https://yourdomain.com/auth/discord/callback`
+3. Scopes: `identify`, `email`
+4. Copy Client ID and Client Secret
+
+#### 4.2.4 Email Service Setup (Resend)
+
+1. Create account at **resend.com**
+2. Obtain API key
+3. Verify sending domain (or use Resend's default for development)
+
+#### 4.2.5 Environment Variables
 
 ```env
-# Azure AD Application
-MICROSOFT_CLIENT_ID=your-application-client-id
-MICROSOFT_CLIENT_SECRET=your-client-secret
+# Microsoft OAuth
+MICROSOFT_CLIENT_ID=your-azure-app-client-id
+MICROSOFT_CLIENT_SECRET=your-azure-app-client-secret
 MICROSOFT_REDIRECT_URI=https://yourdomain.com/auth/microsoft/callback
 
-# For development
-MICROSOFT_REDIRECT_URI_DEV=http://localhost:3000/auth/microsoft/callback
+# Discord OAuth
+DISCORD_CLIENT_ID=your-discord-app-client-id
+DISCORD_CLIENT_SECRET=your-discord-app-client-secret
+DISCORD_REDIRECT_URI=https://yourdomain.com/auth/discord/callback
+DISCORD_BOT_TOKEN=your-discord-bot-token
+
+# Email Service (Resend)
+RESEND_API_KEY=your-resend-api-key
+EMAIL_FROM_ADDRESS=noreply@donuttrade.com
+
+# Verification Bot
+VERIFICATION_BOT_USERNAME=DonutTradeVerify
+VERIFICATION_WEBHOOK_SECRET=your-random-secret
+
+# JWT
+JWT_ACCESS_SECRET=your-64-char-hex-secret
+JWT_REFRESH_SECRET=your-64-char-hex-secret
 ```
 
-### 4.2 Authentication Flow Overview
+### 4.3 Authentication Methods
 
-The authentication process involves a **4-step token exchange chain**:
+#### 4.3.1 Method 1: Microsoft OAuth
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    Complete Authentication Chain                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Step 1              Step 2              Step 3              Step 4         │
-│  ┌─────────┐        ┌─────────┐        ┌─────────┐        ┌─────────────┐  │
-│  │Microsoft│   →    │Xbox Live│   →    │  XSTS   │   →    │  Minecraft  │  │
-│  │  OAuth  │        │  Auth   │        │  Token  │        │  Services   │  │
-│  └─────────┘        └─────────┘        └─────────┘        └─────────────┘  │
-│       │                  │                  │                    │          │
-│       ▼                  ▼                  ▼                    ▼          │
-│  MS Access Token    XBL Token          XSTS Token          MC Access Token │
-│  (+ Refresh Token)  (+ User Hash)      (+ User Hash)       (+ Profile)     │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+- Scopes: `openid email profile offline_access`
+- Extracts Microsoft user ID (`oid` claim) and email from ID token
+- No Xbox Live, XSTS, or Minecraft API calls
+- Existing user → log in; New user → redirect to username entry
 
-### 4.3 API Endpoints Reference
+#### 4.3.2 Method 2: Discord OAuth
+
+- Scopes: `identify email`
+- Fetches Discord user info from `/users/@me`
+- Extracts Discord user ID, username, email
+- Existing user → log in; New user → redirect to username entry
+
+#### 4.3.3 Method 3: Email + Password
+
+- User enters email, password, retype password, Minecraft username
+- Password hashed with bcrypt (12 rounds), must meet strength requirements
+- 6-digit verification code sent via Resend
+- After email verification → redirect to payment verification
+
+#### 4.3.4 Payment Verification (Shared Step)
+
+- Random amount 1-1000 generated
+- User must pay exact amount to verification bot on DonutSMP within 15 minutes
+- Verification bot (Mineflayer) detects payment and reports to API
+- On timeout: soft delete (mark expired, allow retry preserving all user data)
+
+### 4.4 External API Endpoints Reference
 
 #### Microsoft OAuth2 Endpoints
 | Endpoint | URL |
 |----------|-----|
 | Authorization | `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize` |
 | Token Exchange | `https://login.microsoftonline.com/consumers/oauth2/v2.0/token` |
-| Device Code (alternative) | `https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode` |
 
-**CRITICAL**: You **MUST** use the `/consumers` tenant. Using `/common` or a specific tenant ID will fail with the `XboxLive.signin` scope.
+**Note**: Must use `/consumers` tenant for personal Microsoft accounts.
 
-#### Xbox Live Endpoints
+#### Discord OAuth2 Endpoints
 | Endpoint | URL |
 |----------|-----|
-| Xbox Live Authentication | `https://user.auth.xboxlive.com/user/authenticate` |
-| XSTS Token Service | `https://xsts.auth.xboxlive.com/xsts/authorize` |
-
-#### Minecraft Services Endpoints
-| Endpoint | URL |
-|----------|-----|
-| Login with Xbox | `https://api.minecraftservices.com/authentication/login_with_xbox` |
-| Get Profile | `https://api.minecraftservices.com/minecraft/profile` |
-| Check Entitlements | `https://api.minecraftservices.com/entitlements/mcstore` |
-
-### 4.4 Detailed Authentication Steps
-
-#### Step 1: Microsoft OAuth2 Authorization
-
-**Authorization Request (redirect user to):**
-```
-GET https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize
-    ?client_id={CLIENT_ID}
-    &response_type=code
-    &redirect_uri={REDIRECT_URI}
-    &scope=XboxLive.signin%20XboxLive.offline_access%20offline_access
-    &state={RANDOM_STATE_VALUE}
-```
-
-**Token Exchange (after callback with code):**
-```http
-POST https://login.microsoftonline.com/consumers/oauth2/v2.0/token
-Content-Type: application/x-www-form-urlencoded
-
-client_id={CLIENT_ID}
-&client_secret={CLIENT_SECRET}
-&grant_type=authorization_code
-&code={AUTHORIZATION_CODE}
-&redirect_uri={REDIRECT_URI}
-```
-
-**Response:**
-```json
-{
-  "token_type": "Bearer",
-  "scope": "XboxLive.signin XboxLive.offline_access",
-  "expires_in": 3600,
-  "access_token": "EwAIA+pvBgAA...",
-  "refresh_token": "M.R3_BAY..."
-}
-```
-
-#### Step 2: Xbox Live Authentication
-
-**Request:**
-```http
-POST https://user.auth.xboxlive.com/user/authenticate
-Content-Type: application/json
-Accept: application/json
-
-{
-  "Properties": {
-    "AuthMethod": "RPS",
-    "SiteName": "user.auth.xboxlive.com",
-    "RpsTicket": "d={MICROSOFT_ACCESS_TOKEN}"
-  },
-  "RelyingParty": "http://auth.xboxlive.com",
-  "TokenType": "JWT"
-}
-```
-
-**IMPORTANT**: For custom Azure applications, prefix the Microsoft access token with `d=`.
-
-**Response:**
-```json
-{
-  "IssueInstant": "2026-01-18T14:30:00.000Z",
-  "NotAfter": "2026-02-01T14:30:00.000Z",
-  "Token": "eyJlbmMiOiJBMTI4Q0JD...",
-  "DisplayClaims": {
-    "xui": [{ "uhs": "2535428504324680" }]
-  }
-}
-```
-
-The `uhs` (user hash) is required for subsequent requests.
-
-#### Step 3: XSTS Token
-
-**Request:**
-```http
-POST https://xsts.auth.xboxlive.com/xsts/authorize
-Content-Type: application/json
-Accept: application/json
-
-{
-  "Properties": {
-    "SandboxId": "RETAIL",
-    "UserTokens": ["{XBL_TOKEN}"]
-  },
-  "RelyingParty": "rp://api.minecraftservices.com/",
-  "TokenType": "JWT"
-}
-```
-
-**Response:**
-```json
-{
-  "IssueInstant": "2026-01-18T14:30:00.000Z",
-  "NotAfter": "2026-01-19T06:30:00.000Z",
-  "Token": "eyJhbGciOiJIUzI1NiIs...",
-  "DisplayClaims": {
-    "xui": [{ "uhs": "2535428504324680" }]
-  }
-}
-```
-
-#### Step 4: Minecraft Services Authentication
-
-**Request:**
-```http
-POST https://api.minecraftservices.com/authentication/login_with_xbox
-Content-Type: application/json
-
-{
-  "identityToken": "XBL3.0 x={USER_HASH};{XSTS_TOKEN}",
-  "ensureLegacyEnabled": true
-}
-```
-
-**Response:**
-```json
-{
-  "username": "1234567890abcdef",
-  "roles": [],
-  "access_token": "eyJhbGciOiJSUzI1NiIs...",
-  "token_type": "Bearer",
-  "expires_in": 86400
-}
-```
-
-**Note**: The `username` field here is NOT the Minecraft username - it's an internal identifier.
-
-### 4.5 Retrieving Player Profile
-
-#### Java Edition Profile
-
-**Request:**
-```http
-GET https://api.minecraftservices.com/minecraft/profile
-Authorization: Bearer {MINECRAFT_ACCESS_TOKEN}
-```
-
-**Response (user owns Java Edition):**
-```json
-{
-  "id": "069a79f444e94726a5befca90e38aaf5",
-  "name": "Notch",
-  "skins": [
-    {
-      "id": "skin-id",
-      "state": "ACTIVE",
-      "url": "http://textures.minecraft.net/texture/...",
-      "variant": "CLASSIC"
-    }
-  ],
-  "capes": []
-}
-```
-
-| Field | Description |
-|-------|-------------|
-| `id` | Player's UUID (without hyphens) |
-| `name` | **Minecraft Java Edition username** |
-
-**Response (user does NOT own Minecraft):**
-```json
-{
-  "error": "NOT_FOUND",
-  "errorMessage": "The user doesn't have any Minecraft profile"
-}
-```
-
-#### Checking Game Ownership (Entitlements)
-
-**Request:**
-```http
-GET https://api.minecraftservices.com/entitlements/mcstore
-Authorization: Bearer {MINECRAFT_ACCESS_TOKEN}
-```
-
-**Response:**
-```json
-{
-  "items": [
-    {"name": "product_minecraft", "signature": "..."},
-    {"name": "game_minecraft", "signature": "..."}
-  ],
-  "signature": "...",
-  "keyId": "..."
-}
-```
-
-**Entitlement Names:**
-| Entitlement | Edition |
-|-------------|---------|
-| `product_minecraft`, `game_minecraft` | Java Edition |
-| `product_minecraft_bedrock`, `game_minecraft_bedrock` | Bedrock Edition |
-
-**Note**: Xbox Game Pass users may have an empty `items` array but still have a valid Minecraft profile.
-
-### 4.6 Bedrock Player Support
-
-Bedrock Edition players use their **Xbox Gamertag** as their username. These are prefixed with `.` (period) on DonutSMP to distinguish from Java Edition players.
-
-#### Retrieving Xbox Gamertag
-
-For Bedrock players, use the Xbox Profile API:
-
-**Request:**
-```http
-GET https://profile.xboxlive.com/users/me/profile/settings?settings=Gamertag
-Authorization: XBL3.0 x={USER_HASH};{XSTS_TOKEN}
-x-xbl-contract-version: 2
-```
-
-**Alternative**: Use a different `RelyingParty` when getting XSTS token for Bedrock:
-```json
-"RelyingParty": "https://pocket.realms.minecraft.net/"
-```
-
-#### Handling Both Editions
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                       User Edition Detection Flow                         │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  1. Complete authentication flow (Steps 1-4)                            │
-│                                                                          │
-│  2. Call GET /minecraft/profile                                         │
-│     ├── Success → User has Java Edition                                 │
-│     │   └── Store Java identity: username, uuid                         │
-│     │       └── Continue to step 3                                      │
-│     │                                                                    │
-│     └── 404 NOT_FOUND → User doesn't own Java Edition                  │
-│         └── Skip to step 4 (Bedrock-only path)                         │
-│                                                                          │
-│  3. Call GET /entitlements/mcstore                                      │
-│     ├── Has 'game_minecraft_bedrock' → DUAL OWNER (both editions)      │
-│     │   └── Continue to step 4 to retrieve Bedrock identity            │
-│     │                                                                    │
-│     └── No Bedrock entitlement → JAVA-ONLY OWNER                       │
-│         └── Store: minecraft_username = java_username                   │
-│                   minecraft_uuid = java_uuid                            │
-│                   active_edition = "java"                               │
-│                   → DONE (redirect to dashboard)                        │
-│                                                                          │
-│  4. Call Xbox Profile API for Gamertag                                  │
-│     └── Store Bedrock identity: "." + gamertag, xuid                   │
-│                                                                          │
-│  5. Determine user path:                                                │
-│     ├── DUAL OWNER (from step 3):                                      │
-│     │   └── Store BOTH identities, active_edition = NULL               │
-│     │       → Redirect to Edition Choice page (/auth/choose-edition)   │
-│     │                                                                    │
-│     └── BEDROCK-ONLY (from step 2 failure):                            │
-│         └── Store: minecraft_username = "." + gamertag                 │
-│                   minecraft_uuid = xuid                                 │
-│                   active_edition = "bedrock"                            │
-│                   → DONE (redirect to dashboard)                        │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-#### Edition Choice for Dual Owners
-
-When a user owns both Java and Bedrock editions, they must choose which identity to use on the platform. This choice is presented on an uncancelable page after initial authentication.
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      Dual Edition Choice Flow                             │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  1. User completes Microsoft/Xbox/Minecraft auth                        │
-│  2. System detects dual ownership via entitlements API                  │
-│  3. System stores BOTH identities in users table                        │
-│  4. System redirects to /auth/choose-edition                            │
-│  5. User sees Edition Choice page (uncancelable - no back/skip option)  │
-│  6. User selects preferred edition and confirms                         │
-│  7. System sets active_edition and populates minecraft_username/uuid    │
-│  8. System issues JWT and redirects to dashboard                        │
-│                                                                          │
-│  Note: After initial choice, only admins can change the active edition  │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-#### Returning Dual-Owner Login
-
-When a dual-owner returns to the platform:
-1. Complete authentication flow
-2. Match Microsoft ID to existing account
-3. Verify both identities still match (usernames may have changed)
-4. Update stored tokens
-5. If `active_edition` is set → issue session tokens, redirect to dashboard
-6. If `active_edition` is NULL (incomplete registration) → redirect to Edition Choice page
-
-### 4.7 Token Lifetimes & Refresh Strategy
-
-| Token | Lifetime | Refresh Strategy |
-|-------|----------|------------------|
-| Microsoft Access Token | 60-90 minutes | Use refresh token |
-| Microsoft Refresh Token | Up to 90 days | Re-authenticate if expired |
-| Xbox Live (XBL) Token | ~14 days | Re-exchange from MS token |
-| XSTS Token | ~16 hours | Re-exchange from XBL token |
-| Minecraft Access Token | 24 hours | Re-exchange from XSTS token |
-
-**Refresh Microsoft Token:**
-```http
-POST https://login.microsoftonline.com/consumers/oauth2/v2.0/token
-Content-Type: application/x-www-form-urlencoded
-
-client_id={CLIENT_ID}
-&client_secret={CLIENT_SECRET}
-&grant_type=refresh_token
-&refresh_token={REFRESH_TOKEN}
-&scope=XboxLive.signin XboxLive.offline_access offline_access
-```
-
-**Recommended Strategy:**
-1. Store Microsoft refresh token securely in database (encrypted)
-2. On each user session, check if Minecraft token is valid
-3. If expired, re-run Steps 2-4 using stored Xbox tokens or refresh Microsoft token
-4. Refresh Microsoft token proactively before 90-day expiry
-
-### 4.8 Error Handling
-
-#### XSTS Error Codes (XErr)
-
-| XErr Code | Meaning | User Action Required |
-|-----------|---------|---------------------|
-| 2148916227 | Account banned from Xbox Live | Account is permanently banned - cannot use platform |
-| 2148916229 | Account requires adult verification | User must verify age at account.xbox.com |
-| 2148916233 | No Xbox account exists | User must create Xbox account at xbox.com/create |
-| 2148916235 | Xbox Live unavailable in user's country | Geographic restriction - cannot use platform |
-| 2148916238 | Child account (under 18) | Account must be added to a Family by an adult |
-
-#### HTTP Error Codes
-
-| Code | Meaning | Action |
-|------|---------|--------|
-| 401 | Missing or invalid token | Re-authenticate |
-| 403 | App not authorized for Minecraft API | Ensure API permission approved |
-| 404 | Profile not found | User doesn't own Minecraft |
-| 429 | Rate limited | Implement backoff, retry later |
-
-### 4.9 Rate Limits
-
-| API | Rate Limit |
-|-----|------------|
-| Minecraft Services API | 600 requests per 10 minutes |
-| Profile queries | ~200 requests per minute |
-| Same profile query | Cache for at least 60 seconds |
-
-### 4.10 Platform Session Management
-
-After successful Minecraft authentication, the platform issues its own session tokens:
-
-| Token Type | Lifetime | Storage | Purpose |
-|------------|----------|---------|---------|
-| Platform Access Token | 15 minutes | Memory/localStorage | API authentication |
-| Platform Refresh Token | 30 days | HttpOnly Cookie | Session renewal |
-| CSRF Token | Per request | Cookie + Header | Request validation |
-
-**Session Flow:**
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Session Management                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. User completes Microsoft/Xbox/Minecraft auth                │
-│  2. Platform creates/updates user record with:                  │
-│     - minecraft_username                                        │
-│     - minecraft_uuid                                            │
-│     - microsoft_id                                              │
-│     - Encrypted Microsoft refresh token                         │
-│  3. Platform issues JWT access token (15 min)                   │
-│  4. Platform issues refresh token in HttpOnly cookie (30 days)  │
-│  5. Client includes access token in Authorization header        │
-│  6. On access token expiry, client calls /auth/refresh          │
-│  7. On refresh token expiry, user must re-authenticate          │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### 4.11 Complete Authentication Sequence Diagram
-
-```
-┌────────┐     ┌────────┐     ┌──────────┐     ┌────────┐     ┌──────┐     ┌──────────┐
-│ User   │     │Platform│     │Microsoft │     │Xbox Live│    │ XSTS │     │Minecraft │
-│Browser │     │ Server │     │  OAuth   │     │  Auth   │    │      │     │ Services │
-└───┬────┘     └───┬────┘     └────┬─────┘     └────┬────┘    └──┬───┘     └────┬─────┘
-    │              │               │                │            │              │
-    │ Click Login  │               │                │            │              │
-    │─────────────>│               │                │            │              │
-    │              │               │                │            │              │
-    │   Redirect   │               │                │            │              │
-    │<─────────────│               │                │            │              │
-    │              │               │                │            │              │
-    │         Authorize            │                │            │              │
-    │─────────────────────────────>│                │            │              │
-    │              │               │                │            │              │
-    │      Auth Code Callback      │                │            │              │
-    │<─────────────────────────────│                │            │              │
-    │              │               │                │            │              │
-    │  Code        │               │                │            │              │
-    │─────────────>│               │                │            │              │
-    │              │               │                │            │              │
-    │              │ Exchange Code │                │            │              │
-    │              │──────────────>│                │            │              │
-    │              │               │                │            │              │
-    │              │  MS Tokens    │                │            │              │
-    │              │<──────────────│                │            │              │
-    │              │               │                │            │              │
-    │              │          XBL Auth              │            │              │
-    │              │───────────────────────────────>│            │              │
-    │              │               │                │            │              │
-    │              │          XBL Token             │            │              │
-    │              │<───────────────────────────────│            │              │
-    │              │               │                │            │              │
-    │              │                    XSTS Auth                │              │
-    │              │────────────────────────────────────────────>│              │
-    │              │               │                │            │              │
-    │              │                    XSTS Token               │              │
-    │              │<────────────────────────────────────────────│              │
-    │              │               │                │            │              │
-    │              │                           MC Login                         │
-    │              │───────────────────────────────────────────────────────────>│
-    │              │               │                │            │              │
-    │              │                           MC Token                         │
-    │              │<───────────────────────────────────────────────────────────│
-    │              │               │                │            │              │
-    │              │                          Get Profile                       │
-    │              │───────────────────────────────────────────────────────────>│
-    │              │               │                │            │              │
-    │              │                      Username + UUID                       │
-    │              │<───────────────────────────────────────────────────────────│
-    │              │               │                │            │              │
-    │ Platform JWT │               │                │            │              │
-    │<─────────────│               │                │            │              │
-    │              │               │                │            │              │
-```
+| Authorization | `https://discord.com/oauth2/authorize` |
+| Token Exchange | `https://discord.com/api/oauth2/token` |
+| User Info | `https://discord.com/api/users/@me` |
+
+### 4.5 Platform Auth API Endpoints
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/auth/microsoft` | GET | Initiate Microsoft OAuth flow |
+| `/auth/microsoft/callback` | GET | Handle Microsoft OAuth callback |
+| `/auth/discord` | GET | Initiate Discord OAuth flow |
+| `/auth/discord/callback` | GET | Handle Discord OAuth callback |
+| `/auth/email/register` | POST | Email + password registration |
+| `/auth/email/verify` | POST | Verify email with 6-digit code |
+| `/auth/email/login` | POST | Email + password login |
+| `/auth/email/forgot-password` | POST | Request password reset |
+| `/auth/email/reset-password` | POST | Reset password with token |
+| `/auth/set-username` | POST | Set Minecraft username (shared step) |
+| `/auth/verification/start` | POST | Start payment verification |
+| `/auth/verification/status` | GET | Check verification status |
+| `/auth/verification/retry` | POST | Retry expired verification |
+| `/auth/me` | GET | Current user profile (protected) |
+| `/auth/refresh` | POST | Refresh access token |
+| `/auth/logout` | POST | Logout current session |
+| `/auth/logout-all` | POST | Logout all sessions (protected) |
+| `/internal/verification/confirm` | POST | Bot reports payment (internal) |
+
+### 4.6 Bedrock Edition Disclaimer
+
+**IMPORTANT:** Everywhere on the platform where the user needs to enter their Minecraft username, there must be a disclaimer saying: If they have a Minecraft Bedrock Edition account, they should write their username with a dot (".") in front.
+
+**Example:** `.givey` — Bedrock Edition account; `givey` — Java Edition account
+
+### 4.7 Session Management
+
+- **Access Token**: JWT, 15-minute expiry, contains `sub`, `username`, `authProvider`
+- **Refresh Token**: 30-day expiry, stored as SHA-256 hash in database, HTTP-only cookie
+- Token rotation on refresh (old token invalidated)
+- Logout revokes session; logout-all revokes all user sessions
+
+### 4.8 Verification Bot
+
+A separate Mineflayer bot dedicated to payment verification:
+- Connects to DonutSMP server as a dedicated bot account
+- Listens for incoming `/pay` payments matching pending verifications
+- Reports successful verifications to the API via internal webhook
+- Auto-reconnects on disconnect
+
+> **Note:** Previous versions of this specification described a Xbox Live → XSTS → Minecraft API chain which is no longer used. See `docs/Auth-Migration-Changelog.md` for the full list of removed components.
 
 ---
 
@@ -1110,7 +758,8 @@ After successful Minecraft authentication, the platform issues its own session t
 - If logged in → Navigate to `/marketplace`
 - If not logged in → Show modal with options:
   - "Login with Microsoft"
-  - "Create Account"
+  - "Login with Discord"
+  - "Sign up with Email"
 
 #### 5.3.2 Dashboard (`/dashboard`)
 **Access**: Authenticated users only
@@ -1293,102 +942,181 @@ After successful Minecraft authentication, the platform issues its own session t
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### 5.3.7 Edition Choice Page (`/auth/choose-edition`)
-**Access**: Authenticated users with dual-edition ownership who haven't chosen an edition
-**Restrictions**: This page cannot be bypassed or cancelled - user must make a selection
+#### 5.3.7 Login / Register Page (`/auth/login`)
+**Access**: Unauthenticated users only
 
 **Layout**:
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                  │
-│                     Choose Your Edition                          │
-│                                                                  │
-│  You own both Minecraft Java Edition and Bedrock Edition.       │
-│  Please choose which identity you want to use for trading       │
-│  on DonutTrade.                                                 │
-│                                                                  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  ☕ JAVA EDITION                                           │  │
-│  │                                                            │  │
-│  │  Username: PlayerName                                     │  │
-│  │  UUID: 069a79f4-44e9-4726-a5be-fca90e38aaf5              │  │
-│  │                                                            │  │
-│  │  This is your Minecraft Java Edition identity.            │  │
-│  │                                                            │  │
-│  │                              [ Select Java Edition ]       │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│                           - OR -                                │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  🪨 BEDROCK EDITION                                        │  │
-│  │                                                            │  │
-│  │  Username: .GamerTag123                                   │  │
-│  │  Xbox Gamertag: GamerTag123                               │  │
-│  │                                                            │  │
-│  │  This is your Minecraft Bedrock Edition identity.         │  │
-│  │  The "." prefix identifies Bedrock players on DonutSMP.   │  │
-│  │                                                            │  │
-│  │                            [ Select Bedrock Edition ]      │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ⚠️ IMPORTANT: What does this choice mean?                      │
-│                                                                  │
-│  • This determines which Minecraft username is used for        │
-│    deposits, withdrawals, and trading on DonutTrade            │
-│                                                                  │
-│  • Deposits must come from the selected identity's username    │
-│                                                                  │
-│  • Withdrawals will be sent to the selected identity           │
-│                                                                  │
-│  • This choice can only be changed by contacting an admin      │
-│                                                                  │
-│  • Choose the edition you primarily play on DonutSMP           │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Behavior**:
-- Page displays after successful Microsoft authentication for dual-edition users
-- No "back" button, no "skip" option, no navigation menu displayed
-- Browser back button redirects back to this page if choice not made
-- Only the two selection buttons are actionable
-- On selection:
-  1. Confirmation modal appears (see below)
-  2. On confirm: API call to `POST /auth/choose-edition` with `{ edition: 'java' | 'bedrock' }`
-  3. On success: Redirect to dashboard with session tokens
-  4. On cancel: Return to selection screen
-
-**Confirmation Modal**:
-```
 ┌─────────────────────────────────────────────────────────────┐
-│                  Confirm Your Selection                      │
+│                                                              │
+│                    Welcome to DonutTrade                     │
+│                                                              │
+│         Choose how you'd like to sign in or register        │
+│                                                              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  You selected: Java Edition                                 │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  [ Sign in with Microsoft ]                          │   │
+│  └─────────────────────────────────────────────────────┘   │
 │                                                              │
-│  Your trading identity will be:                             │
-│  Username: PlayerName                                       │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  [ Sign in with Discord ]                            │   │
+│  └─────────────────────────────────────────────────────┘   │
 │                                                              │
-│  This choice can only be changed by contacting a platform   │
-│  administrator.                                              │
+│                        ── or ──                              │
 │                                                              │
-│  Are you sure you want to continue?                         │
+│  Email:     [ user@example.com     ]                        │
+│  Password:  [ ••••••••             ]                        │
 │                                                              │
-│              [ Cancel ]         [ Confirm Selection ]        │
+│  [ Log In ]                      [ Forgot Password? ]       │
+│                                                              │
+│  Don't have an account? [ Register with Email ]             │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Mobile Layout**:
-- Cards stack vertically
-- Full-width buttons
-- Important notice section remains visible (scrollable if needed)
-- Touch-friendly tap targets (min 44px)
+**Behavior**:
+- Microsoft/Discord buttons redirect to respective OAuth flows
+- Email/Password form validates locally before submitting
+- After successful login (any method), redirect based on account status:
+  - No username set → `/auth/set-username`
+  - Username set but not verified → `/auth/verify-payment`
+  - Fully verified → `/dashboard`
+
+#### 5.3.8 Email Registration Page (`/auth/register`)
+**Access**: Unauthenticated users only
+
+**Layout**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│                   Create Your Account                        │
+│                                                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Email:            [ user@example.com         ]             │
+│  Password:         [ ••••••••                 ]             │
+│  Confirm Password: [ ••••••••                 ]             │
+│                                                              │
+│  Password requirements:                                     │
+│  ✓ At least 8 characters                                   │
+│  ✓ At least one uppercase letter                           │
+│  ✓ At least one lowercase letter                           │
+│  ✓ At least one number                                     │
+│                                                              │
+│  [ Create Account ]                                         │
+│                                                              │
+│  Already have an account? [ Log In ]                        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**After submission**: Redirect to `/auth/verify-email`
+
+#### 5.3.9 Email Verification Page (`/auth/verify-email`)
+**Access**: Users with unverified email
+
+**Layout**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│                   Verify Your Email                          │
+│                                                              │
+│  We sent a 6-digit code to user@example.com                │
+│                                                              │
+│  ┌───┐ ┌───┐ ┌───┐ ┌───┐ ┌───┐ ┌───┐                     │
+│  │ _ │ │ _ │ │ _ │ │ _ │ │ _ │ │ _ │                     │
+│  └───┘ └───┘ └───┘ └───┘ └───┘ └───┘                     │
+│                                                              │
+│  [ Verify ]                                                 │
+│                                                              │
+│  Didn't receive it? [ Resend Code ]                        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 5.3.10 Set Username Page (`/auth/set-username`)
+**Access**: Authenticated users who haven't set a Minecraft username
+**Restrictions**: This page cannot be bypassed - user must enter username
+
+**Layout**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│               Enter Your Minecraft Username                  │
+│                                                              │
+│  This is the username you use on DonutSMP.                  │
+│                                                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Minecraft Username: [ PlayerName          ]                │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  BEDROCK PLAYERS:                                    │   │
+│  │  If you play Bedrock Edition, add a "." before your │   │
+│  │  name. Example: .givey                              │   │
+│  │                                                      │   │
+│  │  Java players enter their name as-is.               │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                              │
+│  [ Continue ]                                               │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Behavior**:
+- Username validation: 3-16 characters, alphanumeric + underscore (with optional `.` prefix for Bedrock)
+- No back/skip option - username is required to proceed
+- On submit: redirect to `/auth/verify-payment`
+
+#### 5.3.11 Payment Verification Page (`/auth/verify-payment`)
+**Access**: Authenticated users with username set but not yet verified
+**Restrictions**: Cannot be bypassed
+
+**Layout**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│              Verify Your Minecraft Account                   │
+│                                                              │
+│  To prove you own this Minecraft account, send a small     │
+│  payment to our verification bot in-game.                   │
+│                                                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Username: PlayerName                                       │
+│                                                              │
+│  Send exactly this amount to our bot:                       │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                                                      │   │
+│  │   /pay VerifyBot $347                               │   │
+│  │                                                      │   │
+│  │   [ Copy Command ]                                  │   │
+│  │                                                      │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Time remaining: 12:45                                      │
+│  ████████████░░░░░░░░░  (progress bar)                     │
+│                                                              │
+│  Waiting for payment...                                     │
+│                                                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Timed out or need a new amount? [ Retry Verification ]    │
+│  Wrong username? [ Change Username ]                        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Behavior**:
+- Random amount between 1-1000 generated server-side
+- 15-minute countdown timer
+- Page polls or uses WebSocket to check verification status
+- On success: animated checkmark, then redirect to `/dashboard`
+- On timeout: show "Verification expired" with retry button
+- Retry generates a new random amount and resets the timer
+- "Change Username" goes back to `/auth/set-username`
 
 ### 5.4 Mobile Responsiveness
 
@@ -1553,81 +1281,61 @@ Similar to item deposits but in reverse:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Edition Management (Dual Owners Only)**:
+**Verification Management**:
 
-For users who own both editions, admins can view both identities and change the active edition:
+Admins can view verification status and reset verification for users:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Edition Information                                         │
+│  Verification Information                                    │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  Owns Java Edition:     ✓ Yes                               │
-│  Owns Bedrock Edition:  ✓ Yes                               │
+│  Auth Provider:         Discord                             │
+│  Minecraft Username:    PlayerName                          │
+│  Verification Status:   Verified                            │
+│  Verified at:           2026-02-10 14:32                    │
 │                                                              │
-│  Active Edition:        Java Edition                        │
-│  Trading Username:      PlayerName                          │
-│                                                              │
-│  ─────────────────────────────────────────────────────────  │
-│                                                              │
-│  Java Identity:                                              │
-│    Username: PlayerName                                     │
-│    UUID: 069a79f4-44e9-4726-a5be-fca90e38aaf5              │
-│                                                              │
-│  Bedrock Identity:                                           │
-│    Username: .GamerTag123                                   │
-│    Gamertag: GamerTag123                                    │
-│    XUID: 2535428504324680                                   │
-│                                                              │
-│  Edition set: 2026-01-18 14:32 (by user)                   │
-│                                                              │
-│  [ Change Active Edition ]                                   │
+│  [ Reset Verification ]                                      │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Change Edition Modal**:
+**Reset Verification Modal**:
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Change Active Edition for Player123                         │
+│  Reset Verification for Player123                            │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  Current Active Edition: Java Edition                       │
-│  Current Trading Username: PlayerName                       │
+│  Current Username:    PlayerName                            │
+│  Verified at:         2026-02-10 14:32                      │
 │                                                              │
-│  New Active Edition:                                         │
-│  ○ Java Edition (PlayerName)                                │
-│  ● Bedrock Edition (.GamerTag123)                           │
+│  Reason for reset: [ User changed Minecraft username      ] │
+│                    (Required)                                │
 │                                                              │
-│  Reason for change: [ User requested switch to Bedrock    ] │
-│                     (Required)                               │
+│  This will require the user to re-enter their username     │
+│  and complete payment verification again.                   │
 │                                                              │
-│  ⚠️ Warning: This will change the user's trading identity.   │
-│  Pending deposits or withdrawals may need manual review.    │
-│                                                              │
-│              [ Cancel ]         [ Change Edition ]           │
+│              [ Cancel ]         [ Reset Verification ]       │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Admin API Endpoint**:
 ```
-PATCH /admin/users/:id/edition
-Body: { "edition": "java" | "bedrock", "reason": "User requested switch" }
-Requires Permission: users.change_edition
+POST /admin/users/:id/reset-verification
+Body: { "reason": "User changed Minecraft username" }
+Requires Permission: users.reset_verification
 ```
 
-**Audit Log Entry for Edition Change**:
+**Audit Log Entry for Verification Reset**:
 ```
-[2026-01-18 15:45:22] Admin1 (192.168.1.1)
-Action: user.edition_change
+[2026-02-10 15:45:22] Admin1 (192.168.1.1)
+Action: user.verification_reset
 Target: User abc123
 Details: {
-  previous_edition: "java",
-  new_edition: "bedrock",
   previous_username: "PlayerName",
-  new_username: ".GamerTag123",
-  reason: "User requested switch to Bedrock"
+  previous_status: "verified",
+  reason: "User changed Minecraft username"
 }
 ```
 
@@ -1681,7 +1389,7 @@ Details: {
 | users.view | ✓ | ✓ | ✓ |
 | users.edit | ✓ | ✓ | ✗ |
 | users.ban | ✓ | ✓ | ✗ |
-| users.change_edition | ✓ | ✗ | ✗ |
+| users.reset_verification | ✓ | ✗ | ✗ |
 | deposits.view | ✓ | ✓ | ✓ |
 | deposits.fulfill | ✓ | ✗ | ✓ |
 | withdrawals.view | ✓ | ✓ | ✓ |
@@ -1694,7 +1402,7 @@ Details: {
 - `users.view` - View user profiles
 - `users.edit` - Edit user details, adjust balances
 - `users.ban` - Ban/unban users
-- `users.change_edition` - Change active edition for dual-owner users
+- `users.reset_verification` - Reset payment verification for a user
 - `deposits.view` - View deposit requests
 - `deposits.fulfill` - Mark item deposits as fulfilled
 - `withdrawals.view` - View withdrawal requests
@@ -1764,57 +1472,52 @@ Details: { amount: 100000, user: "Player123", status: "completed" }
 ### 7.2 Table Definitions
 
 #### 7.2.1 users
-Primary user accounts linked to Minecraft identities.
+Primary user accounts with multi-method authentication support.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | UUID | PK, DEFAULT uuid_generate_v4() | Unique identifier |
-| minecraft_username | VARCHAR(32) | UNIQUE | Active MC username for trading (Bedrock prefixed with `.`); NULL if dual-owner hasn't chosen |
-| minecraft_uuid | VARCHAR(36) | UNIQUE | Active Minecraft UUID (Java) or XUID (Bedrock); NULL if dual-owner hasn't chosen |
-| active_edition | VARCHAR(10) | | 'java', 'bedrock', or NULL (not yet chosen for dual owners) |
-| java_username | VARCHAR(32) | | Java Edition username (stored for all Java/dual owners) |
-| java_uuid | VARCHAR(36) | | Java Edition UUID (stored for all Java/dual owners) |
-| bedrock_username | VARCHAR(32) | | Bedrock Edition username with "." prefix (stored for all Bedrock/dual owners) |
-| bedrock_xuid | VARCHAR(50) | | Xbox User ID for Bedrock (stored for all Bedrock/dual owners) |
-| owns_java | BOOLEAN | NOT NULL, DEFAULT false | Whether user owns Java Edition |
-| owns_bedrock | BOOLEAN | NOT NULL, DEFAULT false | Whether user owns Bedrock Edition |
-| microsoft_id | VARCHAR(255) | NOT NULL, UNIQUE | Microsoft OAuth subject ID |
-| email | VARCHAR(255) | | Microsoft email (optional) |
-| microsoft_refresh_token | TEXT | | Encrypted Microsoft refresh token for silent re-auth |
-| xbox_user_hash | VARCHAR(50) | | Xbox User Hash (uhs) for token refresh |
-| xbox_gamertag | VARCHAR(50) | | Xbox Gamertag (raw, without "." prefix) |
+| auth_provider | VARCHAR(20) | NOT NULL | 'microsoft', 'discord', or 'email' |
+| microsoft_id | VARCHAR(255) | UNIQUE | Microsoft OAuth subject ID (NULL if not Microsoft auth) |
+| discord_id | VARCHAR(255) | UNIQUE | Discord user ID (NULL if not Discord auth) |
+| discord_username | VARCHAR(100) | | Discord display name |
+| email | VARCHAR(255) | UNIQUE | User email address |
+| email_verified | BOOLEAN | NOT NULL, DEFAULT false | Whether email has been verified (email auth only) |
+| password_hash | VARCHAR(255) | | Bcrypt hash of password (email auth only) |
+| minecraft_username | VARCHAR(32) | UNIQUE | MC username for trading (Bedrock prefixed with `.`) |
+| verification_status | VARCHAR(20) | NOT NULL, DEFAULT 'pending' | 'pending', 'awaiting_payment', 'verified', 'expired' |
+| verification_amount | INTEGER | | Random amount (1-1000) for payment verification |
+| verification_expires_at | TIMESTAMP | | When verification attempt expires (15 min from creation) |
+| verified_at | TIMESTAMP | | When payment verification was completed |
 | balance | DECIMAL(20,2) | NOT NULL, DEFAULT 0.00 | Available balance |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Registration time |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Last update time |
 | last_login_at | TIMESTAMP | | Last successful login |
 | banned_at | TIMESTAMP | | Ban timestamp (NULL = not banned) |
 | ban_reason | TEXT | | Reason for ban |
-| edition_set_at | TIMESTAMP | | When active_edition was chosen/changed |
-| edition_set_by | UUID | FK → users.id | Admin who changed edition (NULL if user's initial choice) |
 
 **Indexes**:
 - `idx_users_minecraft_username` on `minecraft_username`
-- `idx_users_minecraft_uuid` on `minecraft_uuid`
-- `idx_users_microsoft_id` on `microsoft_id`
-- `idx_users_java_uuid` on `java_uuid` WHERE `java_uuid IS NOT NULL`
-- `idx_users_bedrock_xuid` on `bedrock_xuid` WHERE `bedrock_xuid IS NOT NULL`
+- `idx_users_microsoft_id` on `microsoft_id` WHERE `microsoft_id IS NOT NULL`
+- `idx_users_discord_id` on `discord_id` WHERE `discord_id IS NOT NULL`
+- `idx_users_email` on `email` WHERE `email IS NOT NULL`
+- `idx_users_verification_status` on `verification_status` WHERE `verification_status != 'verified'`
 
 **Constraints**:
-- CHECK: `active_edition IN ('java', 'bedrock') OR active_edition IS NULL`
-- CHECK: `(owns_java = true) OR (owns_bedrock = true)` -- must own at least one edition
-- CHECK: If `active_edition = 'java'` then `owns_java = true`
-- CHECK: If `active_edition = 'bedrock'` then `owns_bedrock = true`
+- CHECK: `auth_provider IN ('microsoft', 'discord', 'email')`
+- CHECK: `verification_status IN ('pending', 'awaiting_payment', 'verified', 'expired')`
+- CHECK: At least one provider ID is set based on `auth_provider`
+- CHECK: `password_hash IS NOT NULL` when `auth_provider = 'email'`
 
 **Notes**:
-- `minecraft_username` and `minecraft_uuid` are the ACTIVE identity used for trading
-- For dual owners, these are populated from `java_*` or `bedrock_*` fields based on `active_edition`
-- For single-edition users, `active_edition` is set immediately and only relevant identity fields are populated
-- `minecraft_username` for Bedrock-active users is prefixed with `.` (e.g., `.GamerTag123`)
-- `bedrock_username` is ALWAYS stored with `.` prefix for consistency
-- `active_edition` is NULL only for dual-owners who haven't completed the Edition Choice page
-- `edition_set_by` is NULL for the user's initial choice, set to admin's user_id if changed by admin
-- `microsoft_refresh_token` must be encrypted at rest (AES-256-GCM recommended)
-- `xbox_user_hash` cached for faster token refresh without full re-authentication
+- `auth_provider` records how the user initially signed up
+- `minecraft_username` is self-reported by the user, then verified via in-game payment
+- Bedrock players prefix their username with `.` (e.g., `.givey`)
+- `verification_amount` is randomly generated (1-1000) when user enters username
+- On verification timeout, status changes to `expired` but user data is preserved (soft delete)
+- Users can retry verification, which generates a new amount and resets the timer
+- `password_hash` uses bcrypt with 12 salt rounds (email auth only)
+- `email_verified` only applies to email auth; OAuth providers are trusted for email
 
 #### 7.2.2 roles
 Custom admin roles.
@@ -2075,7 +1778,7 @@ Audit log for all admin actions.
 - `idx_admin_logs_created_at` on `created_at DESC`
 
 #### 7.2.17 sessions
-User authentication sessions (platform-level, not Microsoft/Xbox tokens).
+User authentication sessions (platform-level).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
@@ -2157,53 +1860,63 @@ Authorization: Bearer <access_token>
 #### Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/auth/microsoft` | Initiate Microsoft OAuth (redirects to Microsoft login with Xbox Live scope) |
-| GET | `/auth/microsoft/callback` | OAuth callback - completes MS→XBL→XSTS→MC token chain |
-| GET | `/auth/me` | Get current user (includes minecraft_username, edition) |
+| GET | `/auth/microsoft` | Initiate Microsoft OAuth (redirects to Microsoft login) |
+| GET | `/auth/microsoft/callback` | Microsoft OAuth callback - exchanges code for identity |
+| GET | `/auth/discord` | Initiate Discord OAuth (redirects to Discord login) |
+| GET | `/auth/discord/callback` | Discord OAuth callback - exchanges code for identity |
+| POST | `/auth/email/register` | Register with email and password |
+| POST | `/auth/email/verify` | Verify email with 6-digit code |
+| POST | `/auth/email/resend-code` | Resend email verification code |
+| POST | `/auth/email/login` | Login with email and password |
+| POST | `/auth/email/forgot-password` | Request password reset email |
+| POST | `/auth/email/reset-password` | Reset password with token |
+| POST | `/auth/set-username` | Set Minecraft username (shared across all methods) |
+| GET | `/auth/verification-status` | Get current payment verification status |
+| POST | `/auth/retry-verification` | Generate new verification amount and reset timer |
+| GET | `/auth/me` | Get current user profile |
 | POST | `/auth/refresh` | Refresh platform access token |
-| POST | `/auth/logout` | Logout (clears session, optionally revokes tokens) |
-| GET | `/auth/edition-status` | Check if user needs to choose edition (for dual owners) |
-| POST | `/auth/choose-edition` | Set active edition for dual-owner (initial choice only) |
+| POST | `/auth/logout` | Logout current session |
+| POST | `/auth/logout-all` | Logout all sessions |
 
 **Authentication Flow Detail:**
 ```
 GET /auth/microsoft
   → Redirects to: https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize
-  → Scopes: XboxLive.signin XboxLive.offline_access offline_access
+  → Scopes: openid email profile offline_access
 
 GET /auth/microsoft/callback?code=...&state=...
-  → Server performs 4-step token exchange
-  → Creates/updates user with Minecraft profile
+  → Server exchanges code for ID token
+  → Extracts Microsoft user ID and email from ID token
+  → Creates/finds user record
   → Returns: { access_token, refresh_token (in cookie), user }
+
+GET /auth/discord
+  → Redirects to: https://discord.com/oauth2/authorize
+  → Scopes: identify email
+
+GET /auth/discord/callback?code=...&state=...
+  → Server exchanges code for access token
+  → Fetches Discord user info (id, username, email)
+  → Creates/finds user record
+  → Returns: { access_token, refresh_token (in cookie), user }
+
+POST /auth/email/register
+  Body: { "email": "...", "password": "..." }
+  → Creates user, sends 6-digit verification code via Resend
+  → Returns: { success: true, message: "Verification code sent" }
+
+POST /auth/set-username
+  Body: { "username": "PlayerName" }
+  → Validates username format (Bedrock prefix with "." if applicable)
+  → Generates random verification amount (1-1000)
+  → Sets 15-minute timer
+  → Returns: { success: true, verificationAmount: 347, expiresAt: "..." }
 
 GET /auth/me
   → Returns: {
-      id, minecraft_username, minecraft_uuid, active_edition,
-      owns_java, owns_bedrock, balance, created_at
+      id, minecraft_username, auth_provider,
+      verification_status, balance, created_at
     }
-
-GET /auth/edition-status
-  → For dual owners who haven't chosen: {
-      needs_choice: true,
-      java_identity: {
-        username: "PlayerName",
-        uuid: "069a79f444e94726a5befca90e38aaf5"
-      },
-      bedrock_identity: {
-        username: ".GamerTag123",
-        gamertag: "GamerTag123",
-        xuid: "2535428504324680"
-      }
-    }
-  → For users who have chosen or single-edition: {
-      needs_choice: false
-    }
-
-POST /auth/choose-edition
-  Body: { "edition": "java" | "bedrock" }
-  → Success: { success: true, access_token, user }
-  → Error (already chosen): { error: "EDITION_ALREADY_SET", message: "Contact an admin to change your edition" }
-  → Error (not dual owner): { error: "NOT_DUAL_OWNER", message: "Edition choice is only for users with both editions" }
 ```
 
 #### User
@@ -2282,19 +1995,25 @@ POST /auth/choose-edition
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌──────────────┐         ┌──────────────┐         ┌─────────┐ │
-│  │  Minecraft   │◄───────►│   Mineflayer │◄───────►│   Bot   │ │
-│  │   Server     │         │     Bot      │         │  Bridge │ │
+│  │  Minecraft   │◄───────►│  Trade Bot   │◄───────►│   Bot   │ │
+│  │   Server     │         │ (Mineflayer) │         │  Bridge │ │
 │  └──────────────┘         └──────────────┘         └────┬────┘ │
-│                                  │                      │      │
-│                                  │ logs/                │      │
-│                                  ▼                      │      │
-│                           ┌──────────────┐              │      │
-│                           │payments-in.log│─────────────┘      │
-│                           └──────────────┘                     │
-│                                                                 │
+│         ▲                        │                      │      │
+│         │                        │ logs/                │      │
+│         │                        ▼                      │      │
+│         │                 ┌──────────────┐              │      │
+│         │                 │payments-in.log│─────────────┘      │
+│         │                 └──────────────┘                     │
+│         │                                                       │
+│  ┌──────┴───────┐                                              │
+│  │ Verification │──────── POST /internal/verification/confirm  │
+│  │ Bot          │         (webhook to API)                     │
+│  │ (Mineflayer) │                                              │
+│  └──────────────┘                                              │
+│                                                                  │
 │  ┌──────────────┐         ┌──────────────┐         ┌─────────┐ │
-│  │   Next.js    │◄───────►│   Express    │◄───────►│ PostgreSQL│
-│  │   Frontend   │         │     API      │         │    DB    │ │
+│  │   Next.js    │◄───────►│  Fastify     │◄───────►│PostgreSQL│ │
+│  │   Frontend   │         │     API      │         │    DB   │ │
 │  └──────────────┘         └──────────────┘         └─────────┘ │
 │                                  │                             │
 │                                  │                             │
@@ -2336,7 +2055,33 @@ POST /auth/choose-edition
 10. Admin confirms completion
 11. API updates status to "completed", notifies user
 
-### 9.4 Bot Bridge Service
+### 9.4 Verification Bot
+
+Location: `packages/verification-bot/`
+
+A separate Mineflayer bot dedicated to payment verification during user registration.
+
+**Purpose**: Listens for incoming `/pay` commands from users proving Minecraft account ownership.
+
+**Flow**:
+1. User enters Minecraft username on the platform
+2. API generates random amount (1-1000) and starts 15-minute timer
+3. User sends `/pay VerificationBot <amount>` in Minecraft
+4. Verification bot detects matching payment (username + exact amount)
+5. Bot calls `POST /internal/verification/confirm` with `{ username, amount, secret }`
+6. API marks user as verified, issues full session tokens
+
+**Components**:
+- `src/bot.ts` - Mineflayer connection, chat listener, payment parser
+- `src/api-client.ts` - HTTP client for internal webhook calls
+- `src/config.ts` - Bot configuration (server, credentials, API URL)
+
+**Security**:
+- Internal webhook authenticated with shared secret (`VERIFICATION_BOT_SECRET`)
+- Bot runs on same network as API (not exposed externally)
+- Amount matching is exact (no rounding tolerance)
+
+### 9.5 Bot Bridge Service
 
 Location: `packages/bot-bridge/`
 
@@ -2366,10 +2111,11 @@ Location: `packages/bot-bridge/`
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
-| OAuth Library | @fastify/oauth2 | Native Fastify integration for Microsoft OAuth |
-| HTTP Client | undici or axios | For Xbox Live and Minecraft Services API calls |
+| OAuth Library | @fastify/oauth2 | Native Fastify integration for Microsoft & Discord OAuth |
+| HTTP Client | undici | For Discord API calls |
 | JWT | @fastify/jwt | Platform session token generation/validation |
-| Encryption | Node.js crypto | AES-256-GCM for encrypting refresh tokens |
+| Password Hashing | bcrypt | Industry standard, 12 salt rounds |
+| Email Service | Resend | Developer-friendly API, generous free tier |
 | Session Cookies | @fastify/cookie | HttpOnly, Secure, SameSite cookie handling |
 | CSRF Protection | @fastify/csrf-protection | Double-submit cookie pattern |
 
@@ -2381,6 +2127,8 @@ Location: `packages/bot-bridge/`
     "@fastify/jwt": "^8.x",
     "@fastify/cookie": "^9.x",
     "@fastify/csrf-protection": "^6.x",
+    "bcrypt": "^5.x",
+    "resend": "^3.x",
     "undici": "^6.x"
   }
 }
@@ -2388,17 +2136,28 @@ Location: `packages/bot-bridge/`
 
 **Environment Variables for Auth:**
 ```env
-# Azure AD Application (from Prerequisites)
+# Azure AD Application
 MICROSOFT_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 MICROSOFT_CLIENT_SECRET=your-client-secret-here
 MICROSOFT_REDIRECT_URI=https://yourdomain.com/auth/microsoft/callback
+
+# Discord Application
+DISCORD_CLIENT_ID=your-discord-client-id
+DISCORD_CLIENT_SECRET=your-discord-client-secret
+DISCORD_REDIRECT_URI=https://yourdomain.com/auth/discord/callback
+DISCORD_BOT_TOKEN=your-discord-bot-token
+
+# Email Service (Resend)
+RESEND_API_KEY=re_xxxxxxxxxxxx
+EMAIL_FROM_ADDRESS=noreply@yourdomain.com
 
 # Platform JWT Secrets
 JWT_ACCESS_SECRET=random-32-byte-hex-string
 JWT_REFRESH_SECRET=different-random-32-byte-hex-string
 
-# Encryption Key for Microsoft Refresh Tokens
-TOKEN_ENCRYPTION_KEY=32-byte-hex-key-for-aes-256-gcm
+# Verification Bot
+VERIFICATION_BOT_SECRET=shared-secret-for-internal-webhook
+VERIFICATION_BOT_USERNAME=VerifyBot
 ```
 
 ### 10.2 Frontend
@@ -2442,9 +2201,15 @@ miau/
 │   ├── shared/               # Shared types, utilities
 │   │   ├── types/
 │   │   └── utils/
-│   └── bot-bridge/           # Bot integration layer
-│       ├── payment-watcher.js
-│       └── command-queue.js
+│   ├── bot-bridge/           # Bot integration layer
+│   │   ├── payment-watcher.js
+│   │   └── command-queue.js
+│   └── verification-bot/    # Payment verification bot
+│       ├── src/
+│       │   ├── bot.ts
+│       │   ├── api-client.ts
+│       │   └── config.ts
+│       └── package.json
 ├── prisma/
 │   └── schema.prisma
 ├── config/
@@ -2458,32 +2223,44 @@ miau/
 
 ### 11.1 Authentication Security
 
-#### 11.1.1 OAuth & Token Chain Security
+#### 11.1.1 OAuth Security
 - **Microsoft OAuth 2.0**: Authorization code flow with `state` parameter for CSRF protection
-- **Tenant restriction**: Only `/consumers` tenant accepted (blocks organization accounts)
-- **Scope limitation**: Only request necessary scopes (`XboxLive.signin`, `XboxLive.offline_access`)
-- **Token validation**: Verify all tokens before use; validate expiration times
-- **Error handling**: Handle XSTS errors gracefully without exposing internal details
+- **Discord OAuth 2.0**: Authorization code flow with `state` parameter for CSRF protection
+- **Tenant restriction**: Only `/consumers` tenant accepted for Microsoft (blocks organization accounts)
+- **Scope limitation**: Only request necessary scopes (`openid email profile` for Microsoft, `identify email` for Discord)
+- **Token validation**: Verify all tokens and state parameters before use
 
-#### 11.1.2 Token Storage & Encryption
-- **Microsoft refresh tokens**: Encrypted with AES-256-GCM before database storage
-- **Encryption key management**: Store `TOKEN_ENCRYPTION_KEY` in environment variables, never in code
+#### 11.1.2 Password Security (Email Auth)
+- **Hashing**: bcrypt with 12 salt rounds (no plaintext storage)
+- **Requirements**: Minimum 8 characters, mixed case + number
+- **Rate limiting**: Limit login attempts per IP and per email to prevent brute force
+- **Reset flow**: Time-limited reset tokens sent via email, single-use
+
+#### 11.1.3 Email Verification
+- **6-digit codes**: Randomly generated, valid for 15 minutes
+- **Rate limiting**: Maximum 3 resend attempts per 15-minute window
+- **Code expiry**: Codes expire and cannot be reused
+
+#### 11.1.4 Token Storage
 - **Platform refresh tokens**: Stored as SHA-256 hashes, never plaintext
 - **Access tokens**: Short-lived (15 minutes), stored in memory only
-- **Key rotation**: Implement key rotation strategy for encryption keys
+- **Passwords**: bcrypt hashed, never stored or logged in plaintext
 
-#### 11.1.3 Session Security
+#### 11.1.5 Session Security
 - **HttpOnly cookies**: Refresh tokens in HttpOnly, Secure, SameSite=Strict cookies
 - **CSRF protection**: Double-submit cookie pattern for state-changing requests
 - **Session binding**: Bind sessions to user agent and IP (warn on change, don't block)
 - **Concurrent sessions**: Allow multiple sessions per user with session management UI
-- **Session invalidation**: On password change (if applicable), security concern, or user logout
+- **Session invalidation**: On password change, security concern, or user logout
+- **Token rotation**: Old refresh token invalidated when new one is issued
 
-#### 11.1.4 Identity Verification
-- **No manual username entry**: Minecraft username retrieved directly from Minecraft Services API
-- **UUID verification**: Store and verify Minecraft UUID, not just username (usernames can change)
-- **Edition detection**: Properly distinguish Java (UUID) vs Bedrock (XUID) players
-- **Profile refresh**: Periodically refresh Minecraft profile to detect username changes
+#### 11.1.6 Payment Verification Security
+- **Random amounts**: Verification amounts (1-1000) generated server-side using crypto-secure randomness
+- **Time-limited**: 15-minute window prevents stale verifications
+- **Exact matching**: Amount must match exactly (no rounding tolerance)
+- **Internal webhook**: Verification bot communicates via authenticated internal endpoint
+- **Soft delete**: Expired verifications preserve user data but require new amount on retry
+- **Username uniqueness**: Only one user can claim a given Minecraft username
 
 ### 11.2 Financial Security
 - All balance operations use database transactions
@@ -2514,12 +2291,14 @@ miau/
 - Database connection encryption
 
 ### 11.6 Fraud Prevention
-- Microsoft OAuth prevents impersonation
+- OAuth providers (Microsoft, Discord) prevent impersonation at the account level
+- Payment verification proves Minecraft account ownership
 - Manual admin fulfillment reduces automated fraud
 - Transaction monitoring for suspicious patterns
 - Ban system for bad actors
 - IP logging for admin actions
 - Cooling-off period for new accounts (optional)
+- Email verification prevents throwaway account abuse (email auth)
 
 ---
 
@@ -2527,28 +2306,23 @@ miau/
 
 | Term | Definition |
 |------|------------|
+| **Auth Provider** | The method used to sign up: Microsoft OAuth, Discord OAuth, or Email/Password |
 | **Balance** | User's available money on the platform |
-| **Bot** | The Mineflayer bot that listens to Minecraft chat |
-| **Bridge** | Service connecting the bot to the web application |
+| **Bedrock Prefix** | The `.` character prepended to Bedrock Edition usernames (e.g., `.givey`) |
+| **Bot** | A Mineflayer bot that connects to the Minecraft server |
+| **Bridge** | Service connecting the trade bot to the web application |
 | **Catalog** | Admin-configurable list of tradeable items |
 | **Commission** | Percentage fee taken from marketplace sales |
 | **Deposit** | Adding money or items to the platform |
-| **Dual Owner** | A user who owns both Minecraft Java Edition and Bedrock Edition |
 | **Fulfillment** | Admin process of completing deposit/withdrawal in-game |
 | **Inventory** | User's items available for trading on the platform |
 | **Listing** | An item put up for sale on the marketplace |
 | **Marketplace** | Where users buy and sell items |
+| **Payment Verification** | Process where users send a random amount to the verification bot to prove Minecraft account ownership |
 | **Premium Listing** | 48-hour listing with extended duration |
-| **UUID** | Minecraft's unique identifier for players (Java Edition) |
+| **Trade Bot** | The main Mineflayer bot that handles deposits and withdrawals |
+| **Verification Bot** | A separate Mineflayer bot dedicated to verifying Minecraft account ownership via payments |
 | **Withdrawal** | Removing money or items from the platform to in-game |
-| **XBL Token** | Xbox Live authentication token, obtained from Microsoft access token |
-| **XSTS Token** | Xbox Security Token Service token, used to authenticate with Minecraft Services |
-| **XUID** | Xbox User ID, unique identifier for Xbox/Bedrock Edition players |
-| **User Hash (uhs)** | Xbox user hash included in XBL/XSTS tokens, required for Minecraft authentication |
-| **Gamertag** | Xbox username, used as Minecraft username for Bedrock Edition players |
-| **Edition** | Whether a user plays Java Edition or Bedrock Edition of Minecraft |
-| **Edition Choice** | The mandatory selection page shown to dual owners to choose their trading identity |
-| **Relying Party** | The service that will accept the XSTS token (e.g., `rp://api.minecraftservices.com/`) |
 
 ---
 
@@ -2559,6 +2333,7 @@ miau/
 | 1.0 | 2026-01-18 | Claude | Initial specification |
 | 1.1 | 2026-01-23 | Claude | Complete authentication system overhaul: Microsoft → Xbox Live → XSTS → Minecraft Services API chain; Azure AD prerequisites; token storage schema; Bedrock/Java edition handling |
 | 1.2 | 2026-01-24 | Claude | Added dual-edition user support: UC-AUTH-07/08 for edition choice flow; Edition Choice page UI specification; expanded users table schema with dual-identity columns; admin edition management; users.change_edition permission |
+| 2.0 | 2026-02 | Claude | Complete auth system overhaul: replaced Xbox Live/XSTS/Minecraft API chain with 3-method auth (Microsoft OAuth identity-only, Discord OAuth, Email/Password); added payment verification system; added verification bot; updated users table schema; updated UI pages for new auth flow; updated API endpoints; updated security considerations |
 
 ---
 
