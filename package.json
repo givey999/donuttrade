@@ -1,21 +1,27 @@
 {
   "name": "miau",
   "version": "1.0.0",
-  "description": "Minecraft chat listener module with 24/7 operation support",
-  "main": "src/index.js",
-  "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
-  },
-  "keywords": [
-    "minecraft",
-    "mineflayer",
-    "chat",
-    "bot"
+  "description": "DonutTrade Platform - Minecraft trading escrow service",
+  "private": true,
+  "workspaces": [
+    "packages/*"
   ],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "mineflayer": "^4.33.0"
-  }
+  "scripts": {
+    "dev": "pnpm --filter @donuttrade/api dev",
+    "build": "pnpm --filter @donuttrade/shared build && pnpm --filter @donuttrade/api build",
+    "test": "pnpm --filter @donuttrade/api test",
+    "lint": "pnpm --filter @donuttrade/api lint",
+    "clean": "pnpm --filter @donuttrade/api clean",
+    "db:migrate": "npm run migrate --workspace=@donuttrade/api",
+    "db:studio": "npm run db:studio --workspace=@donuttrade/api",
+    "bot:start": "node src/index.js",
+    "bot:dev": "node --watch src/index.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
 }

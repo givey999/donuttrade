@@ -1,0 +1,193 @@
+import { AuthProvider, VerificationStatus } from './auth.js';
+
+/**
+ * Log level enumeration for structured logging
+ */
+export enum LogLevel {
+  TRACE = 'trace',
+  DEBUG = 'debug',
+  INFO = 'info',
+  WARN = 'warn',
+  ERROR = 'error',
+  FATAL = 'fatal',
+}
+
+/**
+ * Structured log entry format
+ * Every log entry MUST include these fields for consistent observability
+ */
+export interface LogEntry {
+  /** ISO 8601 timestamp */
+  timestamp: string;
+  /** Log severity level */
+  level: LogLevel;
+  /** Request-scoped unique ID for distributed tracing */
+  correlationId: string;
+  /** Service name: 'api', 'web', 'bot-bridge', 'worker' */
+  service: string;
+  /** Module within the service: 'auth', 'marketplace', 'deposits' */
+  module: string;
+  /** Specific action: 'login', 'createListing', 'processPayment' */
+  action: string;
+  /** User ID when authenticated */
+  userId?: string;
+  /** Operation duration in milliseconds */
+  duration?: number;
+  /** Action-specific metadata */
+  metadata?: Record<string, unknown>;
+  /** Error details when applicable */
+  error?: LogError;
+}
+
+/**
+ * Error structure for logging
+ */
+export interface LogError {
+  name: string;
+  message: string;
+  stack?: string;
+  code?: string;
+}
+
+/**
+ * Base API response format
+ */
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: ApiError;
+  meta?: PaginationMeta;
+}
+
+/**
+ * API error format
+ */
+export interface ApiError {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+}
+
+/**
+ * Pagination metadata
+ */
+export interface PaginationMeta {
+  page: number;
+  perPage: number;
+  total: number;
+  totalPages: number;
+}
+
+/**
+ * Health check response
+ */
+export interface HealthCheckResponse {
+  status: 'ok' | 'degraded' | 'unhealthy';
+  timestamp: string;
+  version: string;
+  services: {
+    database: ServiceHealth;
+    redis: ServiceHealth;
+  };
+}
+
+/**
+ * Individual service health
+ */
+export interface ServiceHealth {
+  status: 'ok' | 'unhealthy';
+  latency?: number;
+  error?: string;
+}
+
+/**
+ * Request context passed through the application
+ */
+export interface RequestContext {
+  correlationId: string;
+  userId?: string;
+  userAgent?: string;
+  ipAddress?: string;
+  startTime: number;
+}
+
+// ============================================================================
+// USER TYPES (Phase 1)
+// ============================================================================
+
+/**
+ * Input for creating a new user
+ */
+export interface CreateUserInput {
+  authProvider: AuthProvider;
+  minecraftUsername?: string;
+
+  // Microsoft auth
+  microsoftId?: string;
+
+  // Discord auth
+  discordId?: string;
+  discordUsername?: string;
+
+  // Email auth
+  email?: string;
+  passwordHash?: string;
+}
+
+/**
+ * Input for updating a user
+ */
+export interface UpdateUserInput {
+  minecraftUsername?: string;
+  discordUsername?: string;
+  email?: string;
+  passwordHash?: string;
+  emailVerified?: boolean;
+  emailVerificationCode?: string | null;
+  emailVerificationExpiresAt?: Date | null;
+  verificationAmount?: number | null;
+  verificationExpiresAt?: Date | null;
+  verificationStatus?: VerificationStatus;
+  lastLoginAt?: Date;
+  bannedAt?: Date | null;
+  banReason?: string | null;
+}
+
+/**
+ * User profile returned by API
+ */
+export interface UserProfile {
+  id: string;
+  authProvider: AuthProvider;
+  minecraftUsername: string | null;
+  email: string | null;
+  discordUsername: string | null;
+  verificationStatus: VerificationStatus;
+  balance: string;  // Decimal as string
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
+/**
+ * Session creation input
+ */
+export interface CreateSessionInput {
+  userId: string;
+  refreshTokenHash: string;
+  userAgent?: string;
+  ipAddress?: string;
+  expiresAt: Date;
+}
+
+/**
+ * Auth state creation input
+ */
+export interface CreateAuthStateInput {
+  state: string;
+  authMethod: string;
+  redirectUrl?: string;
+  expiresAt: Date;
+}
+
+// Auth types (OAuth, Discord, Email)
+export * from './auth.js';

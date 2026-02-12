@@ -1,0 +1,13 @@
+{
+  "name": "miau-bot",
+  "version": "1.0.0",
+  "description": "Minecraft chat listener bot for DonutTrade",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "mineflayer": "^4.33.0"
+  }
+}

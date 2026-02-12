@@ -1,0 +1,11 @@
+{
+  "name": "@donuttrade/bot-bridge",
+  "version": "1.0.0",
+  "description": "Bot integration bridge for DonutTrade",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Bot bridge will be implemented in Phase 7'",
+    "build": "echo 'Bot bridge will be implemented in Phase 7'",
+    "start": "echo 'Bot bridge will be implemented in Phase 7'"
+  }
+}

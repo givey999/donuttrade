@@ -1,5 +1,42 @@
+# Dependencies
 node_modules/
+
+# Build output
+dist/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Bot configuration
 config/config.json
+
+# Logs
 logs/
 *.log
-.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+packages/api/prisma/migrations/*_migration.sql
+
+# Turbo
+.turbo/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.tsbuildinfo

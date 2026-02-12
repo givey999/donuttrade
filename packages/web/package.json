@@ -1,0 +1,11 @@
+{
+  "name": "@donuttrade/web",
+  "version": "1.0.0",
+  "description": "DonutTrade web frontend (Next.js)",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Web package will be implemented in Phase 6'",
+    "build": "echo 'Web package will be implemented in Phase 6'",
+    "start": "echo 'Web package will be implemented in Phase 6'"
+  }
+}

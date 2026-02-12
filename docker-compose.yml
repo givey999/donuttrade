@@ -1,0 +1,110 @@
+services:
+  # Caddy - HTTPS reverse proxy with automatic Let's Encrypt
+  caddy:
+    image: caddy:2-alpine
+    container_name: donuttrade-caddy
+    ports:
+      - "9443:9443"
+      - "80:80"  # Required for Let's Encrypt HTTP challenge
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # API Service
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    container_name: donuttrade-api
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=postgresql://dev:dev@postgres:5432/donuttrade
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: donuttrade-postgres
+    environment:
+      POSTGRES_DB: donuttrade
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d donuttrade"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache/Queue
+  redis:
+    image: redis:7-alpine
+    container_name: donuttrade-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Commander (optional - Redis GUI for development)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: donuttrade-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    profiles:
+      - debug
+    restart: unless-stopped
+
+  # pgAdmin (optional - PostgreSQL GUI for development)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: donuttrade-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@donuttrade.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8082:80"
+    depends_on:
+      - postgres
+    profiles:
+      - debug
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local

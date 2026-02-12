@@ -1,0 +1,97 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id                          String    @id @default(uuid())
+
+  // Authentication provider used for signup
+  authProvider                String    @map("auth_provider") // 'microsoft', 'discord', 'email'
+
+  // Minecraft identity (manually entered by user)
+  minecraftUsername            String?   @unique @map("minecraft_username")
+
+  // Microsoft OAuth identity (optional - only for Microsoft auth users)
+  microsoftId                 String?   @unique @map("microsoft_id")
+
+  // Discord OAuth identity (optional - only for Discord auth users)
+  discordId                   String?   @unique @map("discord_id")
+  discordUsername              String?   @map("discord_username")
+
+  // Email/Password identity (optional - only for email auth users)
+  email                       String?   @unique
+  passwordHash                String?   @map("password_hash")
+  emailVerified               Boolean   @default(false) @map("email_verified")
+  emailVerificationCode       String?   @map("email_verification_code")
+  emailVerificationExpiresAt  DateTime? @map("email_verification_expires_at")
+
+  // Payment verification
+  verificationAmount          Int?      @map("verification_amount")       // Random 1-1000
+  verificationExpiresAt       DateTime? @map("verification_expires_at")   // 15-minute deadline
+  verificationStatus          String    @default("pending") @map("verification_status") // 'pending', 'verified', 'expired'
+
+  // Account state
+  balance                     Decimal   @default(0) @db.Decimal(20, 2)
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  updatedAt                   DateTime  @updatedAt @map("updated_at")
+  lastLoginAt                 DateTime? @map("last_login_at")
+  bannedAt                    DateTime? @map("banned_at")
+  banReason                   String?   @map("ban_reason")
+
+  // Relations
+  sessions                    Session[]
+
+  @@index([discordId])
+  @@index([email])
+  @@index([verificationStatus])
+  @@map("users")
+}
+
+model Session {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String   @unique @map("refresh_token_hash")
+  userAgent        String?  @map("user_agent")
+  ipAddress        String?  @map("ip_address")
+  expiresAt        DateTime @map("expires_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  lastUsedAt       DateTime @default(now()) @map("last_used_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model AuthState {
+  state       String   @id
+  authMethod  String   @map("auth_method") // 'microsoft', 'discord'
+  redirectUrl String?  @map("redirect_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  expiresAt   DateTime @map("expires_at")
+
+  @@index([expiresAt])
+  @@map("auth_states")
+}
+
+// ============================================================================
+// HEALTH CHECK (from Phase 0)
+// ============================================================================
+
+model HealthCheck {
+  id        String   @id @default(uuid())
+  timestamp DateTime @default(now())
+  status    String
+
+  @@map("health_checks")
+}
