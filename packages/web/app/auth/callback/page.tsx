@@ -28,7 +28,7 @@ function CallbackContent() {
     return (
       <div className="rounded-xl border border-green-900/50 bg-green-950/20 p-6 text-center">
         <h2 className="text-lg font-semibold text-green-400">Signed in successfully</h2>
-        <p className="mt-2 text-sm text-neutral-400">Redirecting to dashboard...</p>
+        <p className="mt-2 text-sm text-neutral-400">Welcome to DonutTrade!</p>
       </div>
     );
   }

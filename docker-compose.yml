@@ -39,10 +39,11 @@ services:
     build:
       context: .
       dockerfile: packages/web/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://moldo.go.ro:9443
     container_name: donuttrade-web
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://moldo.go.ro:9443
     depends_on:
       - api
     restart: unless-stopped
