@@ -25,6 +25,7 @@ services:
       - PORT=3001
       - DATABASE_URL=postgresql://dev:dev@postgres:5432/donuttrade
       - REDIS_URL=redis://redis:6379
+      - CORS_ORIGIN=https://moldo.go.ro:9443
     env_file:
       - .env
     depends_on:
