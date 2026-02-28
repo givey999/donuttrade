@@ -1,11 +1,25 @@
 {
   "name": "@donuttrade/web",
   "version": "1.0.0",
-  "description": "DonutTrade web frontend (Next.js)",
+  "description": "DonutTrade web frontend",
   "private": true,
   "scripts": {
-    "dev": "echo 'Web package will be implemented in Phase 6'",
-    "build": "echo 'Web package will be implemented in Phase 6'",
-    "start": "echo 'Web package will be implemented in Phase 6'"
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^15.3.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.7",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "tailwindcss": "^4.1.7",
+    "typescript": "^5.3.0"
   }
 }
