@@ -15,7 +15,9 @@
     "db:migrate": "npm run migrate --workspace=@donuttrade/api",
     "db:studio": "npm run db:studio --workspace=@donuttrade/api",
     "bot:start": "node src/index.js",
-    "bot:dev": "node --watch src/index.js"
+    "bot:dev": "node --watch src/index.js",
+    "dev:web": "pnpm --filter @donuttrade/web dev",
+    "build:web": "pnpm --filter @donuttrade/web build"
   },
   "devDependencies": {
     "typescript": "^5.3.0"
