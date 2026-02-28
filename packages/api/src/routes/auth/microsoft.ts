@@ -3,7 +3,8 @@ import { authStateService } from '../../services/auth/state.service.js';
 import { microsoftService, MicrosoftOAuthException } from '../../services/auth/microsoft.service.js';
 import { isMicrosoftOAuthConfigured } from '../../config/oauth.js';
 import { logger } from '../../lib/logger.js';
-import { OAuthError, InvalidStateError, OAuthTokenError, InternalError } from '../../lib/errors.js';
+import { InternalError } from '../../lib/errors.js';
+import { config } from '../../config/index.js';
 
 const authLogger = logger.module('auth.routes');
 
@@ -57,8 +58,11 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
       error?: string;
       error_description?: string;
     };
-  }>('/microsoft/callback', async (request, _reply) => {
+  }>('/microsoft/callback', async (request, reply) => {
     const { code, state, error, error_description } = request.query;
+
+    const frontendUrl = config.CORS_ORIGIN;
+    const callbackPath = '/auth/callback';
 
     // Handle OAuth error from Microsoft
     if (error) {
@@ -67,10 +71,8 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
         errorDescription: error_description,
       });
 
-      throw new OAuthError(
-        `Microsoft authentication failed: ${error_description || error}`,
-        { error, errorDescription: error_description }
-      );
+      const errorMsg = encodeURIComponent(error_description || error);
+      return reply.redirect(`${frontendUrl}${callbackPath}?error=${errorMsg}`);
     }
 
     // Validate required parameters
@@ -80,7 +82,7 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
         hasState: !!state,
       });
 
-      throw new OAuthError('Missing authorization code or state parameter');
+      return reply.redirect(`${frontendUrl}${callbackPath}?error=${encodeURIComponent('Missing authorization code or state parameter')}`);
     }
 
     // Validate state (CSRF protection)
@@ -91,7 +93,7 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
         statePrefix: state.substring(0, 8) + '...',
       });
 
-      throw new InvalidStateError('Invalid or expired state parameter. Please try logging in again.');
+      return reply.redirect(`${frontendUrl}${callbackPath}?error=${encodeURIComponent('Invalid or expired state. Please try logging in again.')}`);
     }
 
     try {
@@ -104,26 +106,20 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       // Phase 2 will handle: decode id_token, find/create user, create session
-      // For now, return basic success
-      return {
-        success: true,
-        message: 'Microsoft authentication successful. User registration pending Phase 2.',
-        redirectUrl: stateResult.redirectUrl || '/dashboard',
-      };
-    } catch (error) {
-      if (error instanceof MicrosoftOAuthException) {
-        authLogger.error('oauth.callback.tokenError', 'Token exchange failed', error, {
-          errorCode: error.errorCode,
+      // Redirect back to frontend callback page
+      const redirectPath = stateResult.redirectUrl || callbackPath;
+      return reply.redirect(`${frontendUrl}${redirectPath}?success=true`);
+    } catch (err) {
+      if (err instanceof MicrosoftOAuthException) {
+        authLogger.error('oauth.callback.tokenError', 'Token exchange failed', err, {
+          errorCode: err.errorCode,
         });
 
-        throw new OAuthTokenError(
-          `Failed to obtain tokens: ${error.errorDescription}`,
-          error.statusCode === 400 ? 400 : 502,
-          { errorCode: error.errorCode }
-        );
+        return reply.redirect(`${frontendUrl}${callbackPath}?error=${encodeURIComponent('Authentication failed. Please try again.')}`);
       }
 
-      throw error;
+      authLogger.error('oauth.callback.unexpected', 'Unexpected error during callback', err as Error);
+      return reply.redirect(`${frontendUrl}${callbackPath}?error=${encodeURIComponent('An unexpected error occurred. Please try again.')}`);
     }
   });
 };
