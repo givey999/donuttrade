@@ -1,13 +1,33 @@
 # Caddyfile - HTTPS reverse proxy with automatic Let's Encrypt certificates
 
-moldo.go.ro:9443 {
-    # Reverse proxy to the API service
-    reverse_proxy api:3001
+{
+    https_port 9443
+    http_port 80
+    auto_https disable_redirects
+}
 
-    # Enable compression
+http://moldo.go.ro:80, http://:80 {
+    redir https://{host}:9443{uri} permanent
+}
+
+moldo.go.ro:9443 {
+    # API routes
+    handle /auth/* {
+        reverse_proxy api:3001
+    }
+
+    # Future: explicit /api/* prefix
+    handle /api/* {
+        reverse_proxy api:3001
+    }
+
+    # Frontend
+    handle {
+        reverse_proxy web:3000
+    }
+
     encode gzip
 
-    # Logging
     log {
         output stdout
         format console
