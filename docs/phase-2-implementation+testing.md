@@ -1,9 +1,11 @@
 # Phase 2: Implementation & Testing Guide
 
 **Phase**: Simplified Microsoft OAuth
-**Status**: Not Started
-**Date**: February 2026 (Rewritten)
+**Status**: ✅ Completed
+**Date**: February 2026 (Rewritten) | **Completed**: February 2026
 **Dependencies**: Phase 1 (Database Schema & User Model)
+
+> **Implementation Note:** All items in this phase have been implemented. Microsoft OAuth uses OpenID Connect scopes (identity only, no Xbox/Minecraft). The username entry endpoint (`POST /auth/set-username`) was also implemented during this phase, ahead of its original Phase 3 schedule.
 
 ---
 
@@ -30,10 +32,10 @@ This phase implements a simplified Microsoft OAuth 2.0 flow. Microsoft is used *
 
 Before starting Phase 2, ensure Phase 1 is complete:
 
-- [ ] All Phase 1 tests passing
-- [ ] `users`, `sessions`, `auth_states` tables exist with new schema
-- [ ] Repositories working correctly
-- [ ] Database and Redis running
+- [x] All Phase 1 tests passing
+- [x] `users`, `sessions`, `auth_states` tables exist with new schema
+- [x] Repositories working correctly
+- [x] Database and Redis running
 
 Verify Phase 1:
 ```bash
@@ -516,20 +518,20 @@ testOAuth();
 ## Verification Checklist
 
 ### Unit Tests
-- [ ] `microsoftOAuthConfig.scopes` contains `openid`, `email`, `profile`, `offline_access`
-- [ ] `microsoftOAuthConfig.scopes` does NOT contain `XboxLive.signin`
-- [ ] `buildAuthorizationUrl()` generates a valid URL with correct parameters
-- [ ] `generateState()` returns a 64-character hex string
-- [ ] `exchangeCodeForTokens()` sends correct parameters to Microsoft token endpoint
-- [ ] `extractUserInfo()` correctly parses ID token JWT payload
+- [x] `microsoftOAuthConfig.scopes` contains `openid`, `email`, `profile`, `offline_access`
+- [x] `microsoftOAuthConfig.scopes` does NOT contain `XboxLive.signin`
+- [x] `buildAuthorizationUrl()` generates a valid URL with correct parameters
+- [x] `generateState()` returns a 64-character hex string
+- [x] `exchangeCodeForTokens()` sends correct parameters to Microsoft token endpoint
+- [x] `extractUserInfo()` correctly parses ID token JWT payload
 
 ### Integration Tests
-- [ ] `GET /auth/microsoft` redirects to Microsoft with correct scopes
-- [ ] `GET /auth/microsoft/callback` with valid code creates a new user with `authProvider: 'microsoft'`
-- [ ] `GET /auth/microsoft/callback` with valid code for existing user logs them in
-- [ ] Invalid state parameter returns 400 error
-- [ ] Missing code parameter returns 400 error
-- [ ] User cancellation (`error` query param) redirects to login with error
+- [x] `GET /auth/microsoft` redirects to Microsoft with correct scopes
+- [x] `GET /auth/microsoft/callback` with valid code creates a new user with `authProvider: 'microsoft'`
+- [x] `GET /auth/microsoft/callback` with valid code for existing user logs them in
+- [x] Invalid state parameter returns 400 error
+- [x] Missing code parameter returns 400 error
+- [x] User cancellation (`error` query param) redirects to login with error
 
 ### Manual Verification
 ```bash
@@ -559,8 +561,15 @@ INFO  [auth:microsoft-routes]  action=oauth_new_user microsoftId=XXXXXXXX...
 ```
 
 ### Deleted Files Verification
-- [ ] `xbox.service.ts` — deleted
-- [ ] `minecraft.service.ts` — deleted
-- [ ] `auth-chain.service.ts` — deleted
-- [ ] `edition.service.ts` — deleted
-- [ ] `routes/auth/edition.ts` — deleted
+- [x] `xbox.service.ts` — deleted
+- [x] `minecraft.service.ts` — deleted
+- [x] `auth-chain.service.ts` — deleted
+- [x] `edition.service.ts` — deleted
+- [x] `routes/auth/edition.ts` — deleted
+
+### Actual Files Implemented
+- `packages/api/src/config/oauth.ts` — Microsoft OAuth endpoints (/consumers tenant), OpenID Connect scopes, state config
+- `packages/api/src/services/auth/microsoft.service.ts` — Build auth URL, exchange code, decode ID token (oid/sub claims), refresh token
+- `packages/api/src/routes/auth/microsoft.ts` — `GET /auth/microsoft`, `GET /auth/microsoft/callback` (3-way branch: new user, returning unverified, verified)
+- `packages/api/src/routes/auth/username.ts` — `POST /auth/set-username` (pulled forward from Phase 3)
+- `packages/api/src/services/auth/state.service.ts` — OAuth CSRF state management

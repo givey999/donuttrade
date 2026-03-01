@@ -1,9 +1,11 @@
 # Phase 3: Implementation & Testing Guide
 
 **Phase**: Discord OAuth + Classic Email/Password Authentication
-**Status**: Not Started
+**Status**: ⏳ Partially Complete (Username entry done; Discord & Email not started)
 **Date**: February 2026 (Rewritten)
 **Dependencies**: Phase 2 (Simplified Microsoft OAuth)
+
+> **Implementation Note:** The shared username entry endpoint (`POST /auth/set-username`) was implemented early during Phase 2. Discord OAuth and Email/Password authentication are **not started**. Missing dependencies: `bcrypt`, `resend`, `@types/bcrypt`. Discord and Resend API credentials also need to be configured.
 
 ---
 
@@ -32,10 +34,10 @@ This phase implements the two remaining authentication methods: Discord OAuth an
 
 Before starting Phase 3, ensure Phase 2 is complete:
 
-- [ ] All Phase 2 tests passing
-- [ ] Microsoft OAuth flow working
-- [ ] Xbox/Minecraft services deleted
-- [ ] Database running with new schema
+- [x] All Phase 2 tests passing
+- [x] Microsoft OAuth flow working
+- [x] Xbox/Minecraft services deleted
+- [x] Database running with new schema
 
 Verify Phase 2:
 ```bash
@@ -1014,7 +1016,7 @@ testAuthMethods();
 
 ## Verification Checklist
 
-### Discord OAuth
+### Discord OAuth — ❌ Not Started
 - [ ] `discordOAuthConfig` has correct scopes (`identify`, `email`)
 - [ ] `buildAuthorizationUrl()` generates valid Discord OAuth URL
 - [ ] `GET /auth/discord` redirects to Discord
@@ -1023,7 +1025,7 @@ testAuthMethods();
 - [ ] Invalid/expired state returns 400
 - [ ] User cancellation handled gracefully
 
-### Email/Password
+### Email/Password — ❌ Not Started
 - [ ] Password hashing works with bcrypt (12 rounds)
 - [ ] Password validation enforces: 8+ chars, uppercase, lowercase, number
 - [ ] `POST /auth/email/register` creates user and sends verification email
@@ -1032,11 +1034,24 @@ testAuthMethods();
 - [ ] `POST /auth/email/login` validates credentials
 - [ ] Duplicate email registration returns error
 
-### Username Entry
-- [ ] `POST /auth/set-username` accepts valid Java usernames
-- [ ] `POST /auth/set-username` accepts valid Bedrock usernames (with "." prefix)
-- [ ] Duplicate username returns 409 conflict
-- [ ] Invalid username format returns 400
+### Username Entry — ✅ Completed (during Phase 2)
+- [x] `POST /auth/set-username` accepts valid Java usernames
+- [x] `POST /auth/set-username` accepts valid Bedrock usernames (with "." prefix)
+- [x] Duplicate username returns 409 conflict
+- [x] Invalid username format returns 400
+
+### Missing Dependencies
+- `bcrypt` / `@types/bcrypt` — needed for email/password auth
+- `resend` — needed for email verification sending
+- Discord application credentials (DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI)
+- Resend API key (RESEND_API_KEY, EMAIL_FROM_ADDRESS)
+
+### Files Still Needed
+- `packages/api/src/services/auth/discord.service.ts`
+- `packages/api/src/services/auth/email.service.ts`
+- `packages/api/src/services/email/email.service.ts`
+- `packages/api/src/routes/auth/discord.ts`
+- `packages/api/src/routes/auth/email.ts`
 
 ### Manual Verification
 ```bash

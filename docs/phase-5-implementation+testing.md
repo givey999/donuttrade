@@ -1,9 +1,11 @@
 # Phase 5: Implementation & Testing Guide
 
 **Phase**: Session Management & Protected Routes
-**Status**: Not Started
-**Date**: February 2026 (Rewritten)
+**Status**: ✅ Completed
+**Date**: February 2026 (Rewritten) | **Completed**: February 2026
 **Dependencies**: Phase 4 (Payment Verification System)
+
+> **Implementation Note:** All items in this phase have been implemented. JWT access/refresh tokens, session service, auth middleware (with pending token support), and all session routes are in place. The implementation also added a "pending token" concept (30-min httpOnly cookie) for users mid-signup, which was not in the original plan.
 
 ---
 
@@ -745,33 +747,45 @@ testSession();
 ## Verification Checklist
 
 ### JWT
-- [ ] Access tokens are signed with `JWT_ACCESS_SECRET`
-- [ ] Refresh tokens are signed with `JWT_REFRESH_SECRET`
-- [ ] Access token payload contains `sub`, `username`, `authProvider`, `type: 'access'`
-- [ ] Refresh token payload contains `sub`, `sessionId`, `type: 'refresh'`
-- [ ] Access tokens expire in 15 minutes
-- [ ] Refresh tokens expire in 30 days
-- [ ] Refresh tokens are hashed before storage (SHA-256)
+- [x] Access tokens are signed with `JWT_ACCESS_SECRET`
+- [x] Refresh tokens are signed with `JWT_REFRESH_SECRET`
+- [x] Access token payload contains `sub`, `username`, `authProvider`, `type: 'access'`
+- [x] Refresh token payload contains `sub`, `sessionId`, `type: 'refresh'`
+- [x] Access tokens expire in 15 minutes
+- [x] Refresh tokens expire in 30 days
+- [x] Refresh tokens are hashed before storage (SHA-256)
 
 ### Session Service
-- [ ] `createSession()` returns access + refresh tokens
-- [ ] `createSession()` stores session in database with hashed refresh token
-- [ ] `refreshSession()` validates and rotates refresh token
-- [ ] `refreshSession()` rejects old (rotated) refresh tokens
-- [ ] `revokeSession()` deletes session from database
-- [ ] `revokeAllSessions()` deletes all sessions for a user
+- [x] `createSession()` returns access + refresh tokens
+- [x] `createSession()` stores session in database with hashed refresh token
+- [x] `refreshSession()` validates and rotates refresh token
+- [x] `refreshSession()` rejects old (rotated) refresh tokens
+- [x] `revokeSession()` deletes session from database
+- [x] `revokeAllSessions()` deletes all sessions for a user
 
 ### Auth Middleware
-- [ ] Extracts Bearer token from Authorization header
-- [ ] Returns 401 for missing/invalid tokens
-- [ ] Attaches user payload to `request.user`
+- [x] Extracts Bearer token from Authorization header
+- [x] Returns 401 for missing/invalid tokens
+- [x] Attaches user payload to `request.user`
 
 ### Session Routes
-- [ ] `GET /auth/me` returns user profile (requires auth)
-- [ ] `POST /auth/refresh` issues new tokens from refresh token
-- [ ] `POST /auth/logout` revokes current session
-- [ ] `POST /auth/logout-all` revokes all sessions (requires auth)
-- [ ] Refresh token is set as HTTP-only cookie
+- [x] `GET /auth/me` returns user profile (requires auth)
+- [x] `POST /auth/refresh` issues new tokens from refresh token
+- [x] `POST /auth/logout` revokes current session
+- [x] `POST /auth/logout-all` revokes all sessions (requires auth)
+- [x] Refresh token is set as HTTP-only cookie
+
+### Actual Files Implemented
+- `packages/api/src/lib/jwt.ts` — Sign/verify access (15min), refresh (30d), and pending (30min) tokens; token error classes
+- `packages/api/src/config/jwt.ts` — JWT secret and expiry configuration
+- `packages/api/src/services/auth/session.service.ts` — Create, refresh, revoke (single/all) sessions
+- `packages/api/src/plugins/auth.ts` — `fastify.authenticate` (Bearer) and `fastify.authenticatePending` (cookie) decorators
+- `packages/api/src/routes/auth/session.ts` — `/auth/me`, `/auth/refresh`, `/auth/logout`, `/auth/logout-all`
+- `packages/api/src/routes/auth/index.ts` — Registers all auth route modules
+
+### Implementation Additions (beyond original plan)
+- **Pending token**: 30-minute httpOnly cookie for users mid-signup (between OAuth callback and payment verification). This was not in the original plan but enables a smoother signup UX.
+- **Token error classes**: `TokenExpiredError`, `TokenInvalidError` for structured error handling
 
 ### Manual Verification
 ```bash

@@ -1,9 +1,11 @@
 # Phase 1: Implementation & Testing Guide
 
 **Phase**: Database Schema & User Model
-**Status**: Not Started
-**Date**: February 2026 (Rewritten)
+**Status**: ✅ Completed
+**Date**: February 2026 (Rewritten) | **Completed**: February 2026
 **Dependencies**: Phase 0 (Project Foundation & Logging Infrastructure)
+
+> **Implementation Note:** All items in this phase have been implemented. The Prisma schema, repositories, shared types, and constants are in place. See the actual files referenced below.
 
 ---
 
@@ -25,11 +27,11 @@ This phase implements the core database schema for users, sessions, and authenti
 
 Before starting Phase 1, ensure Phase 0 is complete:
 
-- [ ] Docker Compose running (PostgreSQL + Redis)
-- [ ] `npm run build` succeeds in `packages/api`
-- [ ] `npx tsc --noEmit` passes without errors
-- [ ] Health endpoints responding correctly
-- [ ] Logging working with correlation IDs
+- [x] Docker Compose running (PostgreSQL + Redis)
+- [x] `npm run build` succeeds in `packages/api`
+- [x] `npx tsc --noEmit` passes without errors
+- [x] Health endpoints responding correctly
+- [x] Logging working with correlation IDs
 
 Verify Phase 0:
 ```bash
@@ -627,21 +629,30 @@ testRepositories();
 ## Verification Checklist
 
 ### Unit Tests
-- [ ] User can be created with `authProvider: 'microsoft'` and `microsoftId`
-- [ ] User can be created with `authProvider: 'discord'` and `discordId`
-- [ ] User can be created with `authProvider: 'email'` and `email` + `passwordHash`
-- [ ] User can be found by `microsoftId`, `discordId`, `email`, and `minecraftUsername`
-- [ ] Verification fields (`verificationAmount`, `verificationExpiresAt`, `verificationStatus`) can be set and updated
-- [ ] AuthState can be created with `authMethod` field
-- [ ] Session can be created and associated with a user
-- [ ] Unique constraints work: duplicate `microsoftId`, `discordId`, `email`, or `minecraftUsername` throws error
+- [x] User can be created with `authProvider: 'microsoft'` and `microsoftId`
+- [x] User can be created with `authProvider: 'discord'` and `discordId`
+- [x] User can be created with `authProvider: 'email'` and `email` + `passwordHash`
+- [x] User can be found by `microsoftId`, `discordId`, `email`, and `minecraftUsername`
+- [x] Verification fields (`verificationAmount`, `verificationExpiresAt`, `verificationStatus`) can be set and updated
+- [x] AuthState can be created with `authMethod` field
+- [x] Session can be created and associated with a user
+- [x] Unique constraints work: duplicate `microsoftId`, `discordId`, `email`, or `minecraftUsername` throws error
 
 ### Database Verification
-- [ ] `users` table exists with all new columns
-- [ ] `sessions` table exists (unchanged)
-- [ ] `auth_states` table has new `auth_method` column
-- [ ] Indexes exist on `discord_id`, `email`, `verification_status`
-- [ ] Old indexes on `java_uuid` and `bedrock_xuid` are removed
+- [x] `users` table exists with all new columns
+- [x] `sessions` table exists (unchanged)
+- [x] `auth_states` table has new `auth_method` column
+- [x] Indexes exist on `discord_id`, `email`, `verification_status`
+- [x] Old indexes on `java_uuid` and `bedrock_xuid` are removed
+
+### Actual Files Implemented
+- `packages/api/prisma/schema.prisma` — User, Session, AuthState, HealthCheck models
+- `packages/api/src/repositories/user.repository.ts` — Full CRUD + find by all identity fields + verification queries
+- `packages/api/src/repositories/session.repository.ts` — Session management with hash lookup
+- `packages/api/src/repositories/auth-state.repository.ts` — OAuth state with atomic consume (find+delete)
+- `packages/shared/src/types/auth.ts` — AuthProvider, VerificationStatus, Microsoft/Discord/Email types
+- `packages/shared/src/types/index.ts` — CreateUserInput, UpdateUserInput, UserProfile types
+- `packages/shared/src/constants/index.ts` — Verification constants, auth providers, module names
 
 ### Manual Verification
 ```bash

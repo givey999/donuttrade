@@ -1,9 +1,11 @@
 # Phase 4: Implementation & Testing Guide
 
 **Phase**: Payment Verification System
-**Status**: Not Started
-**Date**: February 2026 (Rewritten)
+**Status**: ✅ Completed
+**Date**: February 2026 (Rewritten) | **Completed**: February 2026
 **Dependencies**: Phase 3 (Discord OAuth + Email/Password Authentication)
+
+> **Implementation Note:** All items in this phase have been implemented. The verification service, API routes, internal webhook, and bot-bridge package are all in place. Note: Phase 4 was implemented before Phase 3 (Discord/Email) since Microsoft OAuth alone was sufficient to test the verification flow. The background expiry job exists but needs startup integration (minor gap — auto-expiry in `getStatus()` serves as a fallback).
 
 ---
 
@@ -29,11 +31,11 @@ This phase implements the in-game payment verification system. After signing up 
 
 Before starting Phase 4, ensure Phase 3 is complete:
 
-- [ ] All Phase 3 tests passing
-- [ ] Discord OAuth flow working
-- [ ] Email registration and verification working
-- [ ] Username entry endpoint working
-- [ ] Database running with all auth fields
+- [x] ~~All Phase 3 tests passing~~ (Phase 3 Discord/Email not yet built; Phase 4 was implemented ahead of it)
+- [ ] ~~Discord OAuth flow working~~ (not yet — Phase 3)
+- [ ] ~~Email registration and verification working~~ (not yet — Phase 3)
+- [x] Username entry endpoint working
+- [x] Database running with all auth fields
 
 Verify Phase 3:
 ```bash
@@ -828,30 +830,43 @@ testVerification();
 ## Verification Checklist
 
 ### Payment Verification Service
-- [ ] `createVerification()` generates random amount 1-1000
-- [ ] `createVerification()` sets 15-minute expiry
-- [ ] `checkVerification()` returns correct status
-- [ ] `checkVerification()` auto-expires past-due verifications
-- [ ] `confirmPayment()` with correct username + amount marks as verified
-- [ ] `confirmPayment()` with wrong amount returns `matched: false`
-- [ ] `confirmPayment()` with unknown username returns `matched: false`
-- [ ] `retryVerification()` generates new amount and resets timer
-- [ ] `retryVerification()` preserves all user data (soft delete)
-- [ ] `expireStaleVerifications()` expires all past-due pending verifications
+- [x] `createVerification()` generates random amount 1-1000
+- [x] `createVerification()` sets 15-minute expiry
+- [x] `checkVerification()` returns correct status
+- [x] `checkVerification()` auto-expires past-due verifications
+- [x] `confirmPayment()` with correct username + amount marks as verified
+- [x] `confirmPayment()` with wrong amount returns `matched: false`
+- [x] `confirmPayment()` with unknown username returns `matched: false`
+- [x] `retryVerification()` generates new amount and resets timer
+- [x] `retryVerification()` preserves all user data (soft delete)
+- [x] `expireStaleVerifications()` expires all past-due pending verifications
 
 ### API Routes
-- [ ] `POST /auth/verification/start` creates verification and returns amount
-- [ ] `GET /auth/verification/status?userId=xxx` returns current status
-- [ ] `POST /auth/verification/retry` generates new amount for expired verifications
-- [ ] `POST /internal/verification/confirm` validates webhook secret
-- [ ] `POST /internal/verification/confirm` matches payment to pending verification
+- [x] `POST /auth/verification/start` creates verification and returns amount
+- [x] `GET /auth/verification/status?userId=xxx` returns current status
+- [x] `POST /auth/verification/retry` generates new amount for expired verifications
+- [x] `POST /internal/verification/confirm` validates webhook secret
+- [x] `POST /internal/verification/confirm` matches payment to pending verification
 
-### Verification Bot
-- [ ] Bot connects to DonutSMP server
-- [ ] Bot parses incoming payment messages
-- [ ] Bot reports payments to API via webhook
-- [ ] Bot reconnects after disconnect
-- [ ] Bot handles K/M/B/T suffixes in payment amounts
+### Verification Bot (bot-bridge)
+- [x] Bot connects to DonutSMP server
+- [x] Bot parses incoming payment messages
+- [x] Bot reports payments to API via webhook
+- [x] Bot reconnects after disconnect
+- [x] Bot handles K/M/B/T suffixes in payment amounts
+
+### Actual Files Implemented
+- `packages/api/src/services/auth/verification.service.ts` — Start, check, confirm, retry, expire stale
+- `packages/api/src/routes/auth/verification.ts` — `/auth/verification/start`, `/status`, `/retry`
+- `packages/api/src/routes/internal/verification.ts` — `/internal/verification/confirm` (bot webhook)
+- `packages/bot-bridge/src/index.ts` — Main entry, Minecraft connection
+- `packages/bot-bridge/src/bot.ts` — MinecraftChatBot using mineflayer
+- `packages/bot-bridge/src/payment-handler.ts` — Parses in-game payment messages
+- `packages/bot-bridge/src/webhook-client.ts` — Reports payments to API webhook
+
+### Implementation Deviation
+- The doc planned a `packages/verification-bot/` package, but implementation uses `packages/bot-bridge/` instead (the existing bot infrastructure was extended rather than creating a new package)
+- Background expiry job file exists but is not wired into server startup; auto-expiry in `getStatus()` provides equivalent coverage
 
 ### Manual Verification
 ```bash
