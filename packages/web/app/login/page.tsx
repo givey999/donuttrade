@@ -1,7 +1,7 @@
 import { LoginButton } from '@/components/auth/login-button';
 import { MicrosoftIcon } from '@/components/icons/microsoft';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moldo.go.ro:9443';
 
 export default function LoginPage() {
   return (

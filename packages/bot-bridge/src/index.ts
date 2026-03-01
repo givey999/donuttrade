@@ -13,7 +13,7 @@ dotenv.config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 const MC_SERVER_HOST = process.env.MC_SERVER_HOST;
 const MC_BOT_USERNAME = process.env.MC_BOT_USERNAME;
 const BOT_WEBHOOK_SECRET = process.env.BOT_WEBHOOK_SECRET;
-const API_URL = process.env.API_URL || 'http://localhost:3001';
+const API_URL = process.env.API_URL || 'https://moldo.go.ro:9443';
 
 if (!MC_SERVER_HOST || !MC_BOT_USERNAME || !BOT_WEBHOOK_SECRET) {
   console.error('[Bot Bridge] Missing required env vars: MC_SERVER_HOST, MC_BOT_USERNAME, BOT_WEBHOOK_SECRET');

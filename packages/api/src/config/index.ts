@@ -42,7 +42,7 @@ const envSchema = z.object({
   VERIFICATION_BOT_DISPLAY_NAME: z.string().default('DonutTradeBot'),
 
   // CORS
-  CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  CORS_ORIGIN: z.string().default('https://moldo.go.ro:9443'),
 });
 
 /**
