@@ -38,5 +38,8 @@ packages/api/prisma/migrations/*_migration.sql
 coverage/
 .nyc_output/
 
+# Worktrees
+.worktrees/
+
 # Misc
 *.tsbuildinfo
