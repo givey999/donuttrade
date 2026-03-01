@@ -11,8 +11,20 @@ http://moldo.go.ro:80, http://:80 {
 }
 
 moldo.go.ro:9443 {
-    # API routes
-    handle /auth/* {
+    # API auth routes (specific paths, not /auth/callback which is a frontend page)
+    handle /auth/microsoft* {
+        reverse_proxy api:3001
+    }
+    handle /auth/discord* {
+        reverse_proxy api:3001
+    }
+    handle /auth/me {
+        reverse_proxy api:3001
+    }
+    handle /auth/refresh {
+        reverse_proxy api:3001
+    }
+    handle /auth/logout* {
         reverse_proxy api:3001
     }
 
