@@ -59,6 +59,8 @@ services:
       - API_URL=http://api:3001
     env_file:
       - .env
+    volumes:
+      - bot_nmp_cache:/root/.minecraft/nmp-cache
     depends_on:
       - api
     restart: unless-stopped
@@ -136,4 +138,6 @@ volumes:
   caddy_data:
     driver: local
   caddy_config:
+    driver: local
+  bot_nmp_cache:
     driver: local
