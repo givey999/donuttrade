@@ -1,10 +1,14 @@
 import { FastifyPluginAsync } from 'fastify';
 import { authStateService } from '../../services/auth/state.service.js';
 import { microsoftService, MicrosoftOAuthException } from '../../services/auth/microsoft.service.js';
+import { sessionService } from '../../services/auth/session.service.js';
 import { isMicrosoftOAuthConfigured } from '../../config/oauth.js';
 import { logger } from '../../lib/logger.js';
 import { InternalError } from '../../lib/errors.js';
-import { config } from '../../config/index.js';
+import { config, isDevelopment } from '../../config/index.js';
+import { signPendingToken } from '../../lib/jwt.js';
+import { userRepository } from '../../repositories/user.repository.js';
+import { Cookies } from '@donuttrade/shared';
 
 const authLogger = logger.module('auth.routes');
 
@@ -96,6 +100,13 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.redirect(`${frontendUrl}${callbackPath}?error=${encodeURIComponent('Invalid or expired state. Please try logging in again.')}`);
     }
 
+    const cookieOptions = {
+      httpOnly: true,
+      secure: !isDevelopment,
+      sameSite: 'lax' as const,
+      path: '/',
+    };
+
     try {
       // Exchange code for tokens
       const tokens = await microsoftService.exchangeCodeForTokens(code);
@@ -105,10 +116,78 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
         hasRefreshToken: !!tokens.refreshToken,
       });
 
-      // Phase 2 will handle: decode id_token, find/create user, create session
-      // Redirect back to frontend callback page
-      const redirectPath = stateResult.redirectUrl || callbackPath;
-      return reply.redirect(`${frontendUrl}${redirectPath}?success=true`);
+      // Decode ID token to extract Microsoft user identity
+      if (!tokens.idToken) {
+        authLogger.error('oauth.callback.noIdToken', 'No ID token in response');
+        return reply.redirect(`${frontendUrl}${callbackPath}?error=${encodeURIComponent('Authentication failed: no identity token received.')}`);
+      }
+
+      const { microsoftId, email } = microsoftService.decodeIdToken(tokens.idToken);
+
+      // Look up existing user
+      let user = await userRepository.findByMicrosoftId(microsoftId);
+
+      if (user) {
+        // Branch A: Returning verified user
+        if (user.verificationStatus === 'verified') {
+          await userRepository.updateLastLogin(user.id);
+
+          const sessionTokens = await sessionService.createSession(
+            user.id,
+            request.headers['user-agent'],
+            request.ip,
+          );
+
+          reply.setCookie(Cookies.REFRESH_TOKEN, sessionTokens.refreshToken, {
+            ...cookieOptions,
+            maxAge: 30 * 24 * 60 * 60, // 30 days
+          });
+
+          authLogger.info('oauth.callback.returningUser', 'Returning verified user logged in', {
+            userId: user.id,
+          });
+
+          return reply.redirect(`${frontendUrl}${callbackPath}?success=true&token=${sessionTokens.accessToken}`);
+        }
+
+        // Branch B: Returning user in setup (not yet verified)
+        const pendingToken = signPendingToken(user.id);
+        reply.setCookie(Cookies.PENDING_TOKEN, pendingToken, {
+          ...cookieOptions,
+          maxAge: 30 * 60, // 30 minutes
+        });
+
+        if (!user.minecraftUsername) {
+          authLogger.info('oauth.callback.setupUsername', 'Returning user needs username', {
+            userId: user.id,
+          });
+          return reply.redirect(`${frontendUrl}/signup/username`);
+        }
+
+        authLogger.info('oauth.callback.setupVerify', 'Returning user needs verification', {
+          userId: user.id,
+        });
+        return reply.redirect(`${frontendUrl}/verify`);
+      }
+
+      // Branch C: New user
+      user = await userRepository.create({
+        authProvider: 'microsoft',
+        microsoftId,
+        email,
+      });
+
+      const pendingToken = signPendingToken(user.id);
+      reply.setCookie(Cookies.PENDING_TOKEN, pendingToken, {
+        ...cookieOptions,
+        maxAge: 30 * 60, // 30 minutes
+      });
+
+      authLogger.info('oauth.callback.newUser', 'New user created', {
+        userId: user.id,
+      });
+
+      return reply.redirect(`${frontendUrl}/signup/username`);
     } catch (err) {
       if (err instanceof MicrosoftOAuthException) {
         authLogger.error('oauth.callback.tokenError', 'Token exchange failed', err, {

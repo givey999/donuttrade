@@ -27,6 +27,15 @@ moldo.go.ro:9443 {
     handle /auth/logout* {
         reverse_proxy api:3001
     }
+    handle /auth/set-username {
+        reverse_proxy api:3001
+    }
+    handle /auth/verification/* {
+        reverse_proxy api:3001
+    }
+
+    # Note: /internal/* routes are NOT exposed through Caddy.
+    # The bot-bridge calls http://api:3001 directly on the Docker network.
 
     # Future: explicit /api/* prefix
     handle /api/* {
