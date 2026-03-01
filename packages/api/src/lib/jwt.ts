@@ -26,6 +26,16 @@ export interface RefreshTokenPayload {
 }
 
 /**
+ * Pending setup token payload (short-lived, for users mid-setup)
+ */
+export interface PendingTokenPayload {
+  sub: string;           // User ID
+  purpose: 'pending_setup';
+  iat: number;
+  exp: number;
+}
+
+/**
  * Sign an access token
  */
 export function signAccessToken(payload: Omit<AccessTokenPayload, 'iat' | 'exp'>): string {
@@ -109,6 +119,55 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
         error: (error as Error).message,
       });
       throw new InvalidTokenError('Invalid refresh token');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Sign a pending setup token (30 min, for users mid-setup)
+ */
+export function signPendingToken(userId: string): string {
+  const token = jwt.sign(
+    { sub: userId, purpose: 'pending_setup' },
+    jwtConfig.accessToken.secret,
+    { expiresIn: '30m' } as jwt.SignOptions,
+  );
+
+  jwtLogger.debug('signPendingToken', 'Pending token signed', { userId });
+
+  return token;
+}
+
+/**
+ * Verify a pending setup token
+ */
+export function verifyPendingToken(token: string): PendingTokenPayload {
+  try {
+    const payload = jwt.verify(token, jwtConfig.accessToken.secret) as PendingTokenPayload;
+
+    if (payload.purpose !== 'pending_setup') {
+      throw new InvalidTokenError('Token is not a pending setup token');
+    }
+
+    jwtLogger.debug('verifyPendingToken', 'Pending token verified', {
+      userId: payload.sub,
+    });
+
+    return payload;
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      jwtLogger.debug('verifyPendingToken.expired', 'Pending token expired');
+      throw new TokenExpiredError('Pending token has expired');
+    }
+    if (error instanceof InvalidTokenError) {
+      throw error;
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      jwtLogger.warn('verifyPendingToken.invalid', 'Invalid pending token', {
+        error: (error as Error).message,
+      });
+      throw new InvalidTokenError('Invalid pending token');
     }
     throw error;
   }

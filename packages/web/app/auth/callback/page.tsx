@@ -1,13 +1,25 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import Link from 'next/link';
 
 function CallbackContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
   const success = searchParams.get('success');
+  const token = searchParams.get('token');
+
+  // Store access token for returning verified users
+  useEffect(() => {
+    if (success && token) {
+      try {
+        localStorage.setItem('dt_access_token', token);
+      } catch {
+        // localStorage may be unavailable (e.g. private browsing)
+      }
+    }
+  }, [success, token]);
 
   if (error) {
     return (

@@ -16,6 +16,7 @@ import { authPlugin } from './plugins/auth.js';
 
 import healthRoutes from './routes/health.js';
 import { authRoutes } from './routes/auth/index.js';
+import { internalRoutes } from './routes/internal/index.js';
 
 const startupLogger = logger.module('startup');
 
@@ -57,6 +58,7 @@ async function buildApp() {
   // Register routes
   await app.register(healthRoutes);
   await app.register(authRoutes, { prefix: '/auth' });
+  await app.register(internalRoutes, { prefix: '/internal' });
 
   return app;
 }

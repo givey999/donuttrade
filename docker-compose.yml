@@ -49,6 +49,20 @@ services:
       - api
     restart: unless-stopped
 
+  # Verification Bot
+  bot-bridge:
+    build:
+      context: .
+      dockerfile: packages/bot-bridge/Dockerfile
+    container_name: donuttrade-bot-bridge
+    environment:
+      - API_URL=http://api:3001
+    env_file:
+      - .env
+    depends_on:
+      - api
+    restart: unless-stopped
+
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine

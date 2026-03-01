@@ -37,6 +37,10 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32).optional(),
   JWT_REFRESH_SECRET: z.string().min(32).optional(),
 
+  // Bot Bridge
+  BOT_WEBHOOK_SECRET: z.string().min(32).optional(),
+  VERIFICATION_BOT_DISPLAY_NAME: z.string().default('DonutTradeBot'),
+
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
 });
@@ -94,6 +98,8 @@ export function getRedactedConfig(): Record<string, string | number | boolean | 
     RESEND_API_KEY: config.RESEND_API_KEY ? '[REDACTED]' : '[NOT SET]',
     JWT_ACCESS_SECRET: config.JWT_ACCESS_SECRET ? '[REDACTED]' : '[NOT SET]',
     JWT_REFRESH_SECRET: config.JWT_REFRESH_SECRET ? '[REDACTED]' : '[NOT SET]',
+    BOT_WEBHOOK_SECRET: config.BOT_WEBHOOK_SECRET ? '[REDACTED]' : '[NOT SET]',
+    VERIFICATION_BOT_DISPLAY_NAME: config.VERIFICATION_BOT_DISPLAY_NAME,
   };
 }
 

@@ -45,6 +45,7 @@ export const Headers = {
 export const Cookies = {
   REFRESH_TOKEN: 'dt_refresh_token',
   CSRF_TOKEN: 'dt_csrf_token',
+  PENDING_TOKEN: 'dt_pending_token',
 } as const;
 
 /**

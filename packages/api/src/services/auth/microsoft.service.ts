@@ -113,6 +113,39 @@ export const microsoftService = {
   },
 
   /**
+   * Decode the ID token payload without signature verification.
+   * Safe because the token was received directly from Microsoft over TLS.
+   */
+  decodeIdToken(idToken: string): MicrosoftIdTokenClaims {
+    const parts = idToken.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid ID token format');
+    }
+
+    // base64url decode the payload segment
+    const payload = parts[1]!;
+    const padded = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = Buffer.from(padded, 'base64').toString('utf-8');
+    const claims = JSON.parse(decoded) as Record<string, unknown>;
+
+    // oid (Object ID) is the stable Microsoft user identifier, sub is fallback
+    const microsoftId = (claims.oid as string) || (claims.sub as string);
+    if (!microsoftId) {
+      msLogger.error('decodeIdToken.noId', 'ID token missing oid and sub claims');
+      throw new Error('ID token missing user identifier');
+    }
+
+    const email = (claims.email as string) || (claims.preferred_username as string);
+
+    msLogger.debug('decodeIdToken', 'ID token decoded', {
+      microsoftIdPrefix: microsoftId.substring(0, 8) + '...',
+      hasEmail: !!email,
+    });
+
+    return { microsoftId, email };
+  },
+
+  /**
    * Refresh Microsoft access token
    */
   async refreshAccessToken(refreshToken: string): Promise<MicrosoftTokens> {
@@ -195,6 +228,14 @@ export class MicrosoftOAuthException extends Error {
     super(`Microsoft OAuth error: ${errorCode} - ${errorDescription}`);
     this.name = 'MicrosoftOAuthException';
   }
+}
+
+/**
+ * Decoded Microsoft ID token claims
+ */
+export interface MicrosoftIdTokenClaims {
+  microsoftId: string;
+  email?: string;
 }
 
 export type MicrosoftService = typeof microsoftService;

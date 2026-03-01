@@ -1,8 +1,9 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
-import { verifyAccessToken, TokenExpiredError, InvalidTokenError } from '../lib/jwt.js';
+import { verifyAccessToken, verifyPendingToken, TokenExpiredError, InvalidTokenError } from '../lib/jwt.js';
 import { logger } from '../lib/logger.js';
 import { AppError } from '../lib/errors.js';
+import { Cookies } from '@donuttrade/shared';
 
 const authLogger = logger.module('auth.middleware');
 
@@ -15,9 +16,17 @@ export interface AuthUser {
   authProvider: string;
 }
 
+/**
+ * Pending user context for users mid-setup
+ */
+export interface PendingUser {
+  id: string;
+}
+
 declare module 'fastify' {
   interface FastifyRequest {
     user?: AuthUser;
+    pendingUser?: PendingUser;
   }
 }
 
@@ -100,6 +109,60 @@ const authPluginCallback: FastifyPluginAsync = async (fastify) => {
       throw error;
     }
   });
+
+  /**
+   * Decorator to require pending setup authentication (cookie-based)
+   */
+  fastify.decorate('authenticatePending', async (request: FastifyRequest, _reply: FastifyReply) => {
+    const token = request.cookies[Cookies.PENDING_TOKEN];
+
+    if (!token) {
+      authLogger.debug('authenticatePending.noToken', 'No pending token cookie', {
+        path: request.url,
+        method: request.method,
+      });
+
+      throw new AppError('Pending setup token required', {
+        code: 'UNAUTHORIZED',
+        statusCode: 401,
+      });
+    }
+
+    try {
+      const payload = verifyPendingToken(token);
+
+      request.pendingUser = { id: payload.sub };
+
+      authLogger.debug('authenticatePending.success', 'Pending request authenticated', {
+        userId: payload.sub,
+        path: request.url,
+      });
+    } catch (error) {
+      if (error instanceof TokenExpiredError) {
+        authLogger.debug('authenticatePending.expired', 'Pending token expired', {
+          path: request.url,
+        });
+
+        throw new AppError('Pending token has expired. Please log in again.', {
+          code: 'TOKEN_EXPIRED',
+          statusCode: 401,
+        });
+      }
+
+      if (error instanceof InvalidTokenError) {
+        authLogger.warn('authenticatePending.invalid', 'Invalid pending token', {
+          path: request.url,
+        });
+
+        throw new AppError('Invalid pending token', {
+          code: 'INVALID_TOKEN',
+          statusCode: 401,
+        });
+      }
+
+      throw error;
+    }
+  });
 };
 
 export const authPlugin = fp(authPluginCallback, {
@@ -109,5 +172,6 @@ export const authPlugin = fp(authPluginCallback, {
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    authenticatePending: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
