@@ -66,23 +66,34 @@ export const withdrawalRepository = {
   },
 
   /**
-   * Mark a withdrawal as processing (claimed by bot).
+   * Atomically claim a withdrawal for processing.
+   * Uses conditional UPDATE (WHERE status = 'pending') to prevent two bot
+   * instances from claiming the same withdrawal (TOCTOU prevention).
+   * Returns true if successfully claimed, false if already claimed by another.
    */
-  async markProcessing(id: string) {
+  async markProcessing(id: string): Promise<boolean> {
     const startTime = Date.now();
 
     try {
-      const withdrawal = await prisma.withdrawal.update({
-        where: { id },
+      const result = await prisma.withdrawal.updateMany({
+        where: { id, status: 'pending' },
         data: { status: 'processing' },
       });
 
-      wdLogger.info('markProcessing', 'Withdrawal marked as processing', {
+      if (result.count === 0) {
+        wdLogger.warn('markProcessing.alreadyClaimed', 'Withdrawal already claimed or not pending', {
+          withdrawalId: id,
+          duration: Date.now() - startTime,
+        });
+        return false;
+      }
+
+      wdLogger.info('markProcessing', 'Withdrawal claimed for processing', {
         withdrawalId: id,
         duration: Date.now() - startTime,
       });
 
-      return withdrawal;
+      return true;
     } catch (error) {
       wdLogger.error('markProcessing.failed', 'Failed to mark withdrawal as processing', error, { id });
       throw error;

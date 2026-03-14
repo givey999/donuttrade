@@ -43,14 +43,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(profile);
       })
       .catch((err) => {
-        // If refresh also failed, clear everything and redirect to login
-        if (err instanceof ApiError && err.code === 'REFRESH_FAILED') {
+        if (err instanceof ApiError) {
+          // Server explicitly rejected our credentials — clear token
           clearAccessToken();
-          router.push('/login');
-        } else {
-          // Other errors (network, etc.) — clear token to be safe
-          clearAccessToken();
+          if (err.code === 'REFRESH_FAILED') {
+            router.push('/login');
+          }
         }
+        // Network errors (TypeError, etc.) — keep token intact so the
+        // user isn't logged out by a temporary connectivity blip
       })
       .finally(() => {
         setLoading(false);

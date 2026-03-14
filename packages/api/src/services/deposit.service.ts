@@ -2,6 +2,7 @@ import { userRepository } from '../repositories/user.repository.js';
 import { transactionRepository } from '../repositories/transaction.repository.js';
 import { withTransaction } from './database.js';
 import { logger } from '../lib/logger.js';
+import { AppError } from '../lib/errors.js';
 import {
   DEPOSIT_MIN_AMOUNT,
   DEPOSIT_MAX_AMOUNT,
@@ -63,9 +64,14 @@ export const depositService = {
       return { deposited: false, refund: false };
     }
 
-    // Process deposit atomically
+    // Process deposit atomically — read fresh balance inside the transaction
+    // to prevent stale balanceBefore/balanceAfter on concurrent deposits
     const result = await withTransaction(async (tx) => {
-      const balanceBefore = user.balance.toNumber();
+      const freshUser = await tx.user.findUnique({ where: { id: user.id }, select: { balance: true } });
+      if (!freshUser) {
+        throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
+      }
+      const balanceBefore = freshUser.balance.toNumber();
       const balanceAfter = balanceBefore + amount;
 
       // Increment balance

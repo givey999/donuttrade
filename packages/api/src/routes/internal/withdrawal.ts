@@ -51,9 +51,14 @@ export const internalWithdrawalRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request) => {
     const { id } = request.params;
 
-    internalLogger.info('withdrawal.claim', 'Withdrawal claimed for processing', { withdrawalId: id });
+    const claimed = await withdrawalService.claimWithdrawal(id);
 
-    await withdrawalService.claimWithdrawal(id);
+    if (!claimed) {
+      throw new AppError('Withdrawal already claimed or not pending', {
+        code: 'ALREADY_CLAIMED',
+        statusCode: 409,
+      });
+    }
 
     return {
       success: true,

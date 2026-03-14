@@ -113,8 +113,8 @@ export async function apiFetch<T>(
 
   const errorCode = errorBody?.error?.code ?? 'UNKNOWN';
 
-  // Auto-refresh on expired token (only once)
-  if (res.status === 401 && errorCode === 'TOKEN_EXPIRED') {
+  // Auto-refresh on auth failure (expired or invalid token — only once)
+  if (res.status === 401 && (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN')) {
     const newToken = await refreshAccessToken(); // throws ApiError on failure
 
     const retryRes = await fetch(`${API_URL}${path}`, {

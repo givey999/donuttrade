@@ -48,12 +48,15 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
     }
 
     // Build response
+    // Always send details for operational errors (cooldowns, validation, etc.)
+    // Only suppress details for unexpected errors in production (may contain internals)
+    const includeDetails = appError.details && (isOperationalError(appError) || isDevelopment);
     const response: ApiResponse = {
       success: false,
       error: {
         code: appError.code,
         message: appError.message,
-        ...(isDevelopment && appError.details && { details: appError.details }),
+        ...(includeDetails && { details: appError.details }),
       },
     };
 

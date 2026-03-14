@@ -51,6 +51,17 @@ export const withdrawalService = {
     // Atomically: check cooldown + decrement balance + create transaction + create withdrawal
     // All inside one transaction to prevent cooldown bypass and balance races
     const result = await withTransaction(async (tx) => {
+      // Block if there's already a pending or processing withdrawal
+      const activeWithdrawal = await tx.withdrawal.findFirst({
+        where: { userId, status: { in: ['pending', 'processing'] } },
+      });
+      if (activeWithdrawal) {
+        throw new AppError('You already have a withdrawal in progress', {
+          code: 'WITHDRAWAL_ACTIVE',
+          statusCode: 409,
+        });
+      }
+
       // Cooldown check inside transaction
       const lastWithdrawal = await tx.withdrawal.findFirst({
         where: { userId },
@@ -70,7 +81,10 @@ export const withdrawalService = {
 
       // Read fresh balance inside transaction
       const freshUser = await tx.user.findUnique({ where: { id: userId }, select: { balance: true } });
-      const balanceBefore = freshUser!.balance.toNumber();
+      if (!freshUser) {
+        throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
+      }
+      const balanceBefore = freshUser.balance.toNumber();
 
       if (balanceBefore < amount) {
         throw new AppError('Insufficient balance', {
@@ -170,7 +184,10 @@ export const withdrawalService = {
     // Refund: re-increment balance + create reversal transaction + mark failed — ALL atomic
     await withTransaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id: withdrawal.userId }, select: { balance: true } });
-      const balanceBefore = user!.balance.toNumber();
+      if (!user) {
+        throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
+      }
+      const balanceBefore = user.balance.toNumber();
       const balanceAfter = balanceBefore + amount;
 
       await userRepository.incrementBalance(withdrawal.userId, amount, tx);
@@ -205,26 +222,17 @@ export const withdrawalService = {
   },
 
   /**
-   * Claim a pending withdrawal for processing.
-   * Returns the updated withdrawal, or throws if already claimed/completed.
+   * Atomically claim a pending withdrawal for processing.
+   * Returns true if claimed, false if already claimed by another instance.
    */
-  async claimWithdrawal(withdrawalId: string) {
-    const withdrawal = await withdrawalRepository.findById(withdrawalId);
-    if (!withdrawal) {
-      throw new AppError('Withdrawal not found', { code: 'WITHDRAWAL_NOT_FOUND', statusCode: 404 });
+  async claimWithdrawal(withdrawalId: string): Promise<boolean> {
+    const claimed = await withdrawalRepository.markProcessing(withdrawalId);
+
+    if (claimed) {
+      wdLogger.info('claimWithdrawal', 'Withdrawal claimed for processing', { withdrawalId });
     }
 
-    if (withdrawal.status !== 'pending') {
-      throw new AppError('Withdrawal is not pending', {
-        code: 'INVALID_WITHDRAWAL_STATE',
-        statusCode: 400,
-        details: { currentStatus: withdrawal.status },
-      });
-    }
-
-    await withdrawalRepository.markProcessing(withdrawalId);
-
-    wdLogger.info('claimWithdrawal', 'Withdrawal claimed for processing', { withdrawalId });
+    return claimed;
   },
 
   /**

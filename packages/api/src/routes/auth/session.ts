@@ -3,6 +3,8 @@ import { sessionService } from '../../services/auth/session.service.js';
 import { userRepository } from '../../repositories/user.repository.js';
 import { logger } from '../../lib/logger.js';
 import { AppError } from '../../lib/errors.js';
+import { isDevelopment } from '../../config/index.js';
+import { Cookies } from '@donuttrade/shared';
 
 const sessionLogger = logger.module('auth.session.routes');
 
@@ -47,7 +49,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.post<{
     Body: { refreshToken?: string };
-  }>('/refresh', async (request) => {
+  }>('/refresh', async (request, reply) => {
     const refreshToken =
       (request.body as { refreshToken?: string } | null)?.refreshToken
       ?? request.cookies?.['dt_refresh_token'];
@@ -61,11 +63,24 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
 
     const tokens = await sessionService.refreshSession(refreshToken);
 
+    // Re-set the httpOnly cookie to extend its maxAge on every refresh
+    reply.setCookie(Cookies.REFRESH_TOKEN, tokens.refreshToken, {
+      httpOnly: true,
+      secure: !isDevelopment,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
     sessionLogger.info('refresh', 'Session refreshed');
 
+    // Only return access token in JSON — refresh token stays in httpOnly cookie
     return {
       success: true,
-      data: tokens,
+      data: {
+        accessToken: tokens.accessToken,
+        expiresIn: tokens.expiresIn,
+      },
     };
   });
 
@@ -86,7 +101,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
       await sessionService.revokeByRefreshToken(refreshToken);
     }
 
-    reply.clearCookie('dt_refresh_token', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
+    reply.clearCookie(Cookies.REFRESH_TOKEN, { path: '/', httpOnly: true, secure: !isDevelopment, sameSite: 'lax' });
 
     sessionLogger.info('logout', 'User logged out', {
       userId: request.user!.id,

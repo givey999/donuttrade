@@ -36,35 +36,61 @@ export class WebhookClient {
   }
 
   /**
+   * Sleep helper for retry backoff.
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
    * Report an incoming deposit to the API.
-   * Returns the deposit result (whether to refund, etc.).
+   * Retries up to 3 times with exponential backoff (1s, 2s, 4s) to avoid
+   * losing deposits during transient API downtime.
    */
   async reportDeposit(username: string, amount: number): Promise<DepositResponse | null> {
-    try {
-      const res = await fetch(`${this.apiUrl}/internal/deposit/confirm`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.secret}`,
-        },
-        body: JSON.stringify({
-          username,
-          amount,
-          timestamp: new Date().toISOString(),
-        }),
-      });
+    const maxAttempts = 3;
+    const body = JSON.stringify({
+      username,
+      amount,
+      timestamp: new Date().toISOString(),
+    });
 
-      if (!res.ok) {
-        console.error(`[Webhook] Deposit API returned ${res.status}: ${await res.text()}`);
-        return null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const res = await fetch(`${this.apiUrl}/internal/deposit/confirm`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.secret}`,
+          },
+          body,
+        });
+
+        if (res.ok) {
+          const data = await res.json() as { success: boolean; data: DepositResponse };
+          return data.data;
+        }
+
+        // 4xx errors (except 429) are not retryable — bad request won't improve
+        if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+          console.error(`[Webhook] Deposit API returned ${res.status}: ${await res.text()}`);
+          return null;
+        }
+
+        console.error(`[Webhook] Deposit API returned ${res.status} (attempt ${attempt}/${maxAttempts})`);
+      } catch (err) {
+        console.error(`[Webhook] Deposit request failed (attempt ${attempt}/${maxAttempts}):`, (err as Error).message);
       }
 
-      const data = await res.json() as { success: boolean; data: DepositResponse };
-      return data.data;
-    } catch (err) {
-      console.error(`[Webhook] Failed to report deposit:`, (err as Error).message);
-      return null;
+      if (attempt < maxAttempts) {
+        const backoffMs = 1000 * Math.pow(2, attempt - 1); // 1s, 2s, 4s
+        console.log(`[Webhook] Retrying deposit in ${backoffMs}ms...`);
+        await this.sleep(backoffMs);
+      }
     }
+
+    console.error(`[Webhook] Deposit failed after ${maxAttempts} attempts for ${username} ($${amount})`);
+    return null;
   }
 
   /**

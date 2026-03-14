@@ -12,13 +12,25 @@ function CallbackContent() {
   const success = searchParams.get('success');
   const token = searchParams.get('token');
 
-  // Store access token and redirect to dashboard
+  // Store access token and redirect to dashboard after 3s
   useEffect(() => {
     if (success && token) {
       setAccessToken(token); // writes to both in-memory + localStorage
-      router.push('/dashboard');
+      const timer = setTimeout(() => {
+        router.push('/dashboard');
+      }, 3000);
+      return () => clearTimeout(timer);
     }
   }, [success, token, router]);
+
+  // Timeout: if callback page has no success/error after 10s, redirect to login
+  useEffect(() => {
+    if (success || error) return;
+    const timer = setTimeout(() => {
+      router.push('/login');
+    }, 10_000);
+    return () => clearTimeout(timer);
+  }, [success, error, router]);
 
   if (error) {
     return (
@@ -39,7 +51,14 @@ function CallbackContent() {
     return (
       <div className="rounded-xl border border-green-900/50 bg-green-950/20 p-6 text-center">
         <h2 className="text-lg font-semibold text-green-400">Signed in successfully</h2>
+        <p className="mt-3 text-sm text-neutral-300">Welcome to the DonutTrade Family</p>
         <p className="mt-2 text-sm text-neutral-400">Redirecting to dashboard...</p>
+        <Link
+          href="/dashboard"
+          className="mt-4 inline-block text-xs text-neutral-500 underline hover:text-neutral-300 transition-colors"
+        >
+          Go now
+        </Link>
       </div>
     );
   }
