@@ -65,11 +65,6 @@ chat.on('raw', (text, position) => {
   payments.processMessage(text);
 });
 
-// Example command handler
-chat.registerCommand('ping', (username, args, type) => {
-  chat.send(`Pong, ${username}!`);
-});
-
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\nShutting down...');

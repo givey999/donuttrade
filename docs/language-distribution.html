@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DonutTrade — Language Distribution</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0f0f13;
+      color: #e0e0e6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      color: #fff;
+    }
+    .subtitle {
+      font-size: 0.95rem;
+      color: #888;
+      margin-bottom: 2.5rem;
+    }
+    .chart-container {
+      display: flex;
+      align-items: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .pie-wrap {
+      position: relative;
+      width: 340px;
+      height: 340px;
+    }
+    .pie-wrap svg { filter: drop-shadow(0 4px 24px rgba(0,0,0,0.5)); }
+    .center-label {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+    }
+    .center-label .total { font-size: 2rem; font-weight: 700; color: #fff; }
+    .center-label .label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.1em; }
+    .legend {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.95rem;
+      transition: opacity 0.2s;
+      cursor: default;
+    }
+    .legend-item:hover { opacity: 0.8; }
+    .legend-dot {
+      width: 14px; height: 14px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .legend-name { min-width: 110px; }
+    .legend-pct { font-weight: 600; color: #fff; min-width: 50px; text-align: right; }
+    .legend-lines { color: #666; font-size: 0.85rem; }
+    .tooltip {
+      position: absolute;
+      background: #1e1e28;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 0.5rem 0.8rem;
+      font-size: 0.85rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+      z-index: 10;
+    }
+    .tooltip.show { opacity: 1; }
+    footer {
+      margin-top: 2.5rem;
+      font-size: 0.8rem;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>DonutTrade Platform</h1>
+  <p class="subtitle">Language distribution by lines of code</p>
+
+  <div class="chart-container">
+    <div class="pie-wrap">
+      <svg id="pie" viewBox="0 0 340 340" width="340" height="340"></svg>
+      <div class="center-label">
+        <div class="total" id="totalLines"></div>
+        <div class="label">lines</div>
+      </div>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <footer>Auto-generated &mdash; source analysis of the miau monorepo</footer>
+
+  <script>
+    const data = [
+      { name: 'TypeScript',  lines: 6689, color: '#3178c6' },
+      { name: 'React (TSX)', lines: 992,  color: '#61dafb' },
+      { name: 'JavaScript',  lines: 466,  color: '#f7df1e' },
+      { name: 'JSON',        lines: 338,  color: '#a8a8a8' },
+      { name: 'Docker',      lines: 164,  color: '#2496ed' },
+      { name: 'YAML',        lines: 164,  color: '#cb171e' },
+      { name: 'SQL',         lines: 147,  color: '#e48e00' },
+      { name: 'Prisma',      lines: 137,  color: '#5a67d8' },
+      { name: 'CSS',         lines: 1,    color: '#264de4' },
+    ];
+
+    const total = data.reduce((s, d) => s + d.lines, 0);
+    document.getElementById('totalLines').textContent = total.toLocaleString();
+
+    const svg = document.getElementById('pie');
+    const cx = 170, cy = 170, R = 130, r = 80;
+    const tooltip = document.getElementById('tooltip');
+    const legend = document.getElementById('legend');
+    let angle = -Math.PI / 2;
+
+    function polarToCart(cx, cy, radius, angle) {
+      return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+    }
+
+    data.forEach((d, i) => {
+      const pct = d.lines / total;
+      const sweep = pct * Math.PI * 2;
+      const startAngle = angle;
+      const endAngle = angle + sweep;
+      const largeArc = sweep > Math.PI ? 1 : 0;
+
+      const outerStart = polarToCart(cx, cy, R, startAngle);
+      const outerEnd   = polarToCart(cx, cy, R, endAngle);
+      const innerEnd   = polarToCart(cx, cy, r, endAngle);
+      const innerStart = polarToCart(cx, cy, r, startAngle);
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const pathD = [
+        `M ${outerStart.x} ${outerStart.y}`,
+        `A ${R} ${R} 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
+        `L ${innerEnd.x} ${innerEnd.y}`,
+        `A ${r} ${r} 0 ${largeArc} 0 ${innerStart.x} ${innerStart.y}`,
+        'Z'
+      ].join(' ');
+
+      path.setAttribute('d', pathD);
+      path.setAttribute('fill', d.color);
+      path.setAttribute('stroke', '#0f0f13');
+      path.setAttribute('stroke-width', '2');
+      path.style.transition = 'transform 0.2s, filter 0.2s';
+      path.style.transformOrigin = `${cx}px ${cy}px`;
+
+      const midAngle = startAngle + sweep / 2;
+      path.addEventListener('mouseenter', (e) => {
+        path.style.transform = 'scale(1.04)';
+        path.style.filter = 'brightness(1.2)';
+        tooltip.innerHTML = `<strong>${d.name}</strong><br>${d.lines.toLocaleString()} lines &mdash; ${(pct * 100).toFixed(1)}%`;
+        tooltip.classList.add('show');
+      });
+      path.addEventListener('mousemove', (e) => {
+        const rect = document.querySelector('.pie-wrap').getBoundingClientRect();
+        tooltip.style.left = (e.clientX - rect.left + 14) + 'px';
+        tooltip.style.top  = (e.clientY - rect.top - 10) + 'px';
+      });
+      path.addEventListener('mouseleave', () => {
+        path.style.transform = '';
+        path.style.filter = '';
+        tooltip.classList.remove('show');
+      });
+
+      svg.appendChild(path);
+      angle = endAngle;
+
+      // Legend
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      item.innerHTML = `
+        <span class="legend-dot" style="background:${d.color}"></span>
+        <span class="legend-name">${d.name}</span>
+        <span class="legend-pct">${(pct * 100).toFixed(1)}%</span>
+        <span class="legend-lines">${d.lines.toLocaleString()} lines</span>
+      `;
+      legend.appendChild(item);
+    });
+  </script>
+</body>
+</html>
