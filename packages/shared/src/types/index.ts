@@ -189,5 +189,45 @@ export interface CreateAuthStateInput {
   expiresAt: Date;
 }
 
+// ============================================================================
+// FINANCIAL TYPES (Phase 7)
+// ============================================================================
+
+export type TransactionType = 'deposit' | 'withdrawal' | 'purchase' | 'sale';
+export type WithdrawalStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export interface TransactionRecord {
+  id: string;
+  userId: string;
+  type: TransactionType;
+  amount: string;
+  balanceBefore: string;
+  balanceAfter: string;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface DepositResult {
+  transactionId: string;
+  amount: string;
+  balanceBefore: string;
+  balanceAfter: string;
+}
+
+export interface WithdrawalRequest {
+  id: string;
+  userId: string;
+  amount: string;
+  status: WithdrawalStatus;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface PendingWithdrawal {
+  id: string;
+  username: string;
+  amount: string;
+}
+
 // Auth types (OAuth, Discord, Email)
 export * from './auth.js';

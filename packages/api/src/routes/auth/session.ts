@@ -46,9 +46,11 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
    * Refresh access token using refresh token
    */
   fastify.post<{
-    Body: { refreshToken: string };
+    Body: { refreshToken?: string };
   }>('/refresh', async (request) => {
-    const { refreshToken } = request.body || {};
+    const refreshToken =
+      (request.body as { refreshToken?: string } | null)?.refreshToken
+      ?? request.cookies?.['dt_refresh_token'];
 
     if (!refreshToken) {
       throw new AppError('Refresh token required', {
@@ -75,12 +77,16 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
     Body: { refreshToken?: string };
   }>('/logout', {
     preHandler: [fastify.authenticate],
-  }, async (request) => {
-    const { refreshToken } = request.body || {};
+  }, async (request, reply) => {
+    const refreshToken =
+      (request.body as { refreshToken?: string } | null)?.refreshToken
+      ?? request.cookies?.['dt_refresh_token'];
 
     if (refreshToken) {
       await sessionService.revokeByRefreshToken(refreshToken);
     }
+
+    reply.clearCookie('dt_refresh_token', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
 
     sessionLogger.info('logout', 'User logged out', {
       userId: request.user!.id,

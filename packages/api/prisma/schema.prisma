@@ -50,6 +50,8 @@ model User {
 
   // Relations
   sessions                    Session[]
+  transactions                Transaction[]
+  withdrawals                 Withdrawal[]
 
   @@index([discordId])
   @@index([email])
@@ -82,6 +84,44 @@ model AuthState {
 
   @@index([expiresAt])
   @@map("auth_states")
+}
+
+// ============================================================================
+// FINANCIAL — Transactions & Withdrawals (Phase 7)
+// ============================================================================
+
+model Transaction {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String   // 'deposit' | 'withdrawal' | 'purchase' | 'sale'
+  amount        Decimal  @db.Decimal(20, 2)
+  balanceBefore Decimal  @map("balance_before") @db.Decimal(20, 2)
+  balanceAfter  Decimal  @map("balance_after") @db.Decimal(20, 2)
+  description   String?
+  metadata      Json?    @db.JsonB
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+model Withdrawal {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Decimal   @db.Decimal(20, 2)
+  status        String    @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
+  transactionId String?   @unique @map("transaction_id")
+  failReason    String?   @map("fail_reason")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  completedAt   DateTime? @map("completed_at")
+
+  @@index([userId])
+  @@index([status])
+  @@map("withdrawals")
 }
 
 // ============================================================================

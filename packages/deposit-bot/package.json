@@ -1,0 +1,21 @@
+{
+  "name": "@donuttrade/deposit-bot",
+  "version": "1.0.0",
+  "description": "Minecraft deposit bot for DonutTrade — handles deposits and withdrawals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0",
+    "mineflayer": "^4.23.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0"
+  }
+}

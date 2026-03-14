@@ -17,6 +17,7 @@ import { authPlugin } from './plugins/auth.js';
 import healthRoutes from './routes/health.js';
 import { authRoutes } from './routes/auth/index.js';
 import { internalRoutes } from './routes/internal/index.js';
+import { withdrawalRoutes } from './routes/withdrawal.js';
 
 const startupLogger = logger.module('startup');
 
@@ -59,6 +60,7 @@ async function buildApp() {
   await app.register(healthRoutes);
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(internalRoutes, { prefix: '/internal' });
+  await app.register(withdrawalRoutes, { prefix: '/withdrawals' });
 
   return app;
 }

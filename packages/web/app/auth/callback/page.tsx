@@ -1,25 +1,24 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense, useEffect } from 'react';
 import Link from 'next/link';
+import { setAccessToken } from '@/lib/api';
 
 function CallbackContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const error = searchParams.get('error');
   const success = searchParams.get('success');
   const token = searchParams.get('token');
 
-  // Store access token for returning verified users
+  // Store access token and redirect to dashboard
   useEffect(() => {
     if (success && token) {
-      try {
-        localStorage.setItem('dt_access_token', token);
-      } catch {
-        // localStorage may be unavailable (e.g. private browsing)
-      }
+      setAccessToken(token); // writes to both in-memory + localStorage
+      router.push('/dashboard');
     }
-  }, [success, token]);
+  }, [success, token, router]);
 
   if (error) {
     return (
@@ -40,7 +39,7 @@ function CallbackContent() {
     return (
       <div className="rounded-xl border border-green-900/50 bg-green-950/20 p-6 text-center">
         <h2 className="text-lg font-semibold text-green-400">Signed in successfully</h2>
-        <p className="mt-2 text-sm text-neutral-400">Welcome to DonutTrade!</p>
+        <p className="mt-2 text-sm text-neutral-400">Redirecting to dashboard...</p>
       </div>
     );
   }

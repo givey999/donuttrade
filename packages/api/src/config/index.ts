@@ -40,6 +40,7 @@ const envSchema = z.object({
   // Bot Bridge
   BOT_WEBHOOK_SECRET: z.string().min(32).optional(),
   VERIFICATION_BOT_DISPLAY_NAME: z.string().default('DonutTradeBot'),
+  DEPOSIT_BOT_DISPLAY_NAME: z.string().default('DonutTradeDeposit'),
 
   // CORS
   CORS_ORIGIN: z.string().default('https://moldo.go.ro:9443'),
@@ -100,6 +101,7 @@ export function getRedactedConfig(): Record<string, string | number | boolean | 
     JWT_REFRESH_SECRET: config.JWT_REFRESH_SECRET ? '[REDACTED]' : '[NOT SET]',
     BOT_WEBHOOK_SECRET: config.BOT_WEBHOOK_SECRET ? '[REDACTED]' : '[NOT SET]',
     VERIFICATION_BOT_DISPLAY_NAME: config.VERIFICATION_BOT_DISPLAY_NAME,
+    DEPOSIT_BOT_DISPLAY_NAME: config.DEPOSIT_BOT_DISPLAY_NAME,
   };
 }
 

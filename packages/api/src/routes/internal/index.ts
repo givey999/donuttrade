@@ -1,5 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { internalVerificationRoutes } from './verification.js';
+import { internalDepositRoutes } from './deposit.js';
+import { internalWithdrawalRoutes } from './withdrawal.js';
 
 /**
  * Internal routes - /internal/*
@@ -7,4 +9,6 @@ import { internalVerificationRoutes } from './verification.js';
  */
 export const internalRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(internalVerificationRoutes);
+  await fastify.register(internalDepositRoutes);
+  await fastify.register(internalWithdrawalRoutes);
 };

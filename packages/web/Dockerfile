@@ -4,17 +4,22 @@ RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/shared/package.json packages/shared/
 COPY packages/web/package.json packages/web/
-RUN pnpm --filter @donuttrade/web install --frozen-lockfile
+RUN pnpm --filter @donuttrade/web... install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY --from=deps /app/packages/web/node_modules ./packages/web/node_modules
+COPY tsconfig.base.json ./
+COPY packages/shared/ packages/shared/
 COPY packages/web/ packages/web/
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm --filter @donuttrade/shared build
 RUN pnpm --filter @donuttrade/web build
 
 FROM base AS runner
