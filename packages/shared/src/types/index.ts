@@ -193,7 +193,7 @@ export interface CreateAuthStateInput {
 // FINANCIAL TYPES (Phase 7)
 // ============================================================================
 
-export type TransactionType = 'deposit' | 'withdrawal' | 'purchase' | 'sale';
+export type TransactionType = 'deposit' | 'withdrawal' | 'purchase' | 'sale' | 'escrow' | 'escrow_refund' | 'listing_fee';
 export type WithdrawalStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface TransactionRecord {
@@ -227,6 +227,119 @@ export interface PendingWithdrawal {
   id: string;
   username: string;
   amount: string;
+}
+
+// ============================================================================
+// CATALOG & INVENTORY TYPES
+// ============================================================================
+
+export interface CatalogItemRecord {
+  id: string;
+  name: string;
+  displayName: string;
+  category: string;
+  description: string | null;
+  iconUrl: string | null;
+  enabled: boolean;
+}
+
+export interface InventoryItemRecord {
+  id: string;
+  catalogItemId: string;
+  catalogItemName: string;
+  catalogItemDisplayName: string;
+  category: string;
+  quantity: number;
+  reservedQuantity: number;
+  availableQuantity: number;
+}
+
+// ============================================================================
+// ITEM DEPOSIT & WITHDRAWAL TYPES
+// ============================================================================
+
+export type ItemDepositStatus = 'pending' | 'confirmed' | 'rejected';
+export type ItemWithdrawalStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
+export interface ItemDepositRecord {
+  id: string;
+  userId: string;
+  catalogItemId: string;
+  catalogItemDisplayName: string;
+  quantity: number;
+  status: ItemDepositStatus;
+  adminNotes: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface ItemWithdrawalRecord {
+  id: string;
+  userId: string;
+  catalogItemId: string;
+  catalogItemDisplayName: string;
+  quantity: number;
+  status: ItemWithdrawalStatus;
+  failReason: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+// ============================================================================
+// MARKETPLACE ORDER TYPES
+// ============================================================================
+
+export type OrderType = 'buy' | 'sell';
+export type OrderStatus = 'active' | 'completed' | 'cancelled' | 'expired';
+
+export interface OrderRecord {
+  id: string;
+  userId: string;
+  username: string;
+  type: OrderType;
+  catalogItemId: string;
+  catalogItemDisplayName: string;
+  category: string;
+  quantity: number;
+  filledQuantity: number;
+  remainingQuantity: number;
+  pricePerUnit: string;
+  commissionRate: string;
+  escrowAmount: string;
+  isPremium: boolean;
+  status: OrderStatus;
+  expiresAt: string;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface OrderFillRecord {
+  id: string;
+  orderId: string;
+  filledByUserId: string;
+  filledByUsername: string;
+  quantity: number;
+  pricePerUnit: string;
+  totalPrice: string;
+  commissionAmount: string;
+  netAmount: string;
+  createdAt: string;
+}
+
+export interface OrderDetailRecord extends OrderRecord {
+  fills: OrderFillRecord[];
+}
+
+export interface CreateOrderInput {
+  type: OrderType;
+  catalogItemId: string;
+  quantity: number;
+  pricePerUnit: number;
+  isPremium?: boolean;
+}
+
+export interface FillOrderInput {
+  quantity: number;
 }
 
 // Auth types (OAuth, Discord, Email)

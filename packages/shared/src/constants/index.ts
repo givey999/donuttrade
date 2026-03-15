@@ -116,6 +116,18 @@ export const SensitiveFields = [
 ] as const;
 
 /**
+ * Marketplace constants
+ */
+export const MARKETPLACE_COMMISSION_RATE = 0.02;
+export const MARKETPLACE_PREMIUM_FEE = 10_000_000;
+export const MARKETPLACE_STANDARD_DURATION_MS = 24 * 60 * 60 * 1000;
+export const MARKETPLACE_PREMIUM_DURATION_MS = 48 * 60 * 60 * 1000;
+export const MARKETPLACE_MIN_PRICE = 1;
+export const MARKETPLACE_MAX_PRICE = 100_000_000_000;
+export const MARKETPLACE_MIN_QUANTITY = 1;
+export const MARKETPLACE_MAX_QUANTITY = 10_000;
+
+/**
  * Default pagination values
  */
 export const Pagination = {

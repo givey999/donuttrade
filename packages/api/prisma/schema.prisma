@@ -52,6 +52,11 @@ model User {
   sessions                    Session[]
   transactions                Transaction[]
   withdrawals                 Withdrawal[]
+  inventoryItems              InventoryItem[]
+  itemDeposits                ItemDeposit[]
+  itemWithdrawals             ItemWithdrawal[]
+  orders                      Order[]
+  orderFills                  OrderFill[] @relation("orderFills")
 
   @@index([discordId])
   @@index([email])
@@ -134,4 +139,136 @@ model HealthCheck {
   status    String
 
   @@map("health_checks")
+}
+
+// ============================================================================
+// ITEM CATALOG & INVENTORY
+// ============================================================================
+
+model CatalogItem {
+  id          String   @id @default(uuid())
+  name        String   @unique                    // "zombie_spawner"
+  displayName String   @map("display_name")       // "Zombie Spawner"
+  category    String   @default("spawner")
+  description String?
+  iconUrl     String?  @map("icon_url")
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  inventoryItems  InventoryItem[]
+  itemDeposits    ItemDeposit[]
+  itemWithdrawals ItemWithdrawal[]
+  orders          Order[]
+
+  @@index([category])
+  @@index([enabled])
+  @@map("catalog_items")
+}
+
+model InventoryItem {
+  id               String      @id @default(uuid())
+  userId           String      @map("user_id")
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  catalogItemId    String      @map("catalog_item_id")
+  catalogItem      CatalogItem @relation(fields: [catalogItemId], references: [id])
+  quantity         Int         @default(0)
+  reservedQuantity Int         @default(0) @map("reserved_quantity")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  @@unique([userId, catalogItemId])
+  @@index([userId])
+  @@map("inventory_items")
+}
+
+// ============================================================================
+// ITEM DEPOSITS & WITHDRAWALS
+// ============================================================================
+
+model ItemDeposit {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  catalogItemId String    @map("catalog_item_id")
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+  quantity      Int
+  status        String    @default("pending")  // pending | confirmed | rejected
+  adminId       String?   @map("admin_id")
+  adminNotes    String?   @map("admin_notes")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  completedAt   DateTime? @map("completed_at")
+
+  @@index([userId])
+  @@index([status])
+  @@map("item_deposits")
+}
+
+model ItemWithdrawal {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  catalogItemId String    @map("catalog_item_id")
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+  quantity      Int
+  status        String    @default("pending")  // pending | processing | completed | failed | cancelled
+  adminId       String?   @map("admin_id")
+  failReason    String?   @map("fail_reason")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  completedAt   DateTime? @map("completed_at")
+
+  @@index([userId])
+  @@index([status])
+  @@map("item_withdrawals")
+}
+
+// ============================================================================
+// MARKETPLACE ORDERS
+// ============================================================================
+
+model Order {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            String    // 'buy' | 'sell'
+  catalogItemId   String    @map("catalog_item_id")
+  catalogItem     CatalogItem @relation(fields: [catalogItemId], references: [id])
+  quantity        Int
+  filledQuantity  Int       @default(0) @map("filled_quantity")
+  pricePerUnit    Decimal   @map("price_per_unit") @db.Decimal(20, 2)
+  commissionRate  Decimal   @map("commission_rate") @db.Decimal(5, 4)  // e.g. 0.0200
+  escrowAmount    Decimal   @map("escrow_amount") @db.Decimal(20, 2)
+  premiumFee      Decimal   @default(0) @map("premium_fee") @db.Decimal(20, 2)
+  isPremium       Boolean   @default(false) @map("is_premium")
+  status          String    @default("active")  // active | completed | cancelled | expired
+  expiresAt       DateTime  @map("expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  completedAt     DateTime? @map("completed_at")
+
+  fills           OrderFill[]
+
+  @@index([status, expiresAt])
+  @@index([userId])
+  @@index([catalogItemId])
+  @@index([type, status])
+  @@map("orders")
+}
+
+model OrderFill {
+  id               String   @id @default(uuid())
+  orderId          String   @map("order_id")
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  filledByUserId   String   @map("filled_by_user_id")
+  filledByUser     User     @relation("orderFills", fields: [filledByUserId], references: [id])
+  quantity         Int
+  pricePerUnit     Decimal  @map("price_per_unit") @db.Decimal(20, 2)
+  totalPrice       Decimal  @map("total_price") @db.Decimal(20, 2)
+  commissionAmount Decimal  @map("commission_amount") @db.Decimal(20, 2)
+  netAmount        Decimal  @map("net_amount") @db.Decimal(20, 2)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@index([filledByUserId])
+  @@map("order_fills")
 }

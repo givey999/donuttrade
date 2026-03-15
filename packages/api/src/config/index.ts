@@ -42,6 +42,9 @@ const envSchema = z.object({
   VERIFICATION_BOT_DISPLAY_NAME: z.string().default('DonutTradeBot'),
   DEPOSIT_BOT_DISPLAY_NAME: z.string().default('DonutTradeDeposit'),
 
+  // Marketplace
+  MARKETPLACE_COMMISSION_RATE: z.string().transform(Number).default('0.02'),
+
   // CORS
   CORS_ORIGIN: z.string().default('https://moldo.go.ro:9443'),
 });

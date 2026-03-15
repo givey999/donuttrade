@@ -17,6 +17,9 @@
     "db:studio": "prisma studio",
     "db:generate": "prisma generate"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@donuttrade/shared": "workspace:*",
     "@fastify/cookie": "^9.3.0",

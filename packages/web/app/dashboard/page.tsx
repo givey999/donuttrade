@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { RequireAuth } from '@/lib/require-auth';
 import { useAuth } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
+import type { TransactionRecord, TransactionType, PaginationMeta, InventoryItemRecord } from '@donuttrade/shared';
 
 const DEPOSIT_BOT_NAME = process.env.NEXT_PUBLIC_DEPOSIT_BOT_NAME || 'DonutTradeDeposit';
 const DEPOSIT_MIN = 1;
@@ -209,6 +210,162 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   );
 }
 
+// ─── Inventory Section ────────────────────────────────────────────────────────
+
+function InventorySection() {
+  const [items, setItems] = useState<InventoryItemRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch<{ items: InventoryItemRecord[] }>('/inventory')
+      .then((data) => setItems(data.items))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p className="mt-6 text-sm text-neutral-500">Loading inventory...</p>;
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-medium text-neutral-400">Inventory</h3>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-3"
+          >
+            <p className="text-sm font-medium">{item.catalogItemDisplayName}</p>
+            <div className="mt-1 flex items-baseline gap-1">
+              <span className="text-lg font-bold text-green-400">{item.availableQuantity}</span>
+              {item.reservedQuantity > 0 && (
+                <span className="text-xs text-neutral-500">({item.reservedQuantity} reserved)</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Transaction History ──────────────────────────────────────────────────────
+
+const TYPE_BADGE: Record<TransactionType, string> = {
+  deposit: 'border-green-900/50 bg-green-950/20 text-green-400',
+  withdrawal: 'border-red-900/50 bg-red-950/20 text-red-400',
+  purchase: 'border-blue-900/50 bg-blue-950/20 text-blue-400',
+  sale: 'border-amber-900/50 bg-amber-950/20 text-amber-400',
+  escrow: 'border-purple-900/50 bg-purple-950/20 text-purple-400',
+  escrow_refund: 'border-green-900/50 bg-green-950/20 text-green-400',
+  listing_fee: 'border-neutral-700 bg-neutral-800/50 text-neutral-400',
+};
+
+function TransactionHistory() {
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+
+    apiFetch<{ transactions: TransactionRecord[]; meta: PaginationMeta }>(
+      `/transactions?page=${page}&perPage=10`,
+    )
+      .then((data) => {
+        if (cancelled) return;
+        setTransactions(data.transactions);
+        setMeta(data.meta);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTransactions([]);
+        setMeta(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [page]);
+
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-medium text-neutral-400">Transaction History</h3>
+
+      {loading ? (
+        <p className="mt-3 text-sm text-neutral-500">Loading...</p>
+      ) : transactions.length === 0 ? (
+        <p className="mt-3 text-sm text-neutral-500">No transactions yet.</p>
+      ) : (
+        <>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-800">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-neutral-800 bg-neutral-950/50 text-xs text-neutral-400">
+                <tr>
+                  <th className="px-3 py-2">Date</th>
+                  <th className="px-3 py-2">Type</th>
+                  <th className="px-3 py-2">Description</th>
+                  <th className="px-3 py-2 text-right">Amount</th>
+                  <th className="px-3 py-2 text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-800/50">
+                {transactions.map((tx) => {
+                  const isPositive = tx.type === 'deposit' || tx.type === 'sale';
+                  return (
+                    <tr key={tx.id} className="text-neutral-300">
+                      <td className="whitespace-nowrap px-3 py-2 text-xs text-neutral-500">
+                        {new Date(tx.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${TYPE_BADGE[tx.type]}`}>
+                          {tx.type}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-neutral-400">
+                        {tx.description || '—'}
+                      </td>
+                      <td className={`whitespace-nowrap px-3 py-2 text-right text-xs font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                        {isPositive ? '+' : '-'}${Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-right text-xs text-neutral-400">
+                        ${Number(tx.balanceAfter).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {meta && meta.totalPages > 1 && (
+            <div className="mt-3 flex items-center justify-between text-xs text-neutral-500">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="rounded border border-neutral-700 px-2.5 py-1 transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span>Page {meta.page} of {meta.totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+                disabled={page >= meta.totalPages}
+                className="rounded border border-neutral-700 px-2.5 py-1 transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Dashboard Content ─────────────────────────────────────────────────────────
 
 function DashboardContent() {
@@ -227,7 +384,7 @@ function DashboardContent() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold tracking-tight">DonutTrade</h1>
@@ -269,6 +426,12 @@ function DashboardContent() {
               </button>
             </div>
           )}
+
+          {/* Inventory */}
+          {isVerified && <InventorySection />}
+
+          {/* Transaction history */}
+          <TransactionHistory />
 
           {/* Account details */}
           <div className="mt-6 space-y-3 text-sm">

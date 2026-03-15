@@ -18,6 +18,14 @@ import healthRoutes from './routes/health.js';
 import { authRoutes } from './routes/auth/index.js';
 import { internalRoutes } from './routes/internal/index.js';
 import { withdrawalRoutes } from './routes/withdrawal.js';
+import { transactionRoutes } from './routes/transactions.js';
+import { catalogRoutes } from './routes/catalog.js';
+import { inventoryRoutes } from './routes/inventory.js';
+import { itemDepositRoutes } from './routes/item-deposits.js';
+import { itemWithdrawalRoutes } from './routes/item-withdrawals.js';
+import { marketplaceRoutes } from './routes/marketplace.js';
+import { orderRoutes } from './routes/orders.js';
+import { startOrderExpiryJob, stopOrderExpiryJob } from './services/order-expiry.service.js';
 
 const startupLogger = logger.module('startup');
 
@@ -61,6 +69,13 @@ async function buildApp() {
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(internalRoutes, { prefix: '/internal' });
   await app.register(withdrawalRoutes, { prefix: '/withdrawals' });
+  await app.register(transactionRoutes, { prefix: '/transactions' });
+  await app.register(catalogRoutes, { prefix: '/catalog' });
+  await app.register(inventoryRoutes, { prefix: '/inventory' });
+  await app.register(itemDepositRoutes, { prefix: '/item-deposits' });
+  await app.register(itemWithdrawalRoutes, { prefix: '/item-withdrawals' });
+  await app.register(marketplaceRoutes, { prefix: '/marketplace' });
+  await app.register(orderRoutes, { prefix: '/orders' });
 
   return app;
 }
@@ -96,11 +111,15 @@ async function start() {
       environment: config.NODE_ENV,
     });
 
+    // Start background jobs
+    startOrderExpiryJob();
+
     // Graceful shutdown handlers
     const shutdown = async (signal: string) => {
       startupLogger.info('server.shutdown', `Received ${signal}, shutting down gracefully...`);
 
       try {
+        stopOrderExpiryJob();
         await app.close();
         startupLogger.info('server.closed', 'HTTP server closed');
 
