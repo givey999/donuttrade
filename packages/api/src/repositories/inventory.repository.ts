@@ -99,17 +99,16 @@ export const inventoryRepository = {
     const client = tx ?? prisma;
 
     try {
-      // Atomic conditional update to prevent removing reserved items
-      const result = await client.inventoryItem.updateMany({
-        where: {
-          userId,
-          catalogItemId,
-          quantity: { gte: quantity },
-        },
-        data: { quantity: { decrement: quantity } },
-      });
+      // Atomic: only remove available (unreserved) items
+      const result = await client.$executeRaw`
+        UPDATE inventory_items
+        SET quantity = quantity - ${quantity}, updated_at = NOW()
+        WHERE user_id = ${userId}
+          AND catalog_item_id = ${catalogItemId}
+          AND quantity - reserved_quantity >= ${quantity}
+      `;
 
-      if (result.count === 0) {
+      if (result === 0) {
         throw new AppError('Insufficient available items', {
           code: 'INSUFFICIENT_ITEMS',
           statusCode: 400,

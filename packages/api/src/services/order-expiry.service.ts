@@ -13,13 +13,15 @@ export function startOrderExpiryJob() {
 
   expiryLogger.info('start', 'Order expiry job started (every 60s)');
 
-  intervalId = setInterval(async () => {
+  const interval = setInterval(async () => {
     try {
       await marketplaceService.processExpiredOrders();
     } catch (error) {
       expiryLogger.error('tick.failed', 'Order expiry tick failed', error);
     }
   }, 60_000);
+  interval.unref();
+  intervalId = interval;
 }
 
 /**

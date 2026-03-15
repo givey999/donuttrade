@@ -33,6 +33,7 @@ function MyOrdersContent() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,11 +64,12 @@ function MyOrdersContent() {
 
   const handleCancel = async (orderId: string) => {
     setCancelling(orderId);
+    setCancelError(null);
     try {
       await apiFetch(`/orders/${orderId}`, { method: 'DELETE' });
       setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'cancelled' as OrderStatus } : o));
     } catch (err) {
-      // Silently fail — user can retry
+      setCancelError(err instanceof ApiError ? err.message : 'Failed to cancel order');
     } finally {
       setCancelling(null);
     }
@@ -93,6 +95,10 @@ function MyOrdersContent() {
           </button>
         ))}
       </div>
+
+      {cancelError && (
+        <p className="mt-3 text-xs text-red-400">{cancelError}</p>
+      )}
 
       {loading ? (
         <p className="mt-8 text-sm text-neutral-500">Loading orders...</p>

@@ -26,6 +26,7 @@ function OrderDetailContent() {
   const [order, setOrder] = useState<OrderDetailRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const id = params.id as string;
 
@@ -38,11 +39,12 @@ function OrderDetailContent() {
 
   const handleCancel = async () => {
     setCancelling(true);
+    setCancelError(null);
     try {
       await apiFetch(`/orders/${id}`, { method: 'DELETE' });
       setOrder((prev) => prev ? { ...prev, status: 'cancelled' } : null);
-    } catch {
-      // Silently fail
+    } catch (err) {
+      setCancelError(err instanceof ApiError ? err.message : 'Failed to cancel order');
     } finally {
       setCancelling(false);
     }
@@ -138,6 +140,9 @@ function OrderDetailContent() {
           >
             {cancelling ? 'Cancelling...' : 'Cancel Order'}
           </button>
+        )}
+        {cancelError && (
+          <p className="mt-2 text-xs text-red-400">{cancelError}</p>
         )}
       </div>
 

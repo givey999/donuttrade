@@ -88,7 +88,7 @@ export const itemWithdrawalService = {
 
     await withTransaction(async (tx) => {
       // Decrement both quantity and reservedQuantity
-      await tx.inventoryItem.updateMany({
+      const result = await tx.inventoryItem.updateMany({
         where: {
           userId: withdrawal.userId,
           catalogItemId: withdrawal.catalogItemId,
@@ -100,6 +100,14 @@ export const itemWithdrawalService = {
           reservedQuantity: { decrement: withdrawal.quantity },
         },
       });
+
+      if (result.count === 0) {
+        throw new AppError('Failed to remove items from inventory — data inconsistency', {
+          code: 'INVENTORY_UPDATE_FAILED',
+          statusCode: 500,
+          details: { withdrawalId, userId: withdrawal.userId, quantity: withdrawal.quantity },
+        });
+      }
 
       await tx.itemWithdrawal.update({
         where: { id: withdrawalId },

@@ -6,6 +6,7 @@ import { inventoryRepository } from '../repositories/inventory.repository.js';
 import { transactionRepository } from '../repositories/transaction.repository.js';
 import { config } from '../config/index.js';
 import { logger } from '../lib/logger.js';
+import { Prisma } from '@prisma/client';
 import { AppError, ValidationError } from '../lib/errors.js';
 import {
   MARKETPLACE_PREMIUM_FEE,
@@ -271,22 +272,32 @@ export const marketplaceService = {
    * Fill a buy order — seller provides items, buyer's escrow pays seller.
    */
   async _fillBuyOrder(order: any, sellerUserId: string, fillQuantity: number) {
-    const pricePerUnit = order.pricePerUnit.toNumber();
-    const commissionRate = order.commissionRate.toNumber();
-    const totalPrice = fillQuantity * pricePerUnit;
-    const commission = totalPrice * commissionRate;
-    const sellerReceives = totalPrice - commission;
+    const pricePerUnit = order.pricePerUnit as Prisma.Decimal;
+    const commissionRate = order.commissionRate as Prisma.Decimal;
+    const totalPrice = pricePerUnit.mul(fillQuantity);
+    const commission = totalPrice.mul(commissionRate);
+    const sellerReceives = totalPrice.sub(commission);
 
     const fill = await withTransaction(async (tx) => {
-      // Re-check order state inside transaction
-      const freshOrder = await tx.order.findUnique({ where: { id: order.id } });
-      if (!freshOrder || freshOrder.status !== 'active') {
-        throw new AppError('Order is no longer active', { code: 'ORDER_NOT_ACTIVE', statusCode: 400 });
+      // Atomically claim fill quantity — prevents race conditions
+      const claimResult = await tx.$executeRaw`
+        UPDATE orders
+        SET filled_quantity = filled_quantity + ${fillQuantity}, updated_at = NOW()
+        WHERE id = ${order.id} AND status = 'active'
+          AND filled_quantity + ${fillQuantity} <= quantity
+      `;
+      if (claimResult === 0) {
+        throw new AppError('Order cannot be filled — it may have been filled, expired, or cancelled', {
+          code: 'FILL_FAILED', statusCode: 409,
+        });
       }
-      const newFilled = freshOrder.filledQuantity + fillQuantity;
-      if (newFilled > freshOrder.quantity) {
-        throw new AppError('Fill exceeds remaining quantity', { code: 'FILL_EXCEEDED', statusCode: 400 });
-      }
+
+      // Check if fully filled
+      const updatedOrder = await tx.order.findUnique({
+        where: { id: order.id },
+        select: { filledQuantity: true, quantity: true },
+      });
+      const isCompleted = updatedOrder!.filledQuantity === updatedOrder!.quantity;
 
       // Seller loses items
       await inventoryRepository.removeItems(sellerUserId, order.catalogItemId, fillQuantity, tx);
@@ -296,24 +307,24 @@ export const marketplaceService = {
 
       // Seller gets paid (from escrowed money)
       const sellerUser = await tx.user.findUnique({ where: { id: sellerUserId }, select: { balance: true } });
-      const sellerBalanceBefore = sellerUser!.balance.toNumber();
-      await userRepository.incrementBalance(sellerUserId, sellerReceives, tx);
+      const sellerBalanceBefore = sellerUser!.balance as Prisma.Decimal;
+      await userRepository.incrementBalance(sellerUserId, sellerReceives.toNumber(), tx);
 
       // Transaction records
       await transactionRepository.create({
         userId: sellerUserId,
         type: 'sale',
-        amount: sellerReceives,
-        balanceBefore: sellerBalanceBefore,
-        balanceAfter: sellerBalanceBefore + sellerReceives,
+        amount: sellerReceives.toNumber(),
+        balanceBefore: sellerBalanceBefore.toNumber(),
+        balanceAfter: sellerBalanceBefore.add(sellerReceives).toNumber(),
         description: `Sold ${fillQuantity}x ${order.catalogItem.displayName} (${commission.toFixed(2)} commission)`,
-        metadata: { orderId: order.id, commission, fillQuantity },
+        metadata: { orderId: order.id, commission: commission.toNumber(), fillQuantity },
       }, tx);
 
       await transactionRepository.create({
         userId: order.userId,
         type: 'purchase',
-        amount: totalPrice,
+        amount: totalPrice.toNumber(),
         balanceBefore: 0, // Escrow — balance already deducted
         balanceAfter: 0,
         description: `Bought ${fillQuantity}x ${order.catalogItem.displayName}`,
@@ -333,16 +344,13 @@ export const marketplaceService = {
         },
       });
 
-      // Update order
-      const isCompleted = newFilled === freshOrder.quantity;
-      await tx.order.update({
-        where: { id: order.id },
-        data: {
-          filledQuantity: newFilled,
-          status: isCompleted ? 'completed' : 'active',
-          completedAt: isCompleted ? new Date() : null,
-        },
-      });
+      // Mark completed if fully filled
+      if (isCompleted) {
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: 'completed', completedAt: new Date() },
+        });
+      }
 
       return orderFill;
     });
@@ -351,7 +359,7 @@ export const marketplaceService = {
       orderId: order.id,
       sellerUserId,
       fillQuantity,
-      sellerReceives,
+      sellerReceives: sellerReceives.toNumber(),
     });
 
     return fill;
@@ -361,27 +369,37 @@ export const marketplaceService = {
    * Fill a sell order — buyer pays, seller's reserved items transfer to buyer.
    */
   async _fillSellOrder(order: any, buyerUserId: string, fillQuantity: number) {
-    const pricePerUnit = order.pricePerUnit.toNumber();
-    const commissionRate = order.commissionRate.toNumber();
-    const totalPrice = fillQuantity * pricePerUnit;
-    const commission = totalPrice * commissionRate;
-    const sellerReceives = totalPrice - commission;
+    const pricePerUnit = order.pricePerUnit as Prisma.Decimal;
+    const commissionRate = order.commissionRate as Prisma.Decimal;
+    const totalPrice = pricePerUnit.mul(fillQuantity);
+    const commission = totalPrice.mul(commissionRate);
+    const sellerReceives = totalPrice.sub(commission);
 
     const fill = await withTransaction(async (tx) => {
-      // Re-check order state inside transaction
-      const freshOrder = await tx.order.findUnique({ where: { id: order.id } });
-      if (!freshOrder || freshOrder.status !== 'active') {
-        throw new AppError('Order is no longer active', { code: 'ORDER_NOT_ACTIVE', statusCode: 400 });
+      // Atomically claim fill quantity — prevents race conditions
+      const claimResult = await tx.$executeRaw`
+        UPDATE orders
+        SET filled_quantity = filled_quantity + ${fillQuantity}, updated_at = NOW()
+        WHERE id = ${order.id} AND status = 'active'
+          AND filled_quantity + ${fillQuantity} <= quantity
+      `;
+      if (claimResult === 0) {
+        throw new AppError('Order cannot be filled — it may have been filled, expired, or cancelled', {
+          code: 'FILL_FAILED', statusCode: 409,
+        });
       }
-      const newFilled = freshOrder.filledQuantity + fillQuantity;
-      if (newFilled > freshOrder.quantity) {
-        throw new AppError('Fill exceeds remaining quantity', { code: 'FILL_EXCEEDED', statusCode: 400 });
-      }
+
+      // Check if fully filled
+      const updatedOrder = await tx.order.findUnique({
+        where: { id: order.id },
+        select: { filledQuantity: true, quantity: true },
+      });
+      const isCompleted = updatedOrder!.filledQuantity === updatedOrder!.quantity;
 
       // Buyer pays
       const buyerUser = await tx.user.findUnique({ where: { id: buyerUserId }, select: { balance: true } });
-      const buyerBalanceBefore = buyerUser!.balance.toNumber();
-      await userRepository.decrementBalance(buyerUserId, totalPrice, tx);
+      const buyerBalanceBefore = buyerUser!.balance as Prisma.Decimal;
+      await userRepository.decrementBalance(buyerUserId, totalPrice.toNumber(), tx);
 
       // Transfer reserved items from seller to buyer
       await inventoryRepository.transferReservedItems(
@@ -394,16 +412,16 @@ export const marketplaceService = {
 
       // Seller gets paid
       const sellerUser = await tx.user.findUnique({ where: { id: order.userId }, select: { balance: true } });
-      const sellerBalanceBefore = sellerUser!.balance.toNumber();
-      await userRepository.incrementBalance(order.userId, sellerReceives, tx);
+      const sellerBalanceBefore = sellerUser!.balance as Prisma.Decimal;
+      await userRepository.incrementBalance(order.userId, sellerReceives.toNumber(), tx);
 
       // Transaction records
       await transactionRepository.create({
         userId: buyerUserId,
         type: 'purchase',
-        amount: totalPrice,
-        balanceBefore: buyerBalanceBefore,
-        balanceAfter: buyerBalanceBefore - totalPrice,
+        amount: totalPrice.toNumber(),
+        balanceBefore: buyerBalanceBefore.toNumber(),
+        balanceAfter: buyerBalanceBefore.sub(totalPrice).toNumber(),
         description: `Bought ${fillQuantity}x ${order.catalogItem.displayName}`,
         metadata: { orderId: order.id, fillQuantity },
       }, tx);
@@ -411,11 +429,11 @@ export const marketplaceService = {
       await transactionRepository.create({
         userId: order.userId,
         type: 'sale',
-        amount: sellerReceives,
-        balanceBefore: sellerBalanceBefore,
-        balanceAfter: sellerBalanceBefore + sellerReceives,
+        amount: sellerReceives.toNumber(),
+        balanceBefore: sellerBalanceBefore.toNumber(),
+        balanceAfter: sellerBalanceBefore.add(sellerReceives).toNumber(),
         description: `Sold ${fillQuantity}x ${order.catalogItem.displayName} (${commission.toFixed(2)} commission)`,
-        metadata: { orderId: order.id, commission, fillQuantity },
+        metadata: { orderId: order.id, commission: commission.toNumber(), fillQuantity },
       }, tx);
 
       // Create fill record
@@ -431,16 +449,13 @@ export const marketplaceService = {
         },
       });
 
-      // Update order
-      const isCompleted = newFilled === freshOrder.quantity;
-      await tx.order.update({
-        where: { id: order.id },
-        data: {
-          filledQuantity: newFilled,
-          status: isCompleted ? 'completed' : 'active',
-          completedAt: isCompleted ? new Date() : null,
-        },
-      });
+      // Mark completed if fully filled
+      if (isCompleted) {
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: 'completed', completedAt: new Date() },
+        });
+      }
 
       return orderFill;
     });
@@ -449,7 +464,7 @@ export const marketplaceService = {
       orderId: order.id,
       buyerUserId,
       fillQuantity,
-      sellerReceives,
+      sellerReceives: sellerReceives.toNumber(),
     });
 
     return fill;
@@ -461,10 +476,8 @@ export const marketplaceService = {
   async cancelOrder(orderId: string, userId: string) {
     mktLogger.info('cancelOrder', 'Cancelling order', { orderId, userId });
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { catalogItem: true },
-    });
+    // Pre-validate ownership (non-atomic, for fast feedback)
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new AppError('Order not found', { code: 'ORDER_NOT_FOUND', statusCode: 404 });
     if (order.userId !== userId) {
       throw new AppError('Not your order', { code: 'FORBIDDEN', statusCode: 403 });
@@ -477,44 +490,46 @@ export const marketplaceService = {
       });
     }
 
-    const unfilled = order.quantity - order.filledQuantity;
-
     await withTransaction(async (tx) => {
-      if (order.type === 'buy' && unfilled > 0) {
-        // Refund escrowed money for unfilled portion
-        const refundAmount = unfilled * order.pricePerUnit.toNumber();
-        const user = await tx.user.findUnique({ where: { id: userId }, select: { balance: true } });
-        const balanceBefore = user!.balance.toNumber();
+      // Atomically claim the order for cancellation
+      const result = await tx.$executeRaw`
+        UPDATE orders SET status = 'cancelled', completed_at = NOW(), updated_at = NOW()
+        WHERE id = ${orderId} AND status = 'active' AND user_id = ${userId}
+      `;
+      if (result === 0) {
+        throw new AppError('Order cannot be cancelled — it may have already been cancelled or expired', {
+          code: 'CANCEL_FAILED', statusCode: 409,
+        });
+      }
 
-        await userRepository.incrementBalance(userId, refundAmount, tx);
+      // Re-read for fresh filledQuantity
+      const freshOrder = await tx.order.findUnique({ where: { id: orderId } });
+      const unfilled = freshOrder!.quantity - freshOrder!.filledQuantity;
+
+      if (freshOrder!.type === 'buy' && unfilled > 0) {
+        const refundAmount = (freshOrder!.pricePerUnit as Prisma.Decimal).mul(unfilled);
+        const user = await tx.user.findUnique({ where: { id: userId }, select: { balance: true } });
+        const balanceBefore = user!.balance as Prisma.Decimal;
+
+        await userRepository.incrementBalance(userId, refundAmount.toNumber(), tx);
 
         await transactionRepository.create({
           userId,
           type: 'escrow_refund',
-          amount: refundAmount,
-          balanceBefore,
-          balanceAfter: balanceBefore + refundAmount,
+          amount: refundAmount.toNumber(),
+          balanceBefore: balanceBefore.toNumber(),
+          balanceAfter: balanceBefore.add(refundAmount).toNumber(),
           description: `Escrow refund for cancelled buy order (${unfilled} unfilled)`,
-          metadata: { orderId: order.id, unfilled },
+          metadata: { orderId, unfilled },
         }, tx);
-      } else if (order.type === 'sell' && unfilled > 0) {
-        // Release reserved items for unfilled portion
-        await inventoryRepository.releaseReservation(userId, order.catalogItemId, unfilled, tx);
+      } else if (freshOrder!.type === 'sell' && unfilled > 0) {
+        await inventoryRepository.releaseReservation(userId, freshOrder!.catalogItemId, unfilled, tx);
       }
-
-      await tx.order.update({
-        where: { id: orderId },
-        data: {
-          status: 'cancelled',
-          completedAt: new Date(),
-        },
-      });
     });
 
     mktLogger.info('cancelOrder.success', 'Order cancelled', {
       orderId,
       userId,
-      unfilled,
       type: order.type,
     });
   },
@@ -528,7 +543,6 @@ export const marketplaceService = {
         status: 'active',
         expiresAt: { lt: new Date() },
       },
-      include: { catalogItem: true },
     });
 
     if (expired.length === 0) return;
@@ -537,42 +551,42 @@ export const marketplaceService = {
 
     for (const order of expired) {
       try {
-        const unfilled = order.quantity - order.filledQuantity;
-
         await withTransaction(async (tx) => {
-          if (order.type === 'buy' && unfilled > 0) {
-            const refundAmount = unfilled * order.pricePerUnit.toNumber();
-            const user = await tx.user.findUnique({ where: { id: order.userId }, select: { balance: true } });
-            const balanceBefore = user!.balance.toNumber();
+          // Atomically claim the order for expiry
+          const result = await tx.$executeRaw`
+            UPDATE orders SET status = 'expired', completed_at = NOW(), updated_at = NOW()
+            WHERE id = ${order.id} AND status = 'active'
+          `;
+          if (result === 0) return; // Already processed by another tick or cancelled
 
-            await userRepository.incrementBalance(order.userId, refundAmount, tx);
+          // Re-read for fresh filledQuantity
+          const freshOrder = await tx.order.findUnique({ where: { id: order.id } });
+          const unfilled = freshOrder!.quantity - freshOrder!.filledQuantity;
+
+          if (freshOrder!.type === 'buy' && unfilled > 0) {
+            const refundAmount = (freshOrder!.pricePerUnit as Prisma.Decimal).mul(unfilled);
+            const user = await tx.user.findUnique({ where: { id: freshOrder!.userId }, select: { balance: true } });
+            const balanceBefore = user!.balance as Prisma.Decimal;
+
+            await userRepository.incrementBalance(freshOrder!.userId, refundAmount.toNumber(), tx);
 
             await transactionRepository.create({
-              userId: order.userId,
+              userId: freshOrder!.userId,
               type: 'escrow_refund',
-              amount: refundAmount,
-              balanceBefore,
-              balanceAfter: balanceBefore + refundAmount,
+              amount: refundAmount.toNumber(),
+              balanceBefore: balanceBefore.toNumber(),
+              balanceAfter: balanceBefore.add(refundAmount).toNumber(),
               description: `Escrow refund for expired buy order (${unfilled} unfilled)`,
               metadata: { orderId: order.id, unfilled },
             }, tx);
-          } else if (order.type === 'sell' && unfilled > 0) {
-            await inventoryRepository.releaseReservation(order.userId, order.catalogItemId, unfilled, tx);
+          } else if (freshOrder!.type === 'sell' && unfilled > 0) {
+            await inventoryRepository.releaseReservation(freshOrder!.userId, freshOrder!.catalogItemId, unfilled, tx);
           }
-
-          await tx.order.update({
-            where: { id: order.id },
-            data: {
-              status: 'expired',
-              completedAt: new Date(),
-            },
-          });
         });
 
         mktLogger.info('processExpiredOrders.expired', 'Order expired', {
           orderId: order.id,
           type: order.type,
-          unfilled,
         });
       } catch (error) {
         mktLogger.error('processExpiredOrders.error', 'Failed to expire order', error, {
