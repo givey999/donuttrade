@@ -12,11 +12,12 @@ A GeoSpy-inspired landing page for DonutTrade at `/` (currently redirects to `/l
 | Hero headline | "The trusted way to trade on DonutSMP" |
 | CTA text | "Start Trading" (single CTA, links to `/login`) |
 | Visual style | Amber gradient glow + grid + animated floating particles |
-| Stats | Live stats strip pulled from `/admin/stats` API |
+| Stats | Live stats strip from new `GET /public/stats` endpoint |
 | Marketplace preview | Static CSS mockup of the order book |
 | Trust section | Escrow Protection / Verified Players / 24/7 Monitoring |
 | Font | Inter (already used site-wide) |
 | Color palette | `#0a0a0f` background, `#f59e0b` amber accent, neutral grays |
+| Authenticated users | Redirect to `/dashboard` if already logged in |
 
 ## Page Sections (top to bottom)
 
@@ -33,6 +34,7 @@ A GeoSpy-inspired landing page for DonutTrade at `/` (currently redirects to `/l
   - ~25 animated floating particles with 6 motion types: float-up, float-up-left, float-down, drift-right, drift-left, pulse-glow
   - 3 larger blurred orbs that pulse slowly
   - All particles use staggered `animation-delay` for organic feel
+  - Respect `prefers-reduced-motion`: disable all animations when user prefers reduced motion
 - **Content (centered):**
   - Pill badge: "DonutSMP Trading Platform" (amber border, amber text)
   - Headline: "The trusted way to trade on **DonutSMP**" (DonutSMP in amber)
@@ -43,7 +45,13 @@ A GeoSpy-inspired landing page for DonutTrade at `/` (currently redirects to `/l
 - Horizontal bar below hero, bordered top and bottom (`#1a1a1a`)
 - 4 stat columns centered: Items Traded / Total Volume / Active Orders / Traders
 - Large bold number + small uppercase label
-- **Data source:** Fetch from existing `GET /admin/stats` endpoint (public subset) or new public stats endpoint
+- **Data source:** `GET /public/stats` (no auth required)
+- **Loading state:** Show `—` dashes while loading; keep dashes on error (fail silently)
+- **Response fields:**
+  - `totalTraders`: count of users with `verification_status = 'verified'`
+  - `itemsTraded`: sum of `order_fills.quantity`
+  - `totalVolume`: sum of `order_fills.total_price`
+  - `activeOrders`: count of orders with `status = 'active'`
 
 ### 4. How It Works
 - Section title: "How it works"
@@ -63,7 +71,7 @@ A GeoSpy-inspired landing page for DonutTrade at `/` (currently redirects to `/l
   3. **24/7 Monitoring** (eye icon) — "Our admin team reviews every deposit, withdrawal, and trade. Full audit trail on every action."
 
 ### 6. Marketplace Preview
-- Section title: "Live marketplace"
+- Section title: "The marketplace"
 - Subtitle: "A real-time order book where buyers meet sellers"
 - Fake browser window (macOS-style dots: red/yellow/green)
 - Title bar shows: `moldo.go.ro:9443/marketplace`
@@ -83,14 +91,18 @@ A GeoSpy-inspired landing page for DonutTrade at `/` (currently redirects to `/l
 ## Technical Considerations
 
 ### Routing
-- Replace the current `redirect('/login')` in `packages/web/app/page.tsx` with the landing page component
-- The landing page is a **public page** — no auth required
-- The existing navbar (`components/navbar.tsx`) already returns `null` when unauthenticated, so it won't conflict
+- **Delete** `packages/web/app/page.tsx` (the current redirect-to-login file)
+- Create `packages/web/app/(landing)/page.tsx` and `packages/web/app/(landing)/layout.tsx` as a route group
+- The `(landing)` layout provides a minimal HTML shell without `AuthProvider`, `Navbar`, or `TimeoutBanner` — avoiding unnecessary auth checks for unauthenticated visitors
+- The existing `app/layout.tsx` (root layout) is restructured: move `AuthProvider`/`Navbar`/`TimeoutBanner` into a new `app/(app)/layout.tsx` route group that wraps all authenticated pages (`dashboard`, `marketplace`, `orders`, `admin`, `login`, `auth`, `signup`, `verify`)
+- This means two route groups at the top level: `(landing)` for `/` and `(app)` for everything else
+- **Authenticated user redirect:** The landing page checks for an existing access token in localStorage. If found, redirect to `/dashboard` client-side.
 
 ### Stats Endpoint
-- Option A: Create a new lightweight `GET /public/stats` endpoint that returns only aggregate counts (no auth required)
-- Option B: Hardcode stats initially, add live stats later
-- **Recommendation:** Option A — a simple public endpoint returning total users, items traded, active orders, total volume
+- New `GET /public/stats` Fastify route — no authentication required
+- Returns `{ totalTraders, itemsTraded, totalVolume, activeOrders }`
+- Queries: `prisma.user.count()`, `prisma.$queryRaw` for order fill aggregates, `prisma.order.count()`
+- **Caddy routing note:** The frontend fetch must include `Content-Type: application/json` header so Caddy routes the request to Fastify instead of Next.js
 
 ### Responsive Design
 - Hero: full width, text scales down on mobile
@@ -102,14 +114,24 @@ A GeoSpy-inspired landing page for DonutTrade at `/` (currently redirects to `/l
 - All particle animations use CSS `transform` and `opacity` only (GPU-accelerated, no layout thrashing)
 - `pointer-events: none` on all decorative elements
 - No JavaScript animation — pure CSS keyframes
+- `@media (prefers-reduced-motion: reduce)` — disable all particle animations
+
+### SEO
+- Page title: "DonutTrade — The trusted way to trade on DonutSMP"
+- Meta description: "Secure escrow trading for Minecraft items on DonutSMP. Deposit, trade, and withdraw safely."
+- Open Graph tags for title, description, and site name
 
 ## Files
 
 ### New Files
-- `packages/web/app/(landing)/page.tsx` — Landing page component (route group so it doesn't use the main layout's navbar)
-- `packages/web/app/(landing)/layout.tsx` — Minimal layout without authenticated navbar
+- `packages/web/app/(landing)/page.tsx` — Landing page component
+- `packages/web/app/(landing)/layout.tsx` — Minimal layout (no AuthProvider/Navbar)
 - `packages/api/src/routes/public/stats.ts` — Public stats endpoint
 
 ### Modified Files
-- `packages/web/app/page.tsx` — Remove redirect, replaced by route group
 - `packages/api/src/index.ts` — Register public stats route
+- `packages/web/app/layout.tsx` — Strip to bare HTML shell (move providers to app group)
+- `packages/web/app/(app)/layout.tsx` — New route group wrapping all authenticated pages with AuthProvider/Navbar/TimeoutBanner
+
+### Deleted Files
+- `packages/web/app/page.tsx` — Replaced by `(landing)/page.tsx` route group
