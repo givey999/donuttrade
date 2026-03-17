@@ -26,6 +26,7 @@ import { itemWithdrawalRoutes } from './routes/item-withdrawals.js';
 import { marketplaceRoutes } from './routes/marketplace.js';
 import { orderRoutes } from './routes/orders.js';
 import { adminRoutes } from './routes/admin/index.js';
+import { publicStatsRoutes } from './routes/public/stats.js';
 import { startOrderExpiryJob, stopOrderExpiryJob } from './services/order-expiry.service.js';
 
 const startupLogger = logger.module('startup');
@@ -78,6 +79,7 @@ async function buildApp() {
   await app.register(marketplaceRoutes, { prefix: '/marketplace' });
   await app.register(orderRoutes, { prefix: '/orders' });
   await app.register(adminRoutes, { prefix: '/admin' });
+  await app.register(publicStatsRoutes, { prefix: '/public/stats' });
 
   return app;
 }
