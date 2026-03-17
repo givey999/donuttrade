@@ -259,6 +259,7 @@ const TYPE_BADGE: Record<TransactionType, string> = {
   escrow: 'border-purple-900/50 bg-purple-950/20 text-purple-400',
   escrow_refund: 'border-green-900/50 bg-green-950/20 text-green-400',
   listing_fee: 'border-neutral-700 bg-neutral-800/50 text-neutral-400',
+  admin_adjustment: 'border-amber-900/50 bg-amber-950/20 text-amber-400',
 };
 
 function TransactionHistory() {

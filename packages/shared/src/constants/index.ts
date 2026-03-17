@@ -128,6 +128,27 @@ export const MARKETPLACE_MIN_QUANTITY = 1;
 export const MARKETPLACE_MAX_QUANTITY = 10_000;
 
 /**
+ * Role hierarchy — higher number = more power
+ */
+export const ROLE_HIERARCHY: Record<string, number> = {
+  user: 0,
+  moderator: 1,
+  manager: 2,
+  admin: 3,
+};
+
+/**
+ * Timeout preset durations for the admin panel
+ */
+export const TIMEOUT_PRESET_DURATIONS = [
+  { label: '1 Hour', ms: 60 * 60 * 1000 },
+  { label: '6 Hours', ms: 6 * 60 * 60 * 1000 },
+  { label: '24 Hours', ms: 24 * 60 * 60 * 1000 },
+  { label: '3 Days', ms: 3 * 24 * 60 * 60 * 1000 },
+  { label: '7 Days', ms: 7 * 24 * 60 * 60 * 1000 },
+] as const;
+
+/**
  * Default pagination values
  */
 export const Pagination = {

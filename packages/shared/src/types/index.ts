@@ -164,6 +164,9 @@ export interface UserProfile {
   discordUsername: string | null;
   verificationStatus: VerificationStatus;
   balance: string;  // Decimal as string
+  role: UserRole;
+  timedOutUntil: string | null;
+  timeoutReason: string | null;
   createdAt: string;
   lastLoginAt: string | null;
 }
@@ -193,7 +196,9 @@ export interface CreateAuthStateInput {
 // FINANCIAL TYPES (Phase 7)
 // ============================================================================
 
-export type TransactionType = 'deposit' | 'withdrawal' | 'purchase' | 'sale' | 'escrow' | 'escrow_refund' | 'listing_fee';
+export type UserRole = 'user' | 'moderator' | 'manager' | 'admin';
+
+export type TransactionType = 'deposit' | 'withdrawal' | 'purchase' | 'sale' | 'escrow' | 'escrow_refund' | 'listing_fee' | 'admin_adjustment';
 export type WithdrawalStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface TransactionRecord {

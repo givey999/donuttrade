@@ -42,6 +42,9 @@ model User {
 
   // Account state
   balance                     Decimal   @default(0) @db.Decimal(20, 2)
+  role                        String    @default("user")          // 'user' | 'moderator' | 'manager' | 'admin'
+  timedOutUntil               DateTime? @map("timed_out_until")
+  timeoutReason               String?   @map("timeout_reason")
   createdAt                   DateTime  @default(now()) @map("created_at")
   updatedAt                   DateTime  @updatedAt @map("updated_at")
   lastLoginAt                 DateTime? @map("last_login_at")
@@ -61,6 +64,7 @@ model User {
   @@index([discordId])
   @@index([email])
   @@index([verificationStatus])
+  @@index([role])
   @@map("users")
 }
 

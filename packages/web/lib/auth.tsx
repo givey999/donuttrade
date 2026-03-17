@@ -20,6 +20,7 @@ interface AuthState {
   user: UserProfile | null;
   loading: boolean;
   isAuthenticated: boolean;
+  isTimedOut: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -78,12 +79,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   }, [router]);
 
+  const isTimedOut = !!(user?.timedOutUntil && new Date(user.timedOutUntil) > new Date());
+
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
         isAuthenticated: !!user,
+        isTimedOut,
         logout,
         refreshUser,
       }}

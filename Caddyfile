@@ -37,6 +37,15 @@ moldo.go.ro:9443 {
     # Note: /internal/* routes are NOT exposed through Caddy.
     # The bot-bridge calls http://api:3001 directly on the Docker network.
 
+    # JSON API requests (from apiFetch / XHR) → API backend
+    # This catches all programmatic API calls, including /admin/*, /transactions,
+    # /marketplace, /orders, /inventory, etc. Browser page navigations don't
+    # send Content-Type headers, so they fall through to the frontend below.
+    @api_request header Content-Type "application/json*"
+    handle @api_request {
+        reverse_proxy api:3001
+    }
+
     # Future: explicit /api/* prefix
     handle /api/* {
         reverse_proxy api:3001

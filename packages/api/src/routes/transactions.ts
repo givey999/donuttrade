@@ -2,7 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { transactionRepository } from '../repositories/transaction.repository.js';
 import type { TransactionType, TransactionRecord, PaginationMeta } from '@donuttrade/shared';
 
-const VALID_TYPES: TransactionType[] = ['deposit', 'withdrawal', 'purchase', 'sale', 'escrow', 'escrow_refund', 'listing_fee'];
+const VALID_TYPES: TransactionType[] = ['deposit', 'withdrawal', 'purchase', 'sale', 'escrow', 'escrow_refund', 'listing_fee', 'admin_adjustment'];
 
 /**
  * User-facing transaction routes — /transactions

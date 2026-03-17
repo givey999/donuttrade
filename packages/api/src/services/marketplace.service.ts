@@ -53,6 +53,12 @@ export const marketplaceService = {
     if (user.bannedAt) {
       throw new AppError('Account is banned', { code: 'ACCOUNT_BANNED', statusCode: 403 });
     }
+    if (user.timedOutUntil && user.timedOutUntil > new Date()) {
+      throw new AppError('Account is currently timed out', {
+        code: 'ACCOUNT_TIMED_OUT', statusCode: 403,
+        details: { until: user.timedOutUntil.toISOString(), reason: user.timeoutReason },
+      });
+    }
 
     // Validate catalog item
     const catalogItem = await catalogItemRepository.findById(input.catalogItemId);
@@ -235,6 +241,12 @@ export const marketplaceService = {
     }
     if (filler.bannedAt) {
       throw new AppError('Account is banned', { code: 'ACCOUNT_BANNED', statusCode: 403 });
+    }
+    if (filler.timedOutUntil && filler.timedOutUntil > new Date()) {
+      throw new AppError('Account is currently timed out', {
+        code: 'ACCOUNT_TIMED_OUT', statusCode: 403,
+        details: { until: filler.timedOutUntil.toISOString(), reason: filler.timeoutReason },
+      });
     }
 
     const order = await prisma.order.findUnique({
@@ -532,6 +544,58 @@ export const marketplaceService = {
       userId,
       type: order.type,
     });
+  },
+
+  /**
+   * Admin cancel — bypasses ownership check but reuses refund logic.
+   */
+  async adminCancelOrder(orderId: string, adminId: string) {
+    mktLogger.info('adminCancelOrder', 'Admin cancelling order', { orderId, adminId });
+
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new AppError('Order not found', { code: 'ORDER_NOT_FOUND', statusCode: 404 });
+    if (order.status !== 'active') {
+      throw new AppError('Only active orders can be cancelled', {
+        code: 'ORDER_NOT_ACTIVE',
+        statusCode: 400,
+        details: { currentStatus: order.status },
+      });
+    }
+
+    await withTransaction(async (tx) => {
+      const result = await tx.$executeRaw`
+        UPDATE orders SET status = 'cancelled', completed_at = NOW(), updated_at = NOW()
+        WHERE id = ${orderId} AND status = 'active'
+      `;
+      if (result === 0) {
+        throw new AppError('Order cannot be cancelled', { code: 'CANCEL_FAILED', statusCode: 409 });
+      }
+
+      const freshOrder = await tx.order.findUnique({ where: { id: orderId } });
+      const unfilled = freshOrder!.quantity - freshOrder!.filledQuantity;
+
+      if (freshOrder!.type === 'buy' && unfilled > 0) {
+        const refundAmount = (freshOrder!.pricePerUnit as Prisma.Decimal).mul(unfilled);
+        const user = await tx.user.findUnique({ where: { id: freshOrder!.userId }, select: { balance: true } });
+        const balanceBefore = user!.balance as Prisma.Decimal;
+
+        await userRepository.incrementBalance(freshOrder!.userId, refundAmount.toNumber(), tx);
+
+        await transactionRepository.create({
+          userId: freshOrder!.userId,
+          type: 'escrow_refund',
+          amount: refundAmount.toNumber(),
+          balanceBefore: balanceBefore.toNumber(),
+          balanceAfter: balanceBefore.add(refundAmount).toNumber(),
+          description: `Escrow refund for admin-cancelled buy order (${unfilled} unfilled)`,
+          metadata: { orderId, unfilled, cancelledByAdmin: adminId },
+        }, tx);
+      } else if (freshOrder!.type === 'sell' && unfilled > 0) {
+        await inventoryRepository.releaseReservation(freshOrder!.userId, freshOrder!.catalogItemId, unfilled, tx);
+      }
+    });
+
+    mktLogger.info('adminCancelOrder.success', 'Order cancelled by admin', { orderId, adminId });
   },
 
   /**

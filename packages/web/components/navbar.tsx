@@ -42,6 +42,18 @@ export function Navbar() {
               </Link>
             );
           })}
+          {user?.role && user.role !== 'user' && (
+            <Link
+              href="/admin"
+              className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                pathname.startsWith('/admin')
+                  ? 'bg-amber-900/30 text-amber-400'
+                  : 'text-amber-500/70 hover:bg-amber-900/20 hover:text-amber-400'
+              }`}
+            >
+              Admin
+            </Link>
+          )}
         </div>
 
         {/* User info + logout */}

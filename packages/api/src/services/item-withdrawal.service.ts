@@ -28,6 +28,12 @@ export const itemWithdrawalService = {
     if (user.bannedAt) {
       throw new AppError('Account is banned', { code: 'ACCOUNT_BANNED', statusCode: 403 });
     }
+    if (user.timedOutUntil && user.timedOutUntil > new Date()) {
+      throw new AppError('Account is currently timed out', {
+        code: 'ACCOUNT_TIMED_OUT', statusCode: 403,
+        details: { until: user.timedOutUntil.toISOString(), reason: user.timeoutReason },
+      });
+    }
 
     const catalogItem = await catalogItemRepository.findById(catalogItemId);
     if (!catalogItem) throw new AppError('Catalog item not found', { code: 'ITEM_NOT_FOUND', statusCode: 404 });
