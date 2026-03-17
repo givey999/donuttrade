@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { prisma } from '../../services/database.js';
 import { marketplaceService } from '../../services/marketplace.service.js';
 import { AppError } from '../../lib/errors.js';
+import { auditService } from '../../services/audit.service.js';
 
 export const adminOrderRoutes: FastifyPluginAsync = async (fastify) => {
   /**
@@ -88,6 +89,7 @@ export const adminOrderRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     await marketplaceService.adminCancelOrder(request.params.id, request.user!.id);
+    await auditService.log({ actorId: request.user!.id, action: 'order.admin_cancel', targetType: 'order', targetId: request.params.id });
     return { success: true };
   });
 };

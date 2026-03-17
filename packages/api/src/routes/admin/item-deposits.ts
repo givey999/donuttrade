@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { prisma } from '../../services/database.js';
 import { itemDepositService } from '../../services/item-deposit.service.js';
+import { auditService } from '../../services/audit.service.js';
 
 export const adminItemDepositRoutes: FastifyPluginAsync = async (fastify) => {
   /**
@@ -61,6 +62,7 @@ export const adminItemDepositRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.patch<{ Params: { id: string } }>('/:id/confirm', async (request) => {
     await itemDepositService.confirmDeposit(request.params.id, request.user!.id);
+    await auditService.log({ actorId: request.user!.id, action: 'deposit.confirm', targetType: 'deposit', targetId: request.params.id });
     return { success: true };
   });
 
@@ -73,6 +75,7 @@ export const adminItemDepositRoutes: FastifyPluginAsync = async (fastify) => {
   }>('/:id/reject', async (request) => {
     const notes = (request.body as { notes?: string })?.notes;
     await itemDepositService.rejectDeposit(request.params.id, request.user!.id, notes);
+    await auditService.log({ actorId: request.user!.id, action: 'deposit.reject', targetType: 'deposit', targetId: request.params.id, details: { notes } });
     return { success: true };
   });
 };

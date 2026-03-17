@@ -6,6 +6,7 @@ import { adminItemWithdrawalRoutes } from './item-withdrawals.js';
 import { adminOrderRoutes } from './orders.js';
 import { adminUserRoutes } from './users.js';
 import { adminCatalogRoutes } from './catalog.js';
+import { adminAuditLogRoutes } from './audit-logs.js';
 
 /**
  * Admin routes — /admin/*
@@ -22,4 +23,5 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(adminOrderRoutes, { prefix: '/orders' });
   await fastify.register(adminUserRoutes, { prefix: '/users' });
   await fastify.register(adminCatalogRoutes, { prefix: '/catalog' });
+  await fastify.register(adminAuditLogRoutes, { prefix: '/audit-logs' });
 };

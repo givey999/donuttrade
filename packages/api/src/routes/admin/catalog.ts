@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { prisma } from '../../services/database.js';
 import { AppError } from '../../lib/errors.js';
+import { auditService } from '../../services/audit.service.js';
 
 export const adminCatalogRoutes: FastifyPluginAsync = async (fastify) => {
   /**
@@ -56,6 +57,8 @@ export const adminCatalogRoutes: FastifyPluginAsync = async (fastify) => {
       data: { name, displayName, category, description: description ?? null, iconUrl: iconUrl ?? null },
     });
 
+    await auditService.log({ actorId: request.user!.id, action: 'catalog.create', targetType: 'catalog', targetId: item.id, details: { name, displayName, category } });
+
     return {
       success: true,
       data: {
@@ -94,6 +97,8 @@ export const adminCatalogRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.enabled !== undefined) data.enabled = body.enabled;
 
     const item = await prisma.catalogItem.update({ where: { id: request.params.id }, data });
+
+    await auditService.log({ actorId: request.user!.id, action: 'catalog.update', targetType: 'catalog', targetId: request.params.id, details: data });
 
     return {
       success: true,

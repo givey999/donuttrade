@@ -6,6 +6,7 @@ import { transactionRepository } from '../../repositories/transaction.repository
 import { AppError } from '../../lib/errors.js';
 import { ROLE_HIERARCHY } from '@donuttrade/shared';
 import { logger } from '../../lib/logger.js';
+import { auditService } from '../../services/audit.service.js';
 
 const adminLogger = logger.module('admin.users');
 
@@ -180,6 +181,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
 
     const reason = (request.body as { reason: string })?.reason || 'No reason provided';
     await userRepository.ban(request.params.id, reason);
+    await auditService.log({ actorId: request.user!.id, action: 'user.ban', targetType: 'user', targetId: request.params.id, details: { reason } });
     adminLogger.warn('ban', 'User banned by admin', { targetId: request.params.id, adminId: request.user!.id, reason });
     return { success: true };
   });
@@ -194,6 +196,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     await userRepository.unban(request.params.id);
+    await auditService.log({ actorId: request.user!.id, action: 'user.unban', targetType: 'user', targetId: request.params.id });
     adminLogger.info('unban', 'User unbanned by admin', { targetId: request.params.id, adminId: request.user!.id });
     return { success: true };
   });
@@ -232,6 +235,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
       data: { timedOutUntil, timeoutReason: reason || null },
     });
 
+    await auditService.log({ actorId: request.user!.id, action: 'user.timeout', targetType: 'user', targetId: request.params.id, details: { durationMs, reason, until: timedOutUntil.toISOString() } });
     adminLogger.warn('timeout', 'User timed out by admin', {
       targetId: request.params.id,
       adminId: request.user!.id,
@@ -255,6 +259,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
       data: { timedOutUntil: null, timeoutReason: null },
     });
 
+    await auditService.log({ actorId: request.user!.id, action: 'user.remove_timeout', targetType: 'user', targetId: request.params.id });
     adminLogger.info('removeTimeout', 'Timeout removed by admin', { targetId: request.params.id, adminId: request.user!.id });
     return { success: true };
   });
@@ -306,6 +311,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
       }, tx);
     });
 
+    await auditService.log({ actorId: request.user!.id, action: 'user.balance_adjust', targetType: 'user', targetId, details: { amount, direction, reason } });
     adminLogger.warn('balanceAdjust', 'Balance adjusted by admin', {
       targetId,
       adminId: request.user!.id,
@@ -352,6 +358,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
       data: { role: newRole },
     });
 
+    await auditService.log({ actorId: request.user!.id, action: 'user.role_change', targetType: 'user', targetId: request.params.id, details: { oldRole: target.role, newRole } });
     adminLogger.warn('roleChange', 'User role changed by admin', {
       targetId: request.params.id,
       adminId: request.user!.id,

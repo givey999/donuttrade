@@ -60,6 +60,7 @@ model User {
   itemWithdrawals             ItemWithdrawal[]
   orders                      Order[]
   orderFills                  OrderFill[] @relation("orderFills")
+  auditLogs                   AuditLog[]
 
   @@index([discordId])
   @@index([email])
@@ -224,6 +225,27 @@ model ItemWithdrawal {
   @@index([userId])
   @@index([status])
   @@map("item_withdrawals")
+}
+
+// ============================================================================
+// AUDIT LOG
+// ============================================================================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorId     String   @map("actor_id")          // Admin who performed the action
+  actor       User     @relation(fields: [actorId], references: [id])
+  action      String                              // e.g. 'user.ban', 'deposit.confirm'
+  targetType  String   @map("target_type")        // 'user', 'deposit', 'withdrawal', 'order', 'catalog'
+  targetId    String?  @map("target_id")          // ID of the affected entity
+  details     Json?    @db.JsonB                  // Action-specific metadata
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([action])
+  @@index([targetId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 // ============================================================================

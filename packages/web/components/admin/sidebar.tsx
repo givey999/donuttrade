@@ -31,6 +31,7 @@ const SECTIONS = [
     links: [
       { href: '/admin/users', label: 'Users' },
       { href: '/admin/catalog', label: 'Catalog Items', adminOnly: true },
+      { href: '/admin/audit-log', label: 'Audit Log' },
     ],
   },
 ];

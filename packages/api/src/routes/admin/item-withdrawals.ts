@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { prisma } from '../../services/database.js';
 import { itemWithdrawalService } from '../../services/item-withdrawal.service.js';
+import { auditService } from '../../services/audit.service.js';
 
 export const adminItemWithdrawalRoutes: FastifyPluginAsync = async (fastify) => {
   /**
@@ -64,6 +65,7 @@ export const adminItemWithdrawalRoutes: FastifyPluginAsync = async (fastify) => 
     if (!claimed) {
       return { success: false, error: { code: 'ALREADY_CLAIMED', message: 'Withdrawal is not in pending state' } };
     }
+    await auditService.log({ actorId: request.user!.id, action: 'withdrawal.claim', targetType: 'withdrawal', targetId: request.params.id });
     return { success: true };
   });
 
@@ -72,6 +74,7 @@ export const adminItemWithdrawalRoutes: FastifyPluginAsync = async (fastify) => 
    */
   fastify.patch<{ Params: { id: string } }>('/:id/confirm', async (request) => {
     await itemWithdrawalService.confirmWithdrawal(request.params.id, request.user!.id);
+    await auditService.log({ actorId: request.user!.id, action: 'withdrawal.confirm', targetType: 'withdrawal', targetId: request.params.id });
     return { success: true };
   });
 
@@ -84,6 +87,7 @@ export const adminItemWithdrawalRoutes: FastifyPluginAsync = async (fastify) => 
   }>('/:id/fail', async (request) => {
     const reason = (request.body as { reason: string })?.reason || 'No reason provided';
     await itemWithdrawalService.failWithdrawal(request.params.id, request.user!.id, reason);
+    await auditService.log({ actorId: request.user!.id, action: 'withdrawal.fail', targetType: 'withdrawal', targetId: request.params.id, details: { reason } });
     return { success: true };
   });
 };
