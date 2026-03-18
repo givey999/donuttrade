@@ -50,6 +50,7 @@ model User {
   lastLoginAt                 DateTime? @map("last_login_at")
   bannedAt                    DateTime? @map("banned_at")
   banReason                   String?   @map("ban_reason")
+  tradingVolume               Decimal   @default(0) @map("trading_volume") @db.Decimal(20, 2)
 
   // Relations
   sessions                    Session[]
@@ -61,6 +62,8 @@ model User {
   orders                      Order[]
   orderFills                  OrderFill[] @relation("orderFills")
   auditLogs                   AuditLog[]
+  cosmetics                   UserCosmetics?
+  platformSettingsUpdated     PlatformSettings[] @relation("platformSettingsUpdated")
 
   @@index([discordId])
   @@index([email])
@@ -249,6 +252,38 @@ model AuditLog {
 }
 
 // ============================================================================
+// PLATFORM SETTINGS
+// ============================================================================
+
+model PlatformSettings {
+  key        String    @id
+  value      String
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  updatedBy  String?   @map("updated_by")
+  updatedByUser User?  @relation("platformSettingsUpdated", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@map("platform_settings")
+}
+
+// ============================================================================
+// USER COSMETICS
+// ============================================================================
+
+model UserCosmetics {
+  id                  String   @id @default(uuid())
+  userId              String   @unique @map("user_id")
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unlockedColors      String[] @default([]) @map("unlocked_colors")
+  unlockedFonts       String[] @default([]) @map("unlocked_fonts")
+  hiddenModePurchased Boolean  @default(false) @map("hidden_mode_purchased")
+  hiddenMode          Boolean  @default(false) @map("hidden_mode")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("user_cosmetics")
+}
+
+// ============================================================================
 // MARKETPLACE ORDERS
 // ============================================================================
 
@@ -271,6 +306,9 @@ model Order {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   completedAt     DateTime? @map("completed_at")
+  borderColor    String?  @map("border_color")
+  usernameColor  String?  @map("username_color")
+  usernameFont   String?  @map("username_font")
 
   fills           OrderFill[]
 
