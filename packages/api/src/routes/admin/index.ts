@@ -7,6 +7,8 @@ import { adminOrderRoutes } from './orders.js';
 import { adminUserRoutes } from './users.js';
 import { adminCatalogRoutes } from './catalog.js';
 import { adminAuditLogRoutes } from './audit-logs.js';
+import { adminSettingsRoutes } from './settings.js';
+import { adminRevenueRoutes } from './revenue.js';
 
 /**
  * Admin routes — /admin/*
@@ -24,4 +26,6 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(adminUserRoutes, { prefix: '/users' });
   await fastify.register(adminCatalogRoutes, { prefix: '/catalog' });
   await fastify.register(adminAuditLogRoutes, { prefix: '/audit-logs' });
+  await fastify.register(adminSettingsRoutes, { prefix: '/settings' });
+  await fastify.register(adminRevenueRoutes, { prefix: '/revenue' });
 };
