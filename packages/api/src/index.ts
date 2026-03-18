@@ -13,6 +13,8 @@ import requestContextPlugin from './plugins/request-context.js';
 import requestLoggingPlugin from './plugins/request-logging.js';
 import errorHandlerPlugin from './plugins/error-handler.js';
 import { authPlugin } from './plugins/auth.js';
+import maintenancePlugin from './plugins/maintenance.js';
+import { platformSettingsService } from './services/platform-settings.service.js';
 
 import healthRoutes from './routes/health.js';
 import { authRoutes } from './routes/auth/index.js';
@@ -65,6 +67,7 @@ async function buildApp() {
   await app.register(requestLoggingPlugin);
   await app.register(errorHandlerPlugin);
   await app.register(authPlugin);
+  await app.register(maintenancePlugin);
 
   // Register routes
   await app.register(healthRoutes);
@@ -101,6 +104,7 @@ async function start() {
     startupLogger.info('database.connecting', 'Connecting to databases...');
     await connectDatabase();
     await connectRedis();
+    await platformSettingsService.hydrateCache();
 
     // Build and start the app
     const app = await buildApp();
