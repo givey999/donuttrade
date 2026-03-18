@@ -4,6 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { RequireAuth } from '@/lib/require-auth';
 import { useAuth } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Modal } from '@/components/ui/modal';
+import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/pagination';
+import { FadeIn } from '@/components/ui/animate';
+import { CosmeticsSection } from './cosmetics-section';
 import type { TransactionRecord, TransactionType, PaginationMeta, InventoryItemRecord } from '@donuttrade/shared';
 
 const DEPOSIT_BOT_NAME = process.env.NEXT_PUBLIC_DEPOSIT_BOT_NAME || 'DonutTradeDeposit';
@@ -12,62 +21,32 @@ const DEPOSIT_MAX = 10_000_000;
 const WITHDRAWAL_MIN = 1;
 const WITHDRAWAL_MAX = 10_000_000;
 
-function VerificationBadge({ status }: { status: string }) {
-  if (status === 'verified') {
-    return (
-      <span className="inline-flex items-center rounded-full border border-green-900/50 bg-green-950/20 px-2.5 py-0.5 text-xs font-medium text-green-400">
-        Verified
-      </span>
-    );
-  }
-  if (status === 'expired') {
-    return (
-      <span className="inline-flex items-center rounded-full border border-red-900/50 bg-red-950/20 px-2.5 py-0.5 text-xs font-medium text-red-400">
-        Expired
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-full border border-amber-900/50 bg-amber-950/20 px-2.5 py-0.5 text-xs font-medium text-amber-400">
-      Pending
-    </span>
-  );
-}
-
 // ─── Deposit Modal ─────────────────────────────────────────────────────────────
 
 function DepositModal({ onClose }: { onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900/95 p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-semibold">Deposit</h3>
-        <p className="mt-3 text-sm text-neutral-400">
-          Send money to the deposit bot in-game:
-        </p>
+    <Modal onClose={onClose}>
+      <h3 className="text-lg font-semibold">Deposit</h3>
+      <p className="mt-3 text-sm text-neutral-400">
+        Send money to the deposit bot in-game:
+      </p>
 
-        <div className="mt-3 rounded-lg border border-neutral-700 bg-neutral-950/50 p-3">
-          <code className="text-sm text-green-400">
-            /pay {DEPOSIT_BOT_NAME} &lt;amount&gt;
-          </code>
-        </div>
-
-        <div className="mt-4 space-y-2 text-xs text-neutral-500">
-          <p>Min: ${DEPOSIT_MIN.toLocaleString()} &mdash; Max: ${DEPOSIT_MAX.toLocaleString()}</p>
-          <p>Your balance updates automatically after payment.</p>
-          <p>Amounts over the limit will be refunded in full.</p>
-        </div>
-
-        <button
-          onClick={onClose}
-          className="mt-5 w-full rounded-lg border border-neutral-700 bg-neutral-800/50 px-4 py-2 text-sm text-neutral-300 transition-colors hover:bg-neutral-700"
-        >
-          Close
-        </button>
+      <div className="mt-3 rounded-lg border border-[#1a1a1a] bg-white/[0.03] p-3">
+        <code className="text-sm text-amber-400">
+          /pay {DEPOSIT_BOT_NAME} &lt;amount&gt;
+        </code>
       </div>
-    </div>
+
+      <div className="mt-4 space-y-2 text-xs text-neutral-500">
+        <p>Min: ${DEPOSIT_MIN.toLocaleString()} &mdash; Max: ${DEPOSIT_MAX.toLocaleString()}</p>
+        <p>Your balance updates automatically after payment.</p>
+        <p>Amounts over the limit will be refunded in full.</p>
+      </div>
+
+      <Button variant="secondary" className="mt-5 w-full" onClick={onClose}>
+        Close
+      </Button>
+    </Modal>
   );
 }
 
@@ -117,7 +96,6 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.code === 'WITHDRAWAL_COOLDOWN') {
-          // Read retryAfter from structured error details
           const secs = typeof err.details?.retryAfter === 'number'
             ? err.details.retryAfter
             : 300;
@@ -135,78 +113,67 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   }, [amount]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900/95 p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-semibold">Withdraw</h3>
+    <Modal onClose={onClose}>
+      <h3 className="text-lg font-semibold">Withdraw</h3>
 
-        {success ? (
-          <>
-            <p className="mt-3 text-sm text-green-400">{success}</p>
-            <button
-              onClick={onClose}
-              className="mt-5 w-full rounded-lg border border-neutral-700 bg-neutral-800/50 px-4 py-2 text-sm text-neutral-300 transition-colors hover:bg-neutral-700"
-            >
-              Close
-            </button>
-          </>
-        ) : (
-          <>
-            <p className="mt-3 text-xs text-neutral-500">
-              Min: ${WITHDRAWAL_MIN.toLocaleString()} &mdash; Max: ${WITHDRAWAL_MAX.toLocaleString()}
-            </p>
+      {success ? (
+        <>
+          <p className="mt-3 text-sm text-green-400">{success}</p>
+          <Button variant="secondary" className="mt-5 w-full" onClick={onClose}>
+            Close
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="mt-3 text-xs text-neutral-500">
+            Min: ${WITHDRAWAL_MIN.toLocaleString()} &mdash; Max: ${WITHDRAWAL_MAX.toLocaleString()}
+          </p>
 
-            <div className="mt-3">
-              <label htmlFor="wd-amount" className="block text-xs text-neutral-400">
-                Amount
-              </label>
-              <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-500">$</span>
-                <input
-                  id="wd-amount"
-                  type="number"
-                  min={WITHDRAWAL_MIN}
-                  max={WITHDRAWAL_MAX}
-                  step="1"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  disabled={loading || cooldownSeconds > 0}
-                  placeholder="0"
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-950/50 py-2 pl-7 pr-3 text-sm text-white placeholder-neutral-600 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:opacity-50"
-                />
-              </div>
+          <div className="mt-3">
+            <label htmlFor="wd-amount" className="block text-xs text-neutral-400">
+              Amount
+            </label>
+            <div className="relative mt-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-500">$</span>
+              <Input
+                id="wd-amount"
+                type="number"
+                min={WITHDRAWAL_MIN}
+                max={WITHDRAWAL_MAX}
+                step="1"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                disabled={loading || cooldownSeconds > 0}
+                placeholder="0"
+                className="pl-7"
+              />
             </div>
+          </div>
 
-            {cooldownSeconds > 0 && (
-              <p className="mt-2 text-xs text-amber-400">
-                Cooldown: try again in {formatCooldown(cooldownSeconds)}
-              </p>
-            )}
+          {cooldownSeconds > 0 && (
+            <p className="mt-2 text-xs text-amber-400">
+              Cooldown: try again in {formatCooldown(cooldownSeconds)}
+            </p>
+          )}
 
-            {error && !cooldownSeconds && (
-              <p className="mt-2 text-xs text-red-400">{error}</p>
-            )}
+          {error && !cooldownSeconds && (
+            <p className="mt-2 text-xs text-red-400">{error}</p>
+          )}
 
-            <button
-              onClick={handleSubmit}
-              disabled={loading || cooldownSeconds > 0 || !amount}
-              className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? 'Requesting...' : 'Withdraw'}
-            </button>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || cooldownSeconds > 0 || !amount}
+            className="mt-4 w-full"
+          >
+            {loading ? 'Requesting...' : 'Withdraw'}
+          </Button>
 
-            <button
-              onClick={onClose}
-              className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-800/50 px-4 py-2 text-sm text-neutral-300 transition-colors hover:bg-neutral-700"
-            >
-              Cancel
-            </button>
-          </>
-        )}
-      </div>
-    </div>
+          <Button variant="secondary" className="mt-2 w-full" onClick={onClose}>
+            Cancel
+          </Button>
+        </>
+      )}
+    </Modal>
   );
 }
 
@@ -224,42 +191,47 @@ function InventorySection() {
   }, []);
 
   if (loading) return <p className="mt-6 text-sm text-neutral-500">Loading inventory...</p>;
-  if (items.length === 0) return null;
 
   return (
-    <div className="mt-6">
-      <h3 className="text-sm font-medium text-neutral-400">Inventory</h3>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-3"
-          >
-            <p className="text-sm font-medium">{item.catalogItemDisplayName}</p>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-lg font-bold text-green-400">{item.availableQuantity}</span>
-              {item.reservedQuantity > 0 && (
-                <span className="text-xs text-neutral-500">({item.reservedQuantity} reserved)</span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <FadeIn delay={200} className="mt-8">
+      <h3 className="text-lg font-semibold">Inventory</h3>
+      {items.length === 0 ? (
+        <Card className="mt-3 p-8 text-center">
+          <p className="text-sm text-neutral-500">No items yet — deposit spawners in-game to get started</p>
+        </Card>
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          {items.map((item) => (
+            <Card key={item.id} hover className="p-4">
+              <p className="text-sm font-semibold">{item.catalogItemDisplayName}</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-extrabold text-green-400">{item.availableQuantity}</span>
+                {item.reservedQuantity > 0 && (
+                  <span className="text-xs text-amber-400">({item.reservedQuantity} reserved)</span>
+                )}
+              </div>
+              <Badge variant="neutral" className="mt-2">
+                {(item as { category?: string }).category ?? 'item'}
+              </Badge>
+            </Card>
+          ))}
+        </div>
+      )}
+    </FadeIn>
   );
 }
 
 // ─── Transaction History ──────────────────────────────────────────────────────
 
-const TYPE_BADGE: Record<TransactionType, string> = {
-  deposit: 'border-green-900/50 bg-green-950/20 text-green-400',
-  withdrawal: 'border-red-900/50 bg-red-950/20 text-red-400',
-  purchase: 'border-blue-900/50 bg-blue-950/20 text-blue-400',
-  sale: 'border-amber-900/50 bg-amber-950/20 text-amber-400',
-  escrow: 'border-purple-900/50 bg-purple-950/20 text-purple-400',
-  escrow_refund: 'border-green-900/50 bg-green-950/20 text-green-400',
-  listing_fee: 'border-neutral-700 bg-neutral-800/50 text-neutral-400',
-  admin_adjustment: 'border-amber-900/50 bg-amber-950/20 text-amber-400',
+const TYPE_BADGE_VARIANT: Record<TransactionType, string> = {
+  deposit: 'success',
+  withdrawal: 'danger',
+  purchase: 'info',
+  sale: 'amber',
+  escrow: 'purple',
+  escrow_refund: 'success',
+  listing_fee: 'neutral',
+  admin_adjustment: 'warning',
 };
 
 function TransactionHistory() {
@@ -293,8 +265,8 @@ function TransactionHistory() {
   }, [page]);
 
   return (
-    <div className="mt-6">
-      <h3 className="text-sm font-medium text-neutral-400">Transaction History</h3>
+    <FadeIn delay={300} className="mt-8">
+      <h3 className="text-lg font-semibold">Transaction History</h3>
 
       {loading ? (
         <p className="mt-3 text-sm text-neutral-500">Loading...</p>
@@ -302,68 +274,50 @@ function TransactionHistory() {
         <p className="mt-3 text-sm text-neutral-500">No transactions yet.</p>
       ) : (
         <>
-          <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-800">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-neutral-800 bg-neutral-950/50 text-xs text-neutral-400">
+          <div className="mt-3">
+            <Table>
+              <Thead>
                 <tr>
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2">Type</th>
-                  <th className="px-3 py-2">Description</th>
-                  <th className="px-3 py-2 text-right">Amount</th>
-                  <th className="px-3 py-2 text-right">Balance</th>
+                  <Th>Date</Th>
+                  <Th>Type</Th>
+                  <Th>Description</Th>
+                  <Th className="text-right">Amount</Th>
+                  <Th className="text-right">Balance</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800/50">
+              </Thead>
+              <Tbody>
                 {transactions.map((tx) => {
                   const isPositive = tx.type === 'deposit' || tx.type === 'sale';
                   return (
-                    <tr key={tx.id} className="text-neutral-300">
-                      <td className="whitespace-nowrap px-3 py-2 text-xs text-neutral-500">
+                    <tr key={tx.id}>
+                      <Td className="whitespace-nowrap text-xs text-neutral-500">
                         {new Date(tx.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${TYPE_BADGE[tx.type]}`}>
+                      </Td>
+                      <Td>
+                        <Badge variant={TYPE_BADGE_VARIANT[tx.type] as 'success'}>
                           {tx.type}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-neutral-400">
+                        </Badge>
+                      </Td>
+                      <Td className="text-xs text-neutral-400">
                         {tx.description || '—'}
-                      </td>
-                      <td className={`whitespace-nowrap px-3 py-2 text-right text-xs font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                      </Td>
+                      <Td className={`whitespace-nowrap text-right text-xs font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
                         {isPositive ? '+' : '-'}${Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-right text-xs text-neutral-400">
+                      </Td>
+                      <Td className="whitespace-nowrap text-right text-xs text-neutral-400">
                         ${Number(tx.balanceAfter).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
+                      </Td>
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
+              </Tbody>
+            </Table>
           </div>
 
-          {meta && meta.totalPages > 1 && (
-            <div className="mt-3 flex items-center justify-between text-xs text-neutral-500">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="rounded border border-neutral-700 px-2.5 py-1 transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <span>Page {meta.page} of {meta.totalPages}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-                disabled={page >= meta.totalPages}
-                className="rounded border border-neutral-700 px-2.5 py-1 transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          )}
+          {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />}
         </>
       )}
-    </div>
+    </FadeIn>
   );
 }
 
@@ -383,86 +337,70 @@ function DashboardContent() {
 
   const isVerified = user.verificationStatus === 'verified';
 
+  const verificationVariant = user.verificationStatus === 'verified' ? 'success'
+    : user.verificationStatus === 'expired' ? 'danger' : 'warning';
+
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-2xl">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">DonutTrade</h1>
-          <p className="mt-2 text-sm text-neutral-400">Dashboard</p>
-        </div>
-
-        {/* Profile card */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6 shadow-lg backdrop-blur-sm">
-          {/* Username + verification */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              {user.minecraftUsername ?? 'Unknown Player'}
-            </h2>
-            <VerificationBadge status={user.verificationStatus} />
-          </div>
-
-          {/* Balance */}
-          <div className="mt-6 rounded-lg border border-neutral-800 bg-neutral-950/50 p-4 text-center">
-            <p className="text-xs text-neutral-400">Balance</p>
-            <p className="mt-1 text-2xl font-bold text-green-400">
+    <main className="mx-auto max-w-4xl px-4 py-8">
+      {/* Balance Hero */}
+      <FadeIn>
+        <div className="relative overflow-hidden">
+          <Card className="p-8 text-center">
+            {/* Glow behind balance */}
+            <div
+              className="pointer-events-none absolute left-1/2 top-0 h-40 w-80 -translate-x-1/2"
+              style={{ background: 'radial-gradient(ellipse, rgba(34,197,94,0.08) 0%, transparent 70%)' }}
+            />
+            <p className="text-xs text-neutral-500">Your Balance</p>
+            <p className="mt-2 text-4xl font-extrabold text-green-400">
               ${formattedBalance}
             </p>
-          </div>
 
-          {/* Deposit / Withdraw buttons */}
-          {isVerified && (
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setShowDeposit(true)}
-                className="rounded-lg bg-green-600/20 border border-green-800/50 px-4 py-2 text-sm font-medium text-green-400 transition-colors hover:bg-green-600/30"
-              >
-                Deposit
-              </button>
-              <button
-                onClick={() => setShowWithdraw(true)}
-                className="rounded-lg border border-neutral-700 bg-neutral-800/30 px-4 py-2 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-700"
-              >
-                Withdraw
-              </button>
-            </div>
-          )}
-
-          {/* Inventory */}
-          {isVerified && <InventorySection />}
-
-          {/* Transaction history */}
-          <TransactionHistory />
-
-          {/* Account details */}
-          <div className="mt-6 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-neutral-400">Auth provider</span>
-              <span className="capitalize">{user.authProvider}</span>
-            </div>
-            {user.email && (
-              <div className="flex justify-between">
-                <span className="text-neutral-400">Email</span>
-                <span className="truncate ml-4">{user.email}</span>
+            {/* Deposit / Withdraw buttons */}
+            {isVerified && (
+              <div className="mt-6 flex justify-center gap-3">
+                <Button onClick={() => setShowDeposit(true)}>
+                  Deposit
+                </Button>
+                <Button variant="secondary" onClick={() => setShowWithdraw(true)}>
+                  Withdraw
+                </Button>
               </div>
             )}
-            <div className="flex justify-between">
-              <span className="text-neutral-400">Member since</span>
-              <span>{new Date(user.createdAt).toLocaleDateString()}</span>
-            </div>
-          </div>
-
-          {/* Sign out */}
-          <div className="mt-6 border-t border-neutral-800 pt-6">
-            <button
-              onClick={logout}
-              className="w-full rounded-lg border border-neutral-800 bg-neutral-800/30 px-4 py-2.5 text-sm text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
-            >
-              Sign out
-            </button>
-          </div>
+          </Card>
         </div>
-      </div>
+      </FadeIn>
+
+      {/* Stats row */}
+      <FadeIn delay={100}>
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <Card className="p-4 text-center">
+            <p className="text-[10px] uppercase tracking-wider text-neutral-600">Verification</p>
+            <div className="mt-1.5">
+              <Badge variant={verificationVariant}>
+                {user.verificationStatus}
+              </Badge>
+            </div>
+          </Card>
+          <Card className="p-4 text-center">
+            <p className="text-[10px] uppercase tracking-wider text-neutral-600">Member Since</p>
+            <p className="mt-1.5 text-sm font-medium">{new Date(user.createdAt).toLocaleDateString()}</p>
+          </Card>
+          <Card className="p-4 text-center">
+            <p className="text-[10px] uppercase tracking-wider text-neutral-600">Auth Provider</p>
+            <p className="mt-1.5 text-sm font-medium capitalize">{user.authProvider}</p>
+          </Card>
+        </div>
+      </FadeIn>
+
+      {/* Inventory */}
+      {isVerified && <InventorySection />}
+
+      {/* Cosmetics */}
+      {isVerified && <CosmeticsSection />}
+
+      {/* Transaction history */}
+      <TransactionHistory />
 
       {/* Modals */}
       {showDeposit && <DepositModal onClose={() => setShowDeposit(false)} />}
