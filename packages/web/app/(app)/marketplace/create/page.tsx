@@ -15,9 +15,15 @@ import type { CatalogItemRecord } from '@donuttrade/shared';
 
 const PREMIUM_FEE = 10_000_000;
 
+interface CosmeticItem {
+  id: string;
+  available: boolean;
+  reason: string;
+}
+
 interface CosmeticsData {
-  colors: string[];
-  fonts: string[];
+  colors: CosmeticItem[];
+  fonts: CosmeticItem[];
   tradingVolume: string;
   hiddenModePurchased: boolean;
   hiddenMode: boolean;
@@ -73,15 +79,15 @@ function CreateOrderContent() {
 
   // Determine which colors/fonts are unlocked
   const unlockedColors = COSMETIC_COLORS.filter((c) => {
-    if (c.tier === 'free') return true;
-    if (!cosmetics) return false;
-    return cosmetics.colors.includes(c.id);
+    if (!cosmetics) return c.tier === 'free';
+    const match = cosmetics.colors.find((cc) => cc.id === c.id);
+    return match?.available ?? false;
   });
 
   const unlockedFonts = COSMETIC_FONTS.filter((f) => {
-    if (f.tier === 'free') return true;
-    if (!cosmetics) return false;
-    return cosmetics.fonts.includes(f.id);
+    if (!cosmetics) return f.tier === 'free';
+    const match = cosmetics.fonts.find((ff) => ff.id === f.id);
+    return match?.available ?? false;
   });
 
   const handleSubmit = useCallback(async () => {
@@ -245,7 +251,13 @@ function CreateOrderContent() {
                     className={`h-7 w-7 rounded-full border-2 transition-all ${
                       borderColor === color.id ? 'border-white ring-2 ring-white/30' : 'border-[#1a1a1a]'
                     }`}
-                    style={{ backgroundColor: color.hex }}
+                    style={{
+                      background: color.tier === 'volume'
+                        ? `linear-gradient(135deg, ${color.hex}, #0a0a0a, ${color.hex})`
+                        : color.tier === 'paid'
+                          ? `linear-gradient(135deg, ${color.hex}, ${color.hex}dd, white, ${color.hex}dd, ${color.hex})`
+                          : color.hex,
+                    }}
                     title={color.name}
                   />
                 ))}
@@ -272,7 +284,13 @@ function CreateOrderContent() {
                     className={`h-7 w-7 rounded-full border-2 transition-all ${
                       usernameColor === color.id ? 'border-white ring-2 ring-white/30' : 'border-[#1a1a1a]'
                     }`}
-                    style={{ backgroundColor: color.hex }}
+                    style={{
+                      background: color.tier === 'volume'
+                        ? `linear-gradient(135deg, ${color.hex}, #0a0a0a, ${color.hex})`
+                        : color.tier === 'paid'
+                          ? `linear-gradient(135deg, ${color.hex}, ${color.hex}dd, white, ${color.hex}dd, ${color.hex})`
+                          : color.hex,
+                    }}
                     title={color.name}
                   />
                 ))}

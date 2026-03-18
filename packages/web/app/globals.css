@@ -1,1 +1,107 @@
 @import "tailwindcss";
+
+@theme {
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Sparkle effect for premium (3B volume) font */
+@keyframes sparkle-1 {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(180deg); }
+}
+@keyframes sparkle-2 {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(0.8) rotate(-180deg); }
+}
+@keyframes sparkle-3 {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 0.8; transform: scale(1.1) rotate(90deg); }
+}
+@keyframes sparkle-glow {
+  0%, 100% { text-shadow: 0 0 4px rgba(255, 215, 0, 0.3); }
+  50% { text-shadow: 0 0 12px rgba(255, 215, 0, 0.6), 0 0 24px rgba(255, 215, 0, 0.2); }
+}
+
+.sparkle-name {
+  position: relative;
+  display: inline-block;
+  animation: sparkle-glow 2s ease-in-out infinite;
+}
+
+.sparkle-name::before,
+.sparkle-name::after {
+  content: '✦';
+  position: absolute;
+  font-size: 0.6em;
+  pointer-events: none;
+}
+
+.sparkle-name::before {
+  top: -0.5em;
+  left: -0.3em;
+  color: #ffd700;
+  animation: sparkle-1 1.8s ease-in-out infinite;
+}
+
+.sparkle-name::after {
+  bottom: -0.3em;
+  right: -0.4em;
+  color: #fff4b0;
+  animation: sparkle-2 2.2s ease-in-out infinite 0.5s;
+}
+
+/* Extra sparkle via a wrapper span */
+.sparkle-name .sparkle-extra {
+  position: absolute;
+  top: -0.2em;
+  right: -0.1em;
+  font-size: 0.5em;
+  color: #ffe066;
+  pointer-events: none;
+  animation: sparkle-3 2.5s ease-in-out infinite 1s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-scale-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

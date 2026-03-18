@@ -185,13 +185,14 @@ function MarketplaceContent() {
 
                   <div className="mt-3 flex items-center justify-between">
                     <span
-                      className="text-xs text-neutral-500"
+                      className={`text-xs text-neutral-500 ${order.usernameFont === 'premium' ? 'sparkle-name' : ''}`}
                       style={{
                         ...(order.usernameColor ? { color: COSMETIC_COLORS.find(c => c.id === order.usernameColor)?.hex } : {}),
                         ...(order.usernameFont ? { fontFamily: COSMETIC_FONTS.find(f => f.id === order.usernameFont)?.fontFamily } : {}),
                       }}
                     >
                       by {order.username}
+                      {order.usernameFont === 'premium' && <span className="sparkle-extra">✦</span>}
                     </span>
                     <Button size="sm" onClick={() => setFillOrder(order)}>
                       Fill
