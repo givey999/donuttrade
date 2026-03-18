@@ -7,7 +7,7 @@ const EXEMPT_PREFIXES = ['/health', '/auth', '/internal', '/public'];
 
 const maintenancePlugin: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('onRequest', async (request, reply) => {
-    const path = request.url.split('?')[0];
+    const path = request.url.split('?')[0] ?? '';
     if (EXEMPT_PREFIXES.some(prefix => path.startsWith(prefix))) {
       return;
     }

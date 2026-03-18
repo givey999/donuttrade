@@ -14,9 +14,9 @@ export const adminSettingsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.put<{ Params: { key: string }; Body: { value: string } }>('/:key', async (request) => {
     const { key } = request.params;
     const { value } = request.body;
-    await platformSettingsService.update(key, value, request.user.id);
+    await platformSettingsService.update(key, value, request.user!.id);
     await auditService.log({
-      actorId: request.user.id,
+      actorId: request.user!.id,
       action: 'setting.update',
       targetType: 'setting',
       targetId: key,

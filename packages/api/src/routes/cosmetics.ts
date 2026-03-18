@@ -6,7 +6,7 @@ export const cosmeticsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
 
   fastify.get('/', async (request) => {
-    const data = await cosmeticsService.getUserCosmetics(request.user.id);
+    const data = await cosmeticsService.getUserCosmetics(request.user!.id);
     return { success: true, data };
   });
 
@@ -15,17 +15,17 @@ export const cosmeticsRoutes: FastifyPluginAsync = async (fastify) => {
     if (type !== 'color' && type !== 'font') {
       throw new ValidationError('Type must be "color" or "font"');
     }
-    await cosmeticsService.unlockCosmetic(request.user.id, type, id);
+    await cosmeticsService.unlockCosmetic(request.user!.id, type, id);
     return { success: true };
   });
 
   fastify.post('/hidden/purchase', async (request) => {
-    await cosmeticsService.purchaseHiddenMode(request.user.id);
+    await cosmeticsService.purchaseHiddenMode(request.user!.id);
     return { success: true };
   });
 
   fastify.post('/hidden/toggle', async (request) => {
-    const hiddenMode = await cosmeticsService.toggleHiddenMode(request.user.id);
+    const hiddenMode = await cosmeticsService.toggleHiddenMode(request.user!.id);
     return { success: true, data: { hiddenMode } };
   });
 };

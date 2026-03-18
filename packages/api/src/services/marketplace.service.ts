@@ -4,7 +4,6 @@ import { userRepository } from '../repositories/user.repository.js';
 import { catalogItemRepository } from '../repositories/catalog-item.repository.js';
 import { inventoryRepository } from '../repositories/inventory.repository.js';
 import { transactionRepository } from '../repositories/transaction.repository.js';
-import { config } from '../config/index.js';
 import { logger } from '../lib/logger.js';
 import { Prisma } from '@prisma/client';
 import { AppError, ValidationError } from '../lib/errors.js';

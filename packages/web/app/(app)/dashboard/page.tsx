@@ -232,6 +232,8 @@ const TYPE_BADGE_VARIANT: Record<TransactionType, string> = {
   escrow_refund: 'success',
   listing_fee: 'neutral',
   admin_adjustment: 'warning',
+  cosmetic_purchase: 'purple',
+  hidden_mode_purchase: 'purple',
 };
 
 function TransactionHistory() {
