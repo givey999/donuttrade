@@ -5,12 +5,15 @@ import Link from 'next/link';
 import { RequireAuth } from '@/lib/require-auth';
 import { apiFetch } from '@/lib/api';
 import { FillOrderModal } from '@/components/marketplace/fill-order-modal';
+import { PageHeader } from '@/components/ui/page-header';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/input';
+import { Pagination } from '@/components/ui/pagination';
+import { FadeIn } from '@/components/ui/animate';
+import { COSMETIC_COLORS, COSMETIC_FONTS } from '@donuttrade/shared';
 import type { OrderRecord, PaginationMeta, CatalogItemRecord } from '@donuttrade/shared';
-
-const TYPE_BADGE: Record<string, string> = {
-  buy: 'border-blue-900/50 bg-blue-950/20 text-blue-400',
-  sell: 'border-amber-900/50 bg-amber-950/20 text-amber-400',
-};
 
 function timeRemaining(expiresAt: string): string {
   const diff = new Date(expiresAt).getTime() - Date.now();
@@ -28,16 +31,20 @@ function MarketplaceContent() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [fillOrder, setFillOrder] = useState<OrderRecord | null>(null);
+  const [commissionRate, setCommissionRate] = useState<number | null>(null);
 
   // Filters
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [itemFilter, setItemFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('newest');
 
-  // Load catalog items
+  // Load catalog items and commission rate
   useEffect(() => {
     apiFetch<{ items: CatalogItemRecord[] }>('/catalog/items')
       .then((data) => setCatalogItems(data.items))
+      .catch(() => {});
+    apiFetch<{ commissionRate: number }>('/public/settings/commission-rate')
+      .then((data) => setCommissionRate(data.commissionRate))
       .catch(() => {});
   }, []);
 
@@ -80,50 +87,52 @@ function MarketplaceContent() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Marketplace</h1>
-        <Link
-          href="/marketplace/create"
-          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-500"
-        >
-          Create Order
-        </Link>
-      </div>
+      <FadeIn>
+        <PageHeader title="Marketplace" subtitle="Browse and fill active orders">
+          {commissionRate !== null && (
+            <span className="text-xs text-neutral-500">
+              Platform fee: {(commissionRate * 100).toFixed(0)}%
+            </span>
+          )}
+          <Link href="/marketplace/create">
+            <Button>Create Order</Button>
+          </Link>
+        </PageHeader>
+      </FadeIn>
 
       {/* Filters */}
-      <div className="mt-6 flex flex-wrap gap-3">
-        <select
-          value={typeFilter}
-          onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white"
-        >
-          <option value="">All Types</option>
-          <option value="buy">Buy Orders</option>
-          <option value="sell">Sell Orders</option>
-        </select>
+      <FadeIn delay={100}>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Select
+            value={typeFilter}
+            onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+          >
+            <option value="">All Types</option>
+            <option value="buy">Buy Orders</option>
+            <option value="sell">Sell Orders</option>
+          </Select>
 
-        <select
-          value={itemFilter}
-          onChange={(e) => { setItemFilter(e.target.value); setPage(1); }}
-          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white"
-        >
-          <option value="">All Items</option>
-          {catalogItems.map((item) => (
-            <option key={item.id} value={item.id}>{item.displayName}</option>
-          ))}
-        </select>
+          <Select
+            value={itemFilter}
+            onChange={(e) => { setItemFilter(e.target.value); setPage(1); }}
+          >
+            <option value="">All Items</option>
+            {catalogItems.map((item) => (
+              <option key={item.id} value={item.id}>{item.displayName}</option>
+            ))}
+          </Select>
 
-        <select
-          value={sortBy}
-          onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
-          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white"
-        >
-          <option value="newest">Newest</option>
-          <option value="price_asc">Price: Low to High</option>
-          <option value="price_desc">Price: High to Low</option>
-          <option value="expiring_soon">Expiring Soon</option>
-        </select>
-      </div>
+          <Select
+            value={sortBy}
+            onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
+          >
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="expiring_soon">Expiring Soon</option>
+          </Select>
+        </div>
+      </FadeIn>
 
       {/* Orders grid */}
       {loading ? (
@@ -133,76 +142,67 @@ function MarketplaceContent() {
       ) : (
         <>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 shadow-lg"
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium uppercase ${TYPE_BADGE[order.type]}`}>
-                    {order.type}
-                  </span>
-                  <span className="text-xs text-neutral-500">{timeRemaining(order.expiresAt)}</span>
-                </div>
-
-                <h3 className="mt-3 font-semibold">{order.catalogItemDisplayName}</h3>
-
-                <div className="mt-2 space-y-1 text-sm text-neutral-400">
-                  <div className="flex justify-between">
-                    <span>Price</span>
-                    <span className="text-white">${Number(order.pricePerUnit).toLocaleString()}/ea</span>
+            {orders.map((order, i) => (
+              <FadeIn key={order.id} delay={50 * i}>
+                <Card
+                  hover
+                  className="p-4 transition-transform duration-200 hover:scale-[1.01]"
+                  style={order.borderColor ? {
+                    borderColor: COSMETIC_COLORS.find(c => c.id === order.borderColor)?.hex || undefined,
+                  } : undefined}
+                >
+                  <div className="flex items-center justify-between">
+                    <Badge variant={order.type === 'buy' ? 'emerald' : 'amber'}>
+                      {order.type}
+                    </Badge>
+                    <span className="text-xs text-neutral-500">{timeRemaining(order.expiresAt)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Quantity</span>
-                    <span className="text-white">{order.filledQuantity}/{order.quantity}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Total</span>
-                    <span className="text-white">${(order.remainingQuantity * Number(order.pricePerUnit)).toLocaleString()}</span>
-                  </div>
-                </div>
 
-                {/* Progress bar */}
-                <div className="mt-3 h-1.5 rounded-full bg-neutral-800">
-                  <div
-                    className="h-1.5 rounded-full bg-green-500 transition-all"
-                    style={{ width: `${(order.filledQuantity / order.quantity) * 100}%` }}
-                  />
-                </div>
+                  <h3 className="mt-3 font-semibold">{order.catalogItemDisplayName}</h3>
 
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-xs text-neutral-500">by {order.username}</span>
-                  <button
-                    onClick={() => setFillOrder(order)}
-                    className="rounded-lg bg-green-600/20 border border-green-800/50 px-3 py-1 text-xs font-medium text-green-400 transition-colors hover:bg-green-600/30"
-                  >
-                    Fill
-                  </button>
-                </div>
-              </div>
+                  <div className="mt-2 space-y-1 text-sm text-neutral-400">
+                    <div className="flex justify-between">
+                      <span>Price</span>
+                      <span className="text-white">${Number(order.pricePerUnit).toLocaleString()}/ea</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Quantity</span>
+                      <span className="text-white">{order.filledQuantity}/{order.quantity}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total</span>
+                      <span className="text-white">${(order.remainingQuantity * Number(order.pricePerUnit)).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mt-3 h-1.5 rounded-full bg-[#1a1a1a]">
+                    <div
+                      className="h-1.5 rounded-full bg-amber-500 transition-all"
+                      style={{ width: `${(order.filledQuantity / order.quantity) * 100}%` }}
+                    />
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between">
+                    <span
+                      className="text-xs text-neutral-500"
+                      style={{
+                        ...(order.usernameColor ? { color: COSMETIC_COLORS.find(c => c.id === order.usernameColor)?.hex } : {}),
+                        ...(order.usernameFont ? { fontFamily: COSMETIC_FONTS.find(f => f.id === order.usernameFont)?.fontFamily } : {}),
+                      }}
+                    >
+                      by {order.username}
+                    </span>
+                    <Button size="sm" onClick={() => setFillOrder(order)}>
+                      Fill
+                    </Button>
+                  </div>
+                </Card>
+              </FadeIn>
             ))}
           </div>
 
-          {/* Pagination */}
-          {meta && meta.totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-between text-xs text-neutral-500">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="rounded border border-neutral-700 px-2.5 py-1 transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <span>Page {meta.page} of {meta.totalPages}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-                disabled={page >= meta.totalPages}
-                className="rounded border border-neutral-700 px-2.5 py-1 transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          )}
+          {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />}
         </>
       )}
 
