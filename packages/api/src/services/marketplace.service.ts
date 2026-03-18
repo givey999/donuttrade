@@ -18,6 +18,9 @@ import {
   MARKETPLACE_MAX_QUANTITY,
 } from '@donuttrade/shared';
 import type { CreateOrderInput, OrderType } from '@donuttrade/shared';
+import { platformSettingsService } from './platform-settings.service.js';
+import { cosmeticsService } from './cosmetics.service.js';
+import { getColor, getFont } from '@donuttrade/shared';
 
 const mktLogger = logger.module('marketplace.service');
 
@@ -65,11 +68,31 @@ export const marketplaceService = {
     if (!catalogItem) throw new AppError('Catalog item not found', { code: 'ITEM_NOT_FOUND', statusCode: 404 });
     if (!catalogItem.enabled) throw new AppError('Item is not available', { code: 'ITEM_DISABLED', statusCode: 400 });
 
-    const commissionRate = config.MARKETPLACE_COMMISSION_RATE;
+    const commissionRate = await platformSettingsService.getCommissionRate();
     const isPremium = input.isPremium ?? false;
     const premiumFee = isPremium ? MARKETPLACE_PREMIUM_FEE : 0;
     const durationMs = isPremium ? MARKETPLACE_PREMIUM_DURATION_MS : MARKETPLACE_STANDARD_DURATION_MS;
     const expiresAt = new Date(Date.now() + durationMs);
+
+    // Validate cosmetic selections
+    if (input.borderColor) {
+      if (!getColor(input.borderColor)) throw new ValidationError('Invalid border color');
+      if (!(await cosmeticsService.isUnlocked(userId, 'color', input.borderColor))) {
+        throw new AppError('Border color not unlocked', { code: 'COSMETIC_LOCKED', statusCode: 400 });
+      }
+    }
+    if (input.usernameColor) {
+      if (!getColor(input.usernameColor)) throw new ValidationError('Invalid username color');
+      if (!(await cosmeticsService.isUnlocked(userId, 'color', input.usernameColor))) {
+        throw new AppError('Username color not unlocked', { code: 'COSMETIC_LOCKED', statusCode: 400 });
+      }
+    }
+    if (input.usernameFont) {
+      if (!getFont(input.usernameFont)) throw new ValidationError('Invalid username font');
+      if (!(await cosmeticsService.isUnlocked(userId, 'font', input.usernameFont))) {
+        throw new AppError('Username font not unlocked', { code: 'COSMETIC_LOCKED', statusCode: 400 });
+      }
+    }
 
     if (input.type === 'buy') {
       return this._createBuyOrder(userId, input, commissionRate, premiumFee, expiresAt);
@@ -143,10 +166,13 @@ export const marketplaceService = {
           isPremium: premiumFee > 0,
           expiresAt,
           status: 'active',
+          borderColor: input.borderColor ?? null,
+          usernameColor: input.usernameColor ?? null,
+          usernameFont: input.usernameFont ?? null,
         },
         include: {
           catalogItem: true,
-          user: { select: { minecraftUsername: true } },
+          user: { select: { minecraftUsername: true, cosmetics: { select: { hiddenMode: true } } } },
         },
       });
 
@@ -204,10 +230,13 @@ export const marketplaceService = {
           isPremium: premiumFee > 0,
           expiresAt,
           status: 'active',
+          borderColor: input.borderColor ?? null,
+          usernameColor: input.usernameColor ?? null,
+          usernameFont: input.usernameFont ?? null,
         },
         include: {
           catalogItem: true,
-          user: { select: { minecraftUsername: true } },
+          user: { select: { minecraftUsername: true, cosmetics: { select: { hiddenMode: true } } } },
         },
       });
 
@@ -356,6 +385,16 @@ export const marketplaceService = {
         },
       });
 
+      // Update trading volume for both parties
+      await tx.user.update({
+        where: { id: sellerUserId },
+        data: { tradingVolume: { increment: totalPrice.toNumber() } },
+      });
+      await tx.user.update({
+        where: { id: order.userId },
+        data: { tradingVolume: { increment: totalPrice.toNumber() } },
+      });
+
       // Mark completed if fully filled
       if (isCompleted) {
         await tx.order.update({
@@ -459,6 +498,16 @@ export const marketplaceService = {
           commissionAmount: commission,
           netAmount: sellerReceives,
         },
+      });
+
+      // Update trading volume for both parties
+      await tx.user.update({
+        where: { id: buyerUserId },
+        data: { tradingVolume: { increment: totalPrice.toNumber() } },
+      });
+      await tx.user.update({
+        where: { id: order.userId },
+        data: { tradingVolume: { increment: totalPrice.toNumber() } },
       });
 
       // Mark completed if fully filled
@@ -664,11 +713,14 @@ export const marketplaceService = {
   /**
    * Map a Prisma order to the API response shape.
    */
-  _mapOrder(order: any) {
+  _mapOrder(order: any, options?: { adminView?: boolean }) {
+    const isHidden = !options?.adminView && order.user?.cosmetics?.hiddenMode === true;
+    const username = isHidden ? 'Hidden' : (order.user?.minecraftUsername ?? 'Unknown');
+
     return {
       id: order.id,
       userId: order.userId,
-      username: order.user?.minecraftUsername ?? 'Unknown',
+      username,
       type: order.type as OrderType,
       catalogItemId: order.catalogItemId,
       catalogItemDisplayName: order.catalogItem?.displayName ?? '',
@@ -684,6 +736,9 @@ export const marketplaceService = {
       expiresAt: order.expiresAt.toISOString(),
       createdAt: order.createdAt.toISOString(),
       completedAt: order.completedAt?.toISOString() ?? null,
+      borderColor: isHidden ? null : (order.borderColor ?? null),
+      usernameColor: isHidden ? null : (order.usernameColor ?? null),
+      usernameFont: isHidden ? null : (order.usernameFont ?? null),
     };
   },
 };
