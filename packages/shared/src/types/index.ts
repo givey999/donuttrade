@@ -164,6 +164,7 @@ export interface UserProfile {
   discordUsername: string | null;
   verificationStatus: VerificationStatus;
   balance: string;  // Decimal as string
+  tradingVolume: string;
   role: UserRole;
   timedOutUntil: string | null;
   timeoutReason: string | null;
@@ -198,7 +199,7 @@ export interface CreateAuthStateInput {
 
 export type UserRole = 'user' | 'moderator' | 'manager' | 'admin';
 
-export type TransactionType = 'deposit' | 'withdrawal' | 'purchase' | 'sale' | 'escrow' | 'escrow_refund' | 'listing_fee' | 'admin_adjustment';
+export type TransactionType = 'deposit' | 'withdrawal' | 'purchase' | 'sale' | 'escrow' | 'escrow_refund' | 'listing_fee' | 'admin_adjustment' | 'cosmetic_purchase' | 'hidden_mode_purchase';
 export type WithdrawalStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface TransactionRecord {
@@ -316,6 +317,9 @@ export interface OrderRecord {
   expiresAt: string;
   createdAt: string;
   completedAt: string | null;
+  borderColor: string | null;
+  usernameColor: string | null;
+  usernameFont: string | null;
 }
 
 export interface OrderFillRecord {
@@ -341,6 +345,9 @@ export interface CreateOrderInput {
   quantity: number;
   pricePerUnit: number;
   isPremium?: boolean;
+  borderColor?: string;
+  usernameColor?: string;
+  usernameFont?: string;
 }
 
 export interface FillOrderInput {
