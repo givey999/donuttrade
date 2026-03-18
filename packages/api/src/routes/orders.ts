@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { marketplaceService } from '../services/marketplace.service.js';
 import { prisma } from '../services/database.js';
-import type { CreateOrderInput, OrderRecord, OrderStatus, OrderType, PaginationMeta } from '@donuttrade/shared';
+import type { CreateOrderInput, PaginationMeta } from '@donuttrade/shared';
 
 /**
  * Authenticated order routes — /orders
@@ -24,6 +24,9 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
           quantity: { type: 'number', minimum: 1 },
           pricePerUnit: { type: 'number', minimum: 1 },
           isPremium: { type: 'boolean' },
+          borderColor: { type: 'string' },
+          usernameColor: { type: 'string' },
+          usernameFont: { type: 'string' },
         },
       },
     },
@@ -131,7 +134,12 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
         where,
         include: {
           catalogItem: true,
-          user: { select: { minecraftUsername: true } },
+          user: {
+            select: {
+              minecraftUsername: true,
+              cosmetics: { select: { hiddenMode: true } },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -140,26 +148,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
       prisma.order.count({ where }),
     ]);
 
-    const mapped: OrderRecord[] = orders.map((o) => ({
-      id: o.id,
-      userId: o.userId,
-      username: o.user.minecraftUsername ?? 'Unknown',
-      type: o.type as OrderType,
-      catalogItemId: o.catalogItemId,
-      catalogItemDisplayName: o.catalogItem.displayName,
-      category: o.catalogItem.category,
-      quantity: o.quantity,
-      filledQuantity: o.filledQuantity,
-      remainingQuantity: o.quantity - o.filledQuantity,
-      pricePerUnit: o.pricePerUnit.toString(),
-      commissionRate: o.commissionRate.toString(),
-      escrowAmount: o.escrowAmount.toString(),
-      isPremium: o.isPremium,
-      status: o.status as OrderStatus,
-      expiresAt: o.expiresAt.toISOString(),
-      createdAt: o.createdAt.toISOString(),
-      completedAt: o.completedAt?.toISOString() ?? null,
-    }));
+    const mapped = orders.map((o) => marketplaceService._mapOrder(o));
 
     const meta: PaginationMeta = {
       page,

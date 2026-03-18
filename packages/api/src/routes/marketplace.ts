@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { prisma } from '../services/database.js';
-import type { OrderRecord, OrderFillRecord, OrderDetailRecord, PaginationMeta, OrderType, OrderStatus } from '@donuttrade/shared';
+import { marketplaceService } from '../services/marketplace.service.js';
+import type { OrderFillRecord, OrderDetailRecord, PaginationMeta } from '@donuttrade/shared';
 
 /**
  * Public marketplace routes — /marketplace
@@ -72,7 +73,12 @@ export const marketplaceRoutes: FastifyPluginAsync = async (fastify) => {
         where,
         include: {
           catalogItem: true,
-          user: { select: { minecraftUsername: true } },
+          user: {
+            select: {
+              minecraftUsername: true,
+              cosmetics: { select: { hiddenMode: true } },
+            },
+          },
         },
         orderBy,
         skip,
@@ -81,26 +87,7 @@ export const marketplaceRoutes: FastifyPluginAsync = async (fastify) => {
       prisma.order.count({ where }),
     ]);
 
-    const mapped: OrderRecord[] = orders.map((o) => ({
-      id: o.id,
-      userId: o.userId,
-      username: o.user.minecraftUsername ?? 'Unknown',
-      type: o.type as OrderType,
-      catalogItemId: o.catalogItemId,
-      catalogItemDisplayName: o.catalogItem.displayName,
-      category: o.catalogItem.category,
-      quantity: o.quantity,
-      filledQuantity: o.filledQuantity,
-      remainingQuantity: o.quantity - o.filledQuantity,
-      pricePerUnit: o.pricePerUnit.toString(),
-      commissionRate: o.commissionRate.toString(),
-      escrowAmount: o.escrowAmount.toString(),
-      isPremium: o.isPremium,
-      status: o.status as OrderStatus,
-      expiresAt: o.expiresAt.toISOString(),
-      createdAt: o.createdAt.toISOString(),
-      completedAt: o.completedAt?.toISOString() ?? null,
-    }));
+    const mapped = orders.map((o) => marketplaceService._mapOrder(o));
 
     const meta: PaginationMeta = {
       page,
@@ -128,10 +115,20 @@ export const marketplaceRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id },
       include: {
         catalogItem: true,
-        user: { select: { minecraftUsername: true } },
+        user: {
+          select: {
+            minecraftUsername: true,
+            cosmetics: { select: { hiddenMode: true } },
+          },
+        },
         fills: {
           include: {
-            filledByUser: { select: { minecraftUsername: true } },
+            filledByUser: {
+              select: {
+                minecraftUsername: true,
+                cosmetics: { select: { hiddenMode: true } },
+              },
+            },
           },
           orderBy: { createdAt: 'desc' },
         },
@@ -142,38 +139,23 @@ export const marketplaceRoutes: FastifyPluginAsync = async (fastify) => {
       return { success: false, error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' } };
     }
 
-    const fills: OrderFillRecord[] = order.fills.map((f) => ({
-      id: f.id,
-      orderId: f.orderId,
-      filledByUserId: f.filledByUserId,
-      filledByUsername: f.filledByUser.minecraftUsername ?? 'Unknown',
-      quantity: f.quantity,
-      pricePerUnit: f.pricePerUnit.toString(),
-      totalPrice: f.totalPrice.toString(),
-      commissionAmount: f.commissionAmount.toString(),
-      netAmount: f.netAmount.toString(),
-      createdAt: f.createdAt.toISOString(),
+    const fills: OrderFillRecord[] = order.fills.map((fill: any) => ({
+      id: fill.id,
+      orderId: fill.orderId,
+      filledByUserId: fill.filledByUserId,
+      filledByUsername: fill.filledByUser?.cosmetics?.hiddenMode
+        ? 'Hidden'
+        : (fill.filledByUser?.minecraftUsername ?? 'Unknown'),
+      quantity: fill.quantity,
+      pricePerUnit: fill.pricePerUnit.toString(),
+      totalPrice: fill.totalPrice.toString(),
+      commissionAmount: fill.commissionAmount.toString(),
+      netAmount: fill.netAmount.toString(),
+      createdAt: fill.createdAt.toISOString(),
     }));
 
     const detail: OrderDetailRecord = {
-      id: order.id,
-      userId: order.userId,
-      username: order.user.minecraftUsername ?? 'Unknown',
-      type: order.type as OrderType,
-      catalogItemId: order.catalogItemId,
-      catalogItemDisplayName: order.catalogItem.displayName,
-      category: order.catalogItem.category,
-      quantity: order.quantity,
-      filledQuantity: order.filledQuantity,
-      remainingQuantity: order.quantity - order.filledQuantity,
-      pricePerUnit: order.pricePerUnit.toString(),
-      commissionRate: order.commissionRate.toString(),
-      escrowAmount: order.escrowAmount.toString(),
-      isPremium: order.isPremium,
-      status: order.status as OrderStatus,
-      expiresAt: order.expiresAt.toISOString(),
-      createdAt: order.createdAt.toISOString(),
-      completedAt: order.completedAt?.toISOString() ?? null,
+      ...marketplaceService._mapOrder(order),
       fills,
     };
 

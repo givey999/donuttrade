@@ -128,7 +128,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
           description: tx.description,
           createdAt: tx.createdAt.toISOString(),
         })),
-        recentOrders: user.orders.map((o) => ({
+        recentOrders: user.orders.map((o: any) => ({
           id: o.id,
           type: o.type,
           catalogItemDisplayName: o.catalogItem.displayName,
@@ -137,6 +137,9 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
           pricePerUnit: o.pricePerUnit.toString(),
           status: o.status,
           createdAt: o.createdAt.toISOString(),
+          borderColor: o.borderColor ?? null,
+          usernameColor: o.usernameColor ?? null,
+          usernameFont: o.usernameFont ?? null,
         })),
         recentDeposits: user.itemDeposits.map((d) => ({
           id: d.id,
@@ -320,6 +323,32 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
       reason,
     });
 
+    return { success: true };
+  });
+
+  /**
+   * PATCH /admin/users/:id/verify
+   * Admin/manager — manually verify a user.
+   */
+  fastify.patch<{ Params: { id: string } }>('/:id/verify', async (request) => {
+    const actorRole = request.user!.role;
+    if (actorRole !== 'admin' && actorRole !== 'manager') {
+      throw new AppError('Only managers and admins can verify users', { code: 'FORBIDDEN', statusCode: 403 });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: request.params.id }, select: { verificationStatus: true } });
+    if (!target) throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
+    if (target.verificationStatus === 'verified') {
+      throw new AppError('User is already verified', { code: 'ALREADY_VERIFIED', statusCode: 400 });
+    }
+
+    await prisma.user.update({
+      where: { id: request.params.id },
+      data: { verificationStatus: 'verified' },
+    });
+
+    await auditService.log({ actorId: request.user!.id, action: 'user.verify', targetType: 'user', targetId: request.params.id, details: { previousStatus: target.verificationStatus } });
+    adminLogger.info('verify', 'User manually verified by admin', { targetId: request.params.id, adminId: request.user!.id });
     return { success: true };
   });
 

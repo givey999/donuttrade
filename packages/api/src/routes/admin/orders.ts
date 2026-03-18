@@ -34,7 +34,12 @@ export const adminOrderRoutes: FastifyPluginAsync = async (fastify) => {
         where,
         include: {
           catalogItem: true,
-          user: { select: { minecraftUsername: true } },
+          user: {
+            select: {
+              minecraftUsername: true,
+              cosmetics: { select: { hiddenMode: true } },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -46,25 +51,7 @@ export const adminOrderRoutes: FastifyPluginAsync = async (fastify) => {
     return {
       success: true,
       data: {
-        orders: orders.map((o) => ({
-          id: o.id,
-          userId: o.userId,
-          username: o.user.minecraftUsername ?? 'Unknown',
-          type: o.type,
-          catalogItemId: o.catalogItemId,
-          catalogItemDisplayName: o.catalogItem.displayName,
-          category: o.catalogItem.category,
-          quantity: o.quantity,
-          filledQuantity: o.filledQuantity,
-          remainingQuantity: o.quantity - o.filledQuantity,
-          pricePerUnit: o.pricePerUnit.toString(),
-          escrowAmount: o.escrowAmount.toString(),
-          isPremium: o.isPremium,
-          status: o.status,
-          expiresAt: o.expiresAt.toISOString(),
-          createdAt: o.createdAt.toISOString(),
-          completedAt: o.completedAt?.toISOString() ?? null,
-        })),
+        orders: orders.map((o) => marketplaceService._mapOrder(o, { adminView: true })),
         meta: {
           page,
           perPage,
