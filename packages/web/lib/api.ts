@@ -1,5 +1,11 @@
 import type { ApiResponse } from '@donuttrade/shared';
 
+declare global {
+  interface Window {
+    __maintenanceMessage?: string;
+  }
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moldo.go.ro:9443';
 
 // Module-level singleton — shared across all callers within the same page lifecycle
@@ -101,6 +107,17 @@ export async function apiFetch<T>(
   if (res.ok) {
     const json: ApiResponse<T> = await res.json();
     return json.data as T;
+  }
+
+  // Check for maintenance mode
+  if (res.status === 503) {
+    const data = await res.json().catch(() => null);
+    if (data?.maintenance) {
+      const msg = data.error?.message || 'Platform is under maintenance';
+      window.__maintenanceMessage = msg;
+      window.dispatchEvent(new CustomEvent('maintenance', { detail: msg }));
+      throw new ApiError(msg, 'MAINTENANCE', 503);
+    }
   }
 
   // Try to parse error body
