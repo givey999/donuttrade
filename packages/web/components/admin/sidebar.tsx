@@ -34,6 +34,13 @@ const SECTIONS = [
       { href: '/admin/audit-log', label: 'Audit Log' },
     ],
   },
+  {
+    label: 'Platform',
+    links: [
+      { href: '/admin/revenue', label: 'Revenue', adminOnly: true },
+      { href: '/admin/settings', label: 'Settings', adminOnly: true },
+    ],
+  },
 ];
 
 export function AdminSidebar() {
@@ -54,7 +61,7 @@ export function AdminSidebar() {
   }, []);
 
   return (
-    <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-neutral-800 bg-[#0a0a0f] px-3 py-4">
+    <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-[#1a1a1a] bg-[#0a0a0f] px-3 py-4">
       {SECTIONS.map((section) => (
         <div key={section.label} className="mb-5">
           <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
@@ -75,15 +82,15 @@ export function AdminSidebar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-colors ${
+                className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-all duration-200 ${
                   isActive
-                    ? 'bg-neutral-800 text-white'
-                    : 'text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200'
+                    ? 'border border-amber-500/20 bg-amber-500/[0.06] text-amber-500'
+                    : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200'
                 }`}
               >
                 <span>{link.label}</span>
                 {badgeCount > 0 && (
-                  <span className="rounded-full bg-amber-600/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
+                  <span className="rounded-full border border-amber-500/30 bg-amber-500/[0.08] px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
                     {badgeCount}
                   </span>
                 )}
