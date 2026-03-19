@@ -4,6 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
+import { PageHeader } from '@/components/ui/page-header';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
+import { FadeIn } from '@/components/ui/animate';
 
 interface CatalogItem {
   id: string;
@@ -77,27 +83,30 @@ export default function AdminCatalogPage() {
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Catalog Items</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-500"
-        >
-          {showForm ? 'Cancel' : 'Add Item'}
-        </button>
-      </div>
+      <FadeIn>
+        <PageHeader title="Catalog Items">
+          <Button
+            variant={showForm ? 'secondary' : 'primary'}
+            onClick={() => setShowForm(!showForm)}
+          >
+            {showForm ? 'Cancel' : 'Add Item'}
+          </Button>
+        </PageHeader>
+      </FadeIn>
 
       {showForm && (
-        <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="grid grid-cols-3 gap-3">
-            <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="name (snake_case)" className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none" />
-            <input type="text" value={newDisplayName} onChange={(e) => setNewDisplayName(e.target.value)} placeholder="Display Name" className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none" />
-            <input type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Category" className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none" />
-          </div>
-          <button onClick={handleAdd} disabled={!newName || !newDisplayName || actionLoading} className="mt-3 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50">
-            Create Item
-          </button>
-        </div>
+        <FadeIn>
+          <Card className="mt-4 p-4">
+            <div className="grid grid-cols-3 gap-3">
+              <Input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="name (snake_case)" />
+              <Input type="text" value={newDisplayName} onChange={(e) => setNewDisplayName(e.target.value)} placeholder="Display Name" />
+              <Input type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Category" />
+            </div>
+            <Button onClick={handleAdd} disabled={!newName || !newDisplayName || actionLoading} className="mt-3">
+              Create Item
+            </Button>
+          </Card>
+        </FadeIn>
       )}
 
       {loading ? (
@@ -105,48 +114,47 @@ export default function AdminCatalogPage() {
       ) : items.length === 0 ? (
         <p className="mt-4 text-sm text-neutral-500">No catalog items.</p>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-neutral-800 bg-neutral-950/50 text-xs text-neutral-400">
-              <tr>
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Display Name</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Enabled</th>
-                <th className="px-3 py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800/50">
-              {items.map((item) => (
-                <tr key={item.id} className="text-neutral-300">
-                  <td className="px-3 py-2 text-xs font-mono">{item.name}</td>
-                  <td className="px-3 py-2 text-xs">{item.displayName}</td>
-                  <td className="px-3 py-2 text-xs capitalize">{item.category}</td>
-                  <td className="px-3 py-2">
-                    {item.enabled ? (
-                      <span className="text-xs text-green-400">Yes</span>
-                    ) : (
-                      <span className="text-xs text-red-400">No</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <button
-                      onClick={() => handleToggle(item.id, item.enabled)}
-                      disabled={actionLoading}
-                      className={`rounded px-2 py-0.5 text-xs disabled:opacity-50 ${
-                        item.enabled
-                          ? 'bg-red-600/20 text-red-400 hover:bg-red-600/30'
-                          : 'bg-green-600/20 text-green-400 hover:bg-green-600/30'
-                      }`}
-                    >
-                      {item.enabled ? 'Disable' : 'Enable'}
-                    </button>
-                  </td>
+        <FadeIn delay={150}>
+          <div className="mt-4">
+            <Table>
+              <Thead>
+                <tr>
+                  <Th>Name</Th>
+                  <Th>Display Name</Th>
+                  <Th>Category</Th>
+                  <Th>Enabled</Th>
+                  <Th>Actions</Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </Thead>
+              <Tbody>
+                {items.map((item) => (
+                  <tr key={item.id}>
+                    <Td className="text-xs font-mono">{item.name}</Td>
+                    <Td className="text-xs">{item.displayName}</Td>
+                    <Td className="text-xs capitalize">{item.category}</Td>
+                    <Td>
+                      {item.enabled ? (
+                        <span className="text-xs text-green-400">Yes</span>
+                      ) : (
+                        <span className="text-xs text-red-400">No</span>
+                      )}
+                    </Td>
+                    <Td>
+                      <Button
+                        variant={item.enabled ? 'danger' : 'success'}
+                        size="sm"
+                        onClick={() => handleToggle(item.id, item.enabled)}
+                        disabled={actionLoading}
+                      >
+                        {item.enabled ? 'Disable' : 'Enable'}
+                      </Button>
+                    </Td>
+                  </tr>
+                ))}
+              </Tbody>
+            </Table>
+          </div>
+        </FadeIn>
       )}
     </div>
   );

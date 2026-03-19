@@ -39,6 +39,43 @@ export function getAccessToken(): string | null {
   return _accessToken;
 }
 
+// ── Impersonation helpers ──────────────────────────────────────────────
+
+export function startImpersonation(token: string, targetUsername: string) {
+  try {
+    // Save the admin's current token so we can restore it later
+    const adminToken = getAccessToken();
+    if (adminToken) {
+      localStorage.setItem('dt_admin_token', adminToken);
+    }
+    localStorage.setItem('dt_impersonating', targetUsername);
+  } catch {
+    // localStorage may be unavailable
+  }
+  setAccessToken(token);
+}
+
+export function stopImpersonation() {
+  try {
+    const adminToken = localStorage.getItem('dt_admin_token');
+    if (adminToken) {
+      setAccessToken(adminToken);
+    }
+    localStorage.removeItem('dt_admin_token');
+    localStorage.removeItem('dt_impersonating');
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
+export function getImpersonating(): string | null {
+  try {
+    return localStorage.getItem('dt_impersonating');
+  } catch {
+    return null;
+  }
+}
+
 export class ApiError extends Error {
   code: string;
   statusCode: number;

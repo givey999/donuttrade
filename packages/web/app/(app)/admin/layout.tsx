@@ -34,7 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)]">
       <AdminSidebar />
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto border-l border-[#1a1a1a] p-6">
         {children}
       </main>
     </div>

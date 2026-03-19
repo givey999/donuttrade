@@ -15,6 +15,7 @@ export interface AuthUser {
   username: string;
   authProvider: string;
   role: string;
+  impersonatedBy?: string;
 }
 
 /**
@@ -78,6 +79,7 @@ const authPluginCallback: FastifyPluginAsync = async (fastify) => {
         username: payload.username,
         authProvider: payload.authProvider,
         role: 'user', // Default; admin routes refresh from DB via requireRole
+        impersonatedBy: payload.impersonatedBy,
       };
 
       authLogger.debug('authenticate.success', 'Request authenticated', {

@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
+import { PageHeader } from '@/components/ui/page-header';
+import { Tabs } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/pagination';
+import { FadeIn } from '@/components/ui/animate';
 import type { PaginationMeta } from '@donuttrade/shared';
 
 interface AdminDeposit {
@@ -16,7 +23,18 @@ interface AdminDeposit {
   completedAt: string | null;
 }
 
-const STATUS_TABS = ['pending', 'confirmed', 'rejected', 'all'];
+const STATUS_TABS = [
+  { label: 'Pending', value: 'pending' },
+  { label: 'Confirmed', value: 'confirmed' },
+  { label: 'Rejected', value: 'rejected' },
+  { label: 'All', value: 'all' },
+];
+
+const STATUS_VARIANT: Record<string, string> = {
+  pending: 'warning',
+  confirmed: 'success',
+  rejected: 'danger',
+};
 
 export default function AdminDepositsPage() {
   const [deposits, setDeposits] = useState<AdminDeposit[]>([]);
@@ -49,7 +67,7 @@ export default function AdminDepositsPage() {
 
   const handleReject = async (id: string) => {
     const notes = prompt('Rejection reason (optional):');
-    if (notes === null) return; // cancelled
+    if (notes === null) return;
     setActionLoading(id);
     try {
       await apiFetch(`/admin/item-deposits/${id}/reject`, {
@@ -63,113 +81,84 @@ export default function AdminDepositsPage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-xl font-bold">Item Deposits</h1>
+      <FadeIn>
+        <PageHeader title="Item Deposits" />
+      </FadeIn>
 
       {/* Status tabs */}
-      <div className="mt-4 flex gap-1">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => { setStatus(tab); setPage(1); }}
-            className={`rounded-lg px-3 py-1.5 text-sm capitalize transition-colors ${
-              status === tab ? 'bg-neutral-800 text-white' : 'text-neutral-400 hover:bg-neutral-800/50'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <FadeIn delay={100}>
+        <div className="mt-4">
+          <Tabs
+            tabs={STATUS_TABS}
+            value={status}
+            onChange={(v) => { setStatus(v); setPage(1); }}
+          />
+        </div>
+      </FadeIn>
 
       {loading ? (
         <p className="mt-4 text-sm text-neutral-400">Loading...</p>
       ) : deposits.length === 0 ? (
         <p className="mt-4 text-sm text-neutral-500">No deposits found.</p>
       ) : (
-        <>
-          <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-800">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-neutral-800 bg-neutral-950/50 text-xs text-neutral-400">
+        <FadeIn delay={150}>
+          <div className="mt-3">
+            <Table>
+              <Thead>
                 <tr>
-                  <th className="px-3 py-2">User</th>
-                  <th className="px-3 py-2">Item</th>
-                  <th className="px-3 py-2 text-right">Qty</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Date</th>
-                  {status === 'pending' && <th className="px-3 py-2">Actions</th>}
+                  <Th>User</Th>
+                  <Th>Item</Th>
+                  <Th className="text-right">Qty</Th>
+                  <Th>Status</Th>
+                  <Th>Date</Th>
+                  {status === 'pending' && <Th>Actions</Th>}
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800/50">
+              </Thead>
+              <Tbody>
                 {deposits.map((d) => (
-                  <tr key={d.id} className="text-neutral-300">
-                    <td className="px-3 py-2 text-xs">{d.username}</td>
-                    <td className="px-3 py-2 text-xs">{d.catalogItemDisplayName}</td>
-                    <td className="px-3 py-2 text-right text-xs">{d.quantity}</td>
-                    <td className="px-3 py-2">
-                      <StatusBadge status={d.status} />
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-xs text-neutral-500">
+                  <tr key={d.id}>
+                    <Td className="text-xs">{d.username}</Td>
+                    <Td className="text-xs">{d.catalogItemDisplayName}</Td>
+                    <Td className="text-right text-xs">{d.quantity}</Td>
+                    <Td>
+                      <Badge variant={STATUS_VARIANT[d.status] as 'warning'}>
+                        {d.status}
+                      </Badge>
+                    </Td>
+                    <Td className="whitespace-nowrap text-xs text-neutral-500">
                       {new Date(d.createdAt).toLocaleDateString()}
-                    </td>
+                    </Td>
                     {status === 'pending' && (
-                      <td className="px-3 py-2">
+                      <Td>
                         <div className="flex gap-1">
-                          <button
+                          <Button
+                            variant="success"
+                            size="sm"
                             onClick={() => handleConfirm(d.id)}
                             disabled={actionLoading === d.id}
-                            className="rounded bg-green-600/20 px-2 py-0.5 text-xs text-green-400 hover:bg-green-600/30 disabled:opacity-50"
                           >
                             Confirm
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
                             onClick={() => handleReject(d.id)}
                             disabled={actionLoading === d.id}
-                            className="rounded bg-red-600/20 px-2 py-0.5 text-xs text-red-400 hover:bg-red-600/30 disabled:opacity-50"
                           >
                             Reject
-                          </button>
+                          </Button>
                         </div>
-                      </td>
+                      </Td>
                     )}
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </Tbody>
+            </Table>
           </div>
 
-          {meta && meta.totalPages > 1 && (
-            <div className="mt-3 flex items-center justify-between text-xs text-neutral-500">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="rounded border border-neutral-700 px-2.5 py-1 hover:bg-neutral-800 disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <span>Page {meta.page} of {meta.totalPages}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-                disabled={page >= meta.totalPages}
-                className="rounded border border-neutral-700 px-2.5 py-1 hover:bg-neutral-800 disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </>
+          {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />}
+        </FadeIn>
       )}
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    pending: 'border-amber-900/50 bg-amber-950/20 text-amber-400',
-    confirmed: 'border-green-900/50 bg-green-950/20 text-green-400',
-    rejected: 'border-red-900/50 bg-red-950/20 text-red-400',
-  };
-  return (
-    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${colors[status] ?? 'border-neutral-700 text-neutral-400'}`}>
-      {status}
-    </span>
   );
 }

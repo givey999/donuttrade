@@ -6,8 +6,26 @@ import { Navbar } from '@/components/navbar';
 import { TimeoutBanner } from '@/components/timeout-banner';
 import { MaintenanceScreen } from '@/components/maintenance-screen';
 
+function ImpersonationBanner() {
+  const { impersonating, stopImpersonating } = useAuth();
+  if (!impersonating) return null;
+
+  return (
+    <div className="bg-purple-500/20 border-b border-purple-500/30 px-4 py-2 text-center text-sm text-purple-300">
+      Viewing as <span className="font-semibold text-purple-200">{impersonating}</span>
+      {' — '}
+      <button
+        onClick={stopImpersonating}
+        className="font-semibold underline transition-colors hover:text-white"
+      >
+        Switch back to admin
+      </button>
+    </div>
+  );
+}
+
 function MaintenanceGuard({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, impersonating, stopImpersonating } = useAuth();
   const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,7 +42,24 @@ function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (maintenanceMessage && user?.role !== 'admin') {
-    return <MaintenanceScreen message={maintenanceMessage} />;
+    return (
+      <>
+        {/* Always show switch-back button on maintenance screen when impersonating */}
+        {impersonating && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-purple-500/20 border-b border-purple-500/30 px-4 py-2 text-center text-sm text-purple-300">
+            Impersonating <span className="font-semibold text-purple-200">{impersonating}</span>
+            {' — '}
+            <button
+              onClick={stopImpersonating}
+              className="font-semibold underline transition-colors hover:text-white"
+            >
+              Switch back to admin
+            </button>
+          </div>
+        )}
+        <MaintenanceScreen message={maintenanceMessage} />
+      </>
+    );
   }
 
   return (
@@ -46,6 +81,7 @@ export default function AppLayout({
 }) {
   return (
     <AuthProvider>
+      <ImpersonationBanner />
       <MaintenanceGuard>
         <Navbar />
         <TimeoutBanner />

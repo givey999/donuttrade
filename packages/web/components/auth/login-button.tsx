@@ -11,7 +11,7 @@ export function LoginButton({ href, icon, label, className = '' }: LoginButtonPr
   return (
     <a
       href={href}
-      className={`flex w-full items-center justify-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${className}`}
+      className={`flex w-full items-center justify-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200 ${className}`}
     >
       {icon}
       {label}

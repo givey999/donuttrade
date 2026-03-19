@@ -5,18 +5,23 @@ import { useParams, useRouter } from 'next/navigation';
 import { RequireAuth } from '@/lib/require-auth';
 import { useAuth } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
+import { FadeIn } from '@/components/ui/animate';
 import type { OrderDetailRecord } from '@donuttrade/shared';
 
-const TYPE_BADGE: Record<string, string> = {
-  buy: 'border-blue-900/50 bg-blue-950/20 text-blue-400',
-  sell: 'border-amber-900/50 bg-amber-950/20 text-amber-400',
+const TYPE_VARIANT: Record<string, string> = {
+  buy: 'emerald',
+  sell: 'amber',
 };
 
-const STATUS_BADGE: Record<string, string> = {
-  active: 'border-green-900/50 bg-green-950/20 text-green-400',
-  completed: 'border-neutral-700 bg-neutral-800/50 text-neutral-400',
-  cancelled: 'border-red-900/50 bg-red-950/20 text-red-400',
-  expired: 'border-neutral-700 bg-neutral-800/50 text-neutral-500',
+const STATUS_VARIANT: Record<string, string> = {
+  active: 'success',
+  completed: 'neutral',
+  cancelled: 'danger',
+  expired: 'neutral',
 };
 
 function OrderDetailContent() {
@@ -71,114 +76,119 @@ function OrderDetailContent() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
-      <button onClick={() => router.back()} className="text-sm text-neutral-400 hover:text-white">
+      <button onClick={() => router.back()} className="text-sm text-neutral-400 transition-colors hover:text-amber-400">
         &larr; Back
       </button>
 
-      <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-900/50 p-6 shadow-lg">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold">{order.catalogItemDisplayName}</h1>
-          <div className="flex gap-2">
-            <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium uppercase ${TYPE_BADGE[order.type]}`}>
-              {order.type}
-            </span>
-            <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_BADGE[order.status] ?? ''}`}>
-              {order.status}
-            </span>
+      <FadeIn>
+        <Card className="mt-4 p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-[28px] font-extrabold tracking-tight">{order.catalogItemDisplayName}</h1>
+            <div className="flex gap-2">
+              <Badge variant={TYPE_VARIANT[order.type] as 'emerald'}>
+                {order.type}
+              </Badge>
+              <Badge variant={STATUS_VARIANT[order.status] as 'success'}>
+                {order.status}
+              </Badge>
+            </div>
           </div>
-        </div>
 
-        {/* Details */}
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <span className="text-neutral-400">By</span>
-            <p className="font-medium">{order.username}</p>
+          {/* Details */}
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span className="text-neutral-500">By</span>
+              <p className="font-medium">{order.username}</p>
+            </div>
+            <div>
+              <span className="text-neutral-500">Price per unit</span>
+              <p className="font-medium">${Number(order.pricePerUnit).toLocaleString()}</p>
+            </div>
+            <div>
+              <span className="text-neutral-500">Quantity</span>
+              <p className="font-medium">{order.filledQuantity} / {order.quantity}</p>
+            </div>
+            <div>
+              <span className="text-neutral-500">Total value</span>
+              <p className="font-medium">${(order.quantity * Number(order.pricePerUnit)).toLocaleString()}</p>
+            </div>
+            <div>
+              <span className="text-neutral-500">Created</span>
+              <p className="font-medium">{new Date(order.createdAt).toLocaleString()}</p>
+            </div>
+            <div>
+              <span className="text-neutral-500">Expires</span>
+              <p className="font-medium">{new Date(order.expiresAt).toLocaleString()}</p>
+            </div>
           </div>
-          <div>
-            <span className="text-neutral-400">Price per unit</span>
-            <p className="font-medium">${Number(order.pricePerUnit).toLocaleString()}</p>
-          </div>
-          <div>
-            <span className="text-neutral-400">Quantity</span>
-            <p className="font-medium">{order.filledQuantity} / {order.quantity}</p>
-          </div>
-          <div>
-            <span className="text-neutral-400">Total value</span>
-            <p className="font-medium">${(order.quantity * Number(order.pricePerUnit)).toLocaleString()}</p>
-          </div>
-          <div>
-            <span className="text-neutral-400">Created</span>
-            <p className="font-medium">{new Date(order.createdAt).toLocaleString()}</p>
-          </div>
-          <div>
-            <span className="text-neutral-400">Expires</span>
-            <p className="font-medium">{new Date(order.expiresAt).toLocaleString()}</p>
-          </div>
-        </div>
 
-        {/* Progress bar */}
-        <div className="mt-5">
-          <div className="flex items-center justify-between text-xs text-neutral-400">
-            <span>Fill Progress</span>
-            <span>{fillPercent.toFixed(0)}%</span>
+          {/* Progress bar */}
+          <div className="mt-5">
+            <div className="flex items-center justify-between text-xs text-neutral-400">
+              <span>Fill Progress</span>
+              <span>{fillPercent.toFixed(0)}%</span>
+            </div>
+            <div className="mt-1 h-2 rounded-full bg-[#1a1a1a]">
+              <div
+                className="h-2 rounded-full bg-amber-500 transition-all"
+                style={{ width: `${fillPercent}%` }}
+              />
+            </div>
           </div>
-          <div className="mt-1 h-2 rounded-full bg-neutral-800">
-            <div
-              className="h-2 rounded-full bg-green-500 transition-all"
-              style={{ width: `${fillPercent}%` }}
-            />
-          </div>
-        </div>
 
-        {/* Cancel button */}
-        {isOwner && order.status === 'active' && (
-          <button
-            onClick={handleCancel}
-            disabled={cancelling}
-            className="mt-5 w-full rounded-lg border border-red-900/50 bg-red-950/20 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-950/40 disabled:opacity-50"
-          >
-            {cancelling ? 'Cancelling...' : 'Cancel Order'}
-          </button>
-        )}
-        {cancelError && (
-          <p className="mt-2 text-xs text-red-400">{cancelError}</p>
-        )}
-      </div>
+          {/* Cancel button */}
+          {isOwner && order.status === 'active' && (
+            <Button
+              variant="danger"
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="mt-5 w-full"
+            >
+              {cancelling ? 'Cancelling...' : 'Cancel Order'}
+            </Button>
+          )}
+          {cancelError && (
+            <p className="mt-2 text-xs text-red-400">{cancelError}</p>
+          )}
+        </Card>
+      </FadeIn>
 
       {/* Fill history */}
       {order.fills.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold">Fill History</h2>
-          <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-800">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-neutral-800 bg-neutral-950/50 text-xs text-neutral-400">
-                <tr>
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2">Filled by</th>
-                  <th className="px-3 py-2">Qty</th>
-                  <th className="px-3 py-2 text-right">Total</th>
-                  <th className="px-3 py-2 text-right">Commission</th>
-                  <th className="px-3 py-2 text-right">Net</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800/50">
-                {order.fills.map((fill) => (
-                  <tr key={fill.id} className="text-neutral-300">
-                    <td className="whitespace-nowrap px-3 py-2 text-xs text-neutral-500">
-                      {new Date(fill.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-3 py-2">{fill.filledByUsername}</td>
-                    <td className="px-3 py-2">{fill.quantity}</td>
-                    <td className="px-3 py-2 text-right">${Number(fill.totalPrice).toLocaleString()}</td>
-                    <td className="px-3 py-2 text-right text-neutral-500">${Number(fill.commissionAmount).toLocaleString()}</td>
-                    <td className="px-3 py-2 text-right text-green-400">${Number(fill.netAmount).toLocaleString()}</td>
+        <FadeIn delay={100}>
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold">Fill History</h2>
+            <div className="mt-3">
+              <Table>
+                <Thead>
+                  <tr>
+                    <Th>Date</Th>
+                    <Th>Filled by</Th>
+                    <Th>Qty</Th>
+                    <Th className="text-right">Total</Th>
+                    <Th className="text-right">Commission</Th>
+                    <Th className="text-right">Net</Th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </Thead>
+                <Tbody>
+                  {order.fills.map((fill) => (
+                    <tr key={fill.id}>
+                      <Td className="whitespace-nowrap text-xs text-neutral-500">
+                        {new Date(fill.createdAt).toLocaleDateString()}
+                      </Td>
+                      <Td>{fill.filledByUsername}</Td>
+                      <Td>{fill.quantity}</Td>
+                      <Td className="text-right">${Number(fill.totalPrice).toLocaleString()}</Td>
+                      <Td className="text-right text-neutral-500">${Number(fill.commissionAmount).toLocaleString()}</Td>
+                      <Td className="text-right text-green-400">${Number(fill.netAmount).toLocaleString()}</Td>
+                    </tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </div>
           </div>
-        </div>
+        </FadeIn>
       )}
     </main>
   );

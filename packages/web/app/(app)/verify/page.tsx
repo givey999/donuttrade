@@ -163,26 +163,37 @@ export default function VerifyPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      {/* Gradient glow */}
+      <div
+        className="pointer-events-none absolute -top-28 left-1/2 h-[500px] w-[800px] -translate-x-1/2"
+        style={{ background: 'radial-gradient(ellipse, rgba(245,158,11,0.10) 0%, rgba(245,158,11,0.03) 40%, transparent 70%)' }}
+      />
+      {/* Grid */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)', backgroundSize: '56px 56px' }}
+      />
+
+      <div className="relative z-10 w-full max-w-sm animate-fade-in">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">DonutTrade</h1>
-          <p className="mt-2 text-sm text-neutral-400">
+          <h1 className="text-[28px] font-extrabold tracking-tight">DonutTrade</h1>
+          <p className="mt-2 text-sm text-neutral-500">
             Verify your Minecraft account
           </p>
         </div>
 
         {/* Loading */}
         {state === 'loading' && (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6 text-center">
+          <div className="rounded-xl border border-[#1a1a1a] bg-white/[0.02] p-6 text-center">
             <p className="text-sm text-neutral-400">Starting verification...</p>
           </div>
         )}
 
         {/* Pending — waiting for payment */}
         {state === 'pending' && (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6 shadow-lg backdrop-blur-sm">
+          <div className="rounded-xl border border-[#1a1a1a] bg-white/[0.02] p-6 shadow-lg backdrop-blur-sm">
             <h2 className="mb-4 text-center text-lg font-semibold">Pay to Verify</h2>
 
             <p className="text-center text-sm text-neutral-400">
@@ -190,13 +201,13 @@ export default function VerifyPage() {
             </p>
 
             {/* Amount display */}
-            <div className="my-4 rounded-lg border border-neutral-700 bg-neutral-800 p-4 text-center">
+            <div className="my-4 rounded-lg border border-[#1a1a1a] bg-white/[0.03] p-4 text-center">
               <span className="text-3xl font-bold text-green-400">${amount}</span>
               <p className="mt-1 text-xs text-neutral-500">to {botUsername}</p>
             </div>
 
             {/* Command to copy */}
-            <div className="mb-4 rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-3">
+            <div className="mb-4 rounded-lg border border-[#1a1a1a] bg-white/[0.03] px-4 py-3">
               <p className="mb-1 text-xs text-neutral-500">Run this command in-game:</p>
               <code className="text-sm font-mono text-neutral-200">
                 /pay {botUsername} {amount}
@@ -206,7 +217,7 @@ export default function VerifyPage() {
             {/* Countdown */}
             <div className="text-center">
               <span className="text-xs text-neutral-500">Expires in </span>
-              <span className="font-mono text-sm text-neutral-300">{timeLeft}</span>
+              <span className="font-mono text-sm text-amber-400">{timeLeft}</span>
             </div>
 
             <p className="mt-4 text-center text-xs text-neutral-600">
@@ -227,14 +238,14 @@ export default function VerifyPage() {
 
         {/* Expired */}
         {state === 'expired' && (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6 text-center">
+          <div className="rounded-xl border border-[#1a1a1a] bg-white/[0.02] p-6 text-center">
             <h2 className="text-lg font-semibold text-neutral-300">Verification Expired</h2>
             <p className="mt-2 text-sm text-neutral-400">
               The verification window has closed. Please try again.
             </p>
             <button
               onClick={handleRetry}
-              className="mt-4 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-neutral-200"
+              className="mt-4 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-[#0a0a0f] transition-all duration-200 hover:bg-amber-600"
             >
               Try Again
             </button>
@@ -248,7 +259,7 @@ export default function VerifyPage() {
             <p className="mt-2 text-sm text-neutral-400">{errorMsg}</p>
             <button
               onClick={handleRetry}
-              className="mt-4 rounded-lg bg-neutral-800 px-4 py-2 text-sm hover:bg-neutral-700 transition-colors"
+              className="mt-4 rounded-lg border border-[#1a1a1a] bg-white/[0.03] px-4 py-2 text-sm text-neutral-300 transition-colors hover:bg-white/[0.06]"
             >
               Try Again
             </button>

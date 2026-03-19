@@ -35,10 +35,10 @@ export default function AdminSettingsPage() {
     apiFetch<Record<string, string>>('/admin/settings')
       .then((data) => {
         setSettings(data);
-        setCommissionRate(((Number(data.commissionRate || '0.02') * 100).toString()));
-        setHiddenModePrice(data.hiddenModePrice || '50000000');
-        setMaintenanceEnabled(data.maintenanceMode === 'true');
-        setMaintenanceMessage(data.maintenanceMessage || '');
+        setCommissionRate(((Number(data.commission_rate || '0.02') * 100).toString()));
+        setHiddenModePrice(data.hidden_mode_price || '50000000');
+        setMaintenanceEnabled(data.maintenance_enabled === 'true');
+        setMaintenanceMessage(data.maintenance_message || '');
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -98,7 +98,7 @@ export default function AdminSettingsPage() {
             </div>
             <Button
               size="sm"
-              onClick={() => saveSetting('commissionRate', (Number(commissionRate) / 100).toString(), 'commission')}
+              onClick={() => saveSetting('commission_rate', (Number(commissionRate) / 100).toString(), 'commission')}
             >
               Save
             </Button>
@@ -131,7 +131,7 @@ export default function AdminSettingsPage() {
             </div>
             <Button
               size="sm"
-              onClick={() => saveSetting('hiddenModePrice', hiddenModePrice, 'hidden')}
+              onClick={() => saveSetting('hidden_mode_price', hiddenModePrice, 'hidden')}
             >
               Save
             </Button>
@@ -185,10 +185,8 @@ export default function AdminSettingsPage() {
             <Button
               size="sm"
               onClick={async () => {
-                await saveSetting('maintenanceMode', maintenanceEnabled ? 'true' : 'false', 'maintenance');
-                if (maintenanceMessage) {
-                  await saveSetting('maintenanceMessage', maintenanceMessage, 'maintenance');
-                }
+                await saveSetting('maintenance_enabled', maintenanceEnabled ? 'true' : 'false', 'maintenance');
+                await saveSetting('maintenance_message', maintenanceMessage, 'maintenance');
               }}
             >
               Save

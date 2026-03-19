@@ -3,6 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import { PageHeader } from '@/components/ui/page-header';
+import { Badge } from '@/components/ui/badge';
+import { Input, Select } from '@/components/ui/input';
+import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/pagination';
+import { FadeIn } from '@/components/ui/animate';
 import type { PaginationMeta } from '@donuttrade/shared';
 
 interface AdminUser {
@@ -18,11 +24,11 @@ interface AdminUser {
   createdAt: string;
 }
 
-const ROLE_COLORS: Record<string, string> = {
-  admin: 'border-red-900/50 bg-red-950/20 text-red-400',
-  manager: 'border-purple-900/50 bg-purple-950/20 text-purple-400',
-  moderator: 'border-blue-900/50 bg-blue-950/20 text-blue-400',
-  user: 'border-neutral-700 bg-neutral-800/50 text-neutral-400',
+const ROLE_VARIANT: Record<string, string> = {
+  admin: 'danger',
+  manager: 'purple',
+  moderator: 'info',
+  user: 'neutral',
 };
 
 export default function AdminUsersPage() {
@@ -59,65 +65,68 @@ export default function AdminUsersPage() {
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-xl font-bold">Users</h1>
+      <FadeIn>
+        <PageHeader title="Users" />
+      </FadeIn>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search username or email..."
-          className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
-        />
-        <select
-          value={roleFilter}
-          onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-          className="rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-300"
-        >
-          <option value="">All roles</option>
-          <option value="admin">Admin</option>
-          <option value="manager">Manager</option>
-          <option value="moderator">Moderator</option>
-          <option value="user">User</option>
-        </select>
-      </div>
+      <FadeIn delay={100}>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search username or email..."
+            className="w-64"
+          />
+          <Select
+            value={roleFilter}
+            onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+          >
+            <option value="">All roles</option>
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="moderator">Moderator</option>
+            <option value="user">User</option>
+          </Select>
+        </div>
+      </FadeIn>
 
       {loading ? (
         <p className="mt-4 text-sm text-neutral-400">Loading...</p>
       ) : users.length === 0 ? (
         <p className="mt-4 text-sm text-neutral-500">No users found.</p>
       ) : (
-        <>
-          <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-800">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-neutral-800 bg-neutral-950/50 text-xs text-neutral-400">
+        <FadeIn delay={150}>
+          <div className="mt-3">
+            <Table>
+              <Thead>
                 <tr>
-                  <th className="px-3 py-2">Username</th>
-                  <th className="px-3 py-2">Email</th>
-                  <th className="px-3 py-2 text-right">Balance</th>
-                  <th className="px-3 py-2">Role</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Joined</th>
+                  <Th>Username</Th>
+                  <Th>Email</Th>
+                  <Th className="text-right">Balance</Th>
+                  <Th>Role</Th>
+                  <Th>Status</Th>
+                  <Th>Joined</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800/50">
+              </Thead>
+              <Tbody>
                 {users.map((u) => (
                   <tr
                     key={u.id}
                     onClick={() => router.push(`/admin/users/${u.id}`)}
-                    className="cursor-pointer text-neutral-300 transition-colors hover:bg-neutral-800/30"
+                    className="cursor-pointer transition-colors hover:bg-white/[0.02]"
                   >
-                    <td className="px-3 py-2 text-xs font-medium">{u.minecraftUsername ?? '—'}</td>
-                    <td className="px-3 py-2 text-xs text-neutral-500">{u.email ?? '—'}</td>
-                    <td className="px-3 py-2 text-right text-xs text-green-400">
+                    <Td className="text-xs font-medium">{u.minecraftUsername ?? '—'}</Td>
+                    <Td className="text-xs text-neutral-500">{u.email ?? '—'}</Td>
+                    <Td className="text-right text-xs text-green-400">
                       ${Number(u.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${ROLE_COLORS[u.role] ?? ROLE_COLORS.user}`}>
+                    </Td>
+                    <Td>
+                      <Badge variant={ROLE_VARIANT[u.role] as 'danger'}>
                         {u.role}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
+                      </Badge>
+                    </Td>
+                    <Td>
                       {u.isBanned ? (
                         <span className="text-xs text-red-400">Banned</span>
                       ) : u.isTimedOut ? (
@@ -127,24 +136,18 @@ export default function AdminUsersPage() {
                       ) : (
                         <span className="text-xs text-neutral-500 capitalize">{u.verificationStatus}</span>
                       )}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-xs text-neutral-500">
+                    </Td>
+                    <Td className="whitespace-nowrap text-xs text-neutral-500">
                       {new Date(u.createdAt).toLocaleDateString()}
-                    </td>
+                    </Td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </Tbody>
+            </Table>
           </div>
 
-          {meta && meta.totalPages > 1 && (
-            <div className="mt-3 flex items-center justify-between text-xs text-neutral-500">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="rounded border border-neutral-700 px-2.5 py-1 hover:bg-neutral-800 disabled:opacity-40">Previous</button>
-              <span>Page {meta.page} of {meta.totalPages}</span>
-              <button onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))} disabled={page >= meta.totalPages} className="rounded border border-neutral-700 px-2.5 py-1 hover:bg-neutral-800 disabled:opacity-40">Next</button>
-            </div>
-          )}
-        </>
+          {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />}
+        </FadeIn>
       )}
     </div>
   );
