@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { marketplaceService } from '../services/marketplace.service.js';
 import { prisma } from '../services/database.js';
+import { AppError } from '../lib/errors.js';
 import type { CreateOrderInput, PaginationMeta } from '@donuttrade/shared';
 
 /**
@@ -32,6 +33,9 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
     },
     preHandler: [fastify.authenticate],
   }, async (request) => {
+    if (request.user!.impersonatedBy) {
+      throw new AppError('Cannot perform financial actions while impersonating', { code: 'IMPERSONATION_BLOCKED', statusCode: 403 });
+    }
     const userId = request.user!.id;
     const order = await marketplaceService.createOrder(userId, request.body);
 
@@ -60,6 +64,9 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
     },
     preHandler: [fastify.authenticate],
   }, async (request) => {
+    if (request.user!.impersonatedBy) {
+      throw new AppError('Cannot perform financial actions while impersonating', { code: 'IMPERSONATION_BLOCKED', statusCode: 403 });
+    }
     const fillerUserId = request.user!.id;
     const { id } = request.params;
     const { quantity } = request.body;
@@ -88,6 +95,9 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
   }>('/:id', {
     preHandler: [fastify.authenticate],
   }, async (request) => {
+    if (request.user!.impersonatedBy) {
+      throw new AppError('Cannot perform financial actions while impersonating', { code: 'IMPERSONATION_BLOCKED', statusCode: 403 });
+    }
     const userId = request.user!.id;
     const { id } = request.params;
 

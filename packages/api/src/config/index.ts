@@ -38,7 +38,7 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32).optional(),
 
   // Bot Bridge
-  BOT_WEBHOOK_SECRET: z.string().min(32).optional(),
+  BOT_WEBHOOK_SECRET: z.string().min(32),
   VERIFICATION_BOT_DISPLAY_NAME: z.string().default('DonutTradeBot'),
   DEPOSIT_BOT_DISPLAY_NAME: z.string().default('DonutTradeDeposit'),
 

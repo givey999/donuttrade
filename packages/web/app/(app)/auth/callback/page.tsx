@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { setAccessToken } from '@/lib/api';
 
@@ -10,7 +10,17 @@ function CallbackContent() {
   const router = useRouter();
   const error = searchParams.get('error');
   const success = searchParams.get('success');
-  const token = searchParams.get('token');
+
+  // Token is in the URL hash fragment (not sent to servers, not logged)
+  const [token, setTokenValue] = useState<string | null>(null);
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#token=')) {
+      setTokenValue(hash.slice('#token='.length));
+      // Clear from address bar
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, []);
 
   // Store access token and redirect to dashboard after 3s
   useEffect(() => {

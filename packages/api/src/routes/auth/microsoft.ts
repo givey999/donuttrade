@@ -147,7 +147,7 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
             userId: user.id,
           });
 
-          return reply.redirect(`${frontendUrl}${callbackPath}?success=true&token=${sessionTokens.accessToken}`);
+          return reply.redirect(`${frontendUrl}${callbackPath}?success=true#token=${sessionTokens.accessToken}`);
         }
 
         // Branch B: Returning user in setup (not yet verified)

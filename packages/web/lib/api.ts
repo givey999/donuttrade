@@ -60,6 +60,9 @@ export function stopImpersonation() {
     const adminToken = localStorage.getItem('dt_admin_token');
     if (adminToken) {
       setAccessToken(adminToken);
+    } else {
+      // No admin token to restore — clear everything to force re-login
+      clearAccessToken();
     }
     localStorage.removeItem('dt_admin_token');
     localStorage.removeItem('dt_impersonating');

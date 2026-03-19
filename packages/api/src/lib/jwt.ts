@@ -76,6 +76,11 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
   try {
     const payload = jwt.verify(token, jwtConfig.accessToken.secret) as AccessTokenPayload;
 
+    // Reject pending setup tokens used as access tokens
+    if ((payload as any).purpose === 'pending_setup') {
+      throw new InvalidTokenError('Pending token cannot be used as access token');
+    }
+
     jwtLogger.debug('verifyAccessToken', 'Access token verified', {
       userId: payload.sub,
       username: payload.username,

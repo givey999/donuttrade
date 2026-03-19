@@ -42,18 +42,19 @@ export class PaymentHandler {
     // Remove trailing period
     cleaned = cleaned.replace(/\.$/, '');
 
-    // Check for K/M/B/T suffix
+    // Check for K/M/B/T suffix (case-insensitive)
     let multiplier = 1;
-    if (cleaned.endsWith('K')) {
+    const lastChar = cleaned.slice(-1).toUpperCase();
+    if (lastChar === 'K') {
       multiplier = 1_000;
       cleaned = cleaned.slice(0, -1);
-    } else if (cleaned.endsWith('M')) {
+    } else if (lastChar === 'M') {
       multiplier = 1_000_000;
       cleaned = cleaned.slice(0, -1);
-    } else if (cleaned.endsWith('B')) {
+    } else if (lastChar === 'B') {
       multiplier = 1_000_000_000;
       cleaned = cleaned.slice(0, -1);
-    } else if (cleaned.endsWith('T')) {
+    } else if (lastChar === 'T') {
       multiplier = 1_000_000_000_000;
       cleaned = cleaned.slice(0, -1);
     }

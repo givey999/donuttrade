@@ -87,15 +87,20 @@ export default function AdminUserDetailPage() {
   const isTimedOut = userDetail.timedOutUntil && new Date(userDetail.timedOutUntil) > new Date();
   const isBanned = !!userDetail.bannedAt;
 
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const doAction = async (path: string, body?: unknown) => {
     setActionLoading(true);
+    setActionError(null);
     try {
       await apiFetch(`/admin/users/${params.id}${path}`, {
         method: 'PATCH',
         body: body ? JSON.stringify(body) : '{}',
       });
       fetchUser();
-    } catch { /* error handled */ }
+    } catch (err: any) {
+      setActionError(err?.message || 'Action failed');
+    }
     setActionLoading(false);
   };
 
@@ -173,6 +178,12 @@ export default function AdminUserDetailPage() {
           {isTimedOut && (
             <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3 text-sm text-amber-400">
               Timed out until {new Date(userDetail.timedOutUntil!).toLocaleString()} — {userDetail.timeoutReason || 'No reason'}
+            </div>
+          )}
+
+          {actionError && (
+            <div className="mt-3 rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-sm text-red-400">
+              {actionError}
             </div>
           )}
 

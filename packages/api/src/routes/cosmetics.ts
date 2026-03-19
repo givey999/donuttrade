@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { cosmeticsService } from '../services/cosmetics.service.js';
-import { ValidationError } from '../lib/errors.js';
+import { AppError, ValidationError } from '../lib/errors.js';
 
 export const cosmeticsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
@@ -11,6 +11,9 @@ export const cosmeticsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post<{ Body: { type: 'color' | 'font'; id: string } }>('/unlock', async (request) => {
+    if (request.user!.impersonatedBy) {
+      throw new AppError('Cannot perform financial actions while impersonating', { code: 'IMPERSONATION_BLOCKED', statusCode: 403 });
+    }
     const { type, id } = request.body;
     if (type !== 'color' && type !== 'font') {
       throw new ValidationError('Type must be "color" or "font"');
@@ -20,6 +23,9 @@ export const cosmeticsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/hidden/purchase', async (request) => {
+    if (request.user!.impersonatedBy) {
+      throw new AppError('Cannot perform financial actions while impersonating', { code: 'IMPERSONATION_BLOCKED', statusCode: 403 });
+    }
     await cosmeticsService.purchaseHiddenMode(request.user!.id);
     return { success: true };
   });

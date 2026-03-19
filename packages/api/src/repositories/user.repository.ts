@@ -356,7 +356,7 @@ export const userRepository = {
    */
   async isBanned(id: string): Promise<boolean> {
     const user = await this.findById(id);
-    return user?.bannedAt !== null;
+    return user !== null && user.bannedAt !== null;
   },
 
   /**

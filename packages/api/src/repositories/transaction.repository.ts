@@ -59,18 +59,22 @@ export const transactionRepository = {
   /**
    * Find transactions by user ID with pagination.
    */
-  async findByUserId(userId: string, options?: { skip?: number; take?: number }) {
+  async findByUserId(userId: string, options?: { skip?: number; take?: number; type?: string }) {
     const startTime = Date.now();
+    const where: { userId: string; type?: string } = { userId };
+    if (options?.type) {
+      where.type = options.type;
+    }
 
     try {
       const [transactions, total] = await Promise.all([
         prisma.transaction.findMany({
-          where: { userId },
+          where,
           orderBy: { createdAt: 'desc' },
           skip: options?.skip,
           take: options?.take,
         }),
-        prisma.transaction.count({ where: { userId } }),
+        prisma.transaction.count({ where }),
       ]);
 
       txLogger.debug('findByUserId', 'Transactions fetched', {

@@ -41,7 +41,7 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const skip = (page - 1) * perPage;
-    const { transactions, total } = await transactionRepository.findByUserId(userId, { skip, take: perPage });
+    const { transactions, total } = await transactionRepository.findByUserId(userId, { skip, take: perPage, type: typeFilter });
 
     // Map Prisma Decimal fields to strings to match TransactionRecord shape
     const mapped: TransactionRecord[] = transactions.map((tx) => ({

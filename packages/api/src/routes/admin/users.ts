@@ -198,6 +198,12 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
       throw new AppError('Only managers and admins can unban users', { code: 'FORBIDDEN', statusCode: 403 });
     }
 
+    const target = await prisma.user.findUnique({ where: { id: request.params.id }, select: { role: true } });
+    if (!target) throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
+    if (!canActOn(actorRole, target.role)) {
+      throw new AppError('Cannot unban a user at or above your role level', { code: 'HIERARCHY_VIOLATION', statusCode: 403 });
+    }
+
     await userRepository.unban(request.params.id);
     await auditService.log({ actorId: request.user!.id, action: 'user.unban', targetType: 'user', targetId: request.params.id });
     adminLogger.info('unban', 'User unbanned by admin', { targetId: request.params.id, adminId: request.user!.id });
@@ -255,6 +261,12 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
     const actorRole = request.user!.role;
     if (actorRole !== 'admin' && actorRole !== 'manager') {
       throw new AppError('Only managers and admins can remove timeouts', { code: 'FORBIDDEN', statusCode: 403 });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: request.params.id }, select: { role: true } });
+    if (!target) throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
+    if (!canActOn(actorRole, target.role)) {
+      throw new AppError('Cannot remove timeout from a user at or above your role level', { code: 'HIERARCHY_VIOLATION', statusCode: 403 });
     }
 
     await prisma.user.update({
