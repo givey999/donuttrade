@@ -113,6 +113,35 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   /**
+   * PATCH /orders/:id/price
+   * Update the price of an active, unfilled order.
+   */
+  fastify.patch<{
+    Params: { id: string };
+    Body: { pricePerUnit: number };
+  }>('/:id/price', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['pricePerUnit'],
+        properties: {
+          pricePerUnit: { type: 'number', minimum: 1 },
+        },
+      },
+    },
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    preHandler: [fastify.authenticate],
+  }, async (request) => {
+    if (request.user!.impersonatedBy) {
+      throw new AppError('Cannot perform financial actions while impersonating', {
+        code: 'IMPERSONATION_BLOCKED', statusCode: 403,
+      });
+    }
+    await marketplaceService.updateOrderPrice(request.params.id, request.user!.id, request.body.pricePerUnit);
+    return { success: true, data: { message: 'Order price updated' } };
+  });
+
+  /**
    * GET /orders/my
    * User's own orders.
    */

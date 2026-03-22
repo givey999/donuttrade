@@ -47,6 +47,12 @@ function CreateOrderContent() {
   const [pricePerUnit, setPricePerUnit] = useState('');
   const [isPremium, setIsPremium] = useState(false);
 
+  // Item summary (market data)
+  const [itemSummary, setItemSummary] = useState<{
+    lastSoldPrice: string | null;
+    avgPrice24h: string;
+  } | null>(null);
+
   // Cosmetic selections
   const [borderColor, setBorderColor] = useState<string>('');
   const [usernameColor, setUsernameColor] = useState<string>('');
@@ -68,6 +74,18 @@ function CreateOrderContent() {
       .then((data) => setCommissionRate(data.commissionRate))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!catalogItemId) {
+      setItemSummary(null);
+      return;
+    }
+    apiFetch<{ lastSoldPrice: string | null; avgPrice24h: string }>(
+      `/public/stats/item-summary/${catalogItemId}`
+    )
+      .then(setItemSummary)
+      .catch(() => setItemSummary(null));
+  }, [catalogItemId]);
 
   const qty = parseInt(quantity, 10) || 0;
   const price = parseFloat(pricePerUnit) || 0;
@@ -221,6 +239,14 @@ function CreateOrderContent() {
               placeholder="100000"
               className="mt-1.5"
             />
+            {itemSummary?.lastSoldPrice && (
+              <p className="mt-1 text-xs text-neutral-500">
+                Last sold for ${Number(itemSummary.lastSoldPrice).toLocaleString()}
+                {itemSummary.avgPrice24h !== '0' && (
+                  <> · 24h avg: ${Number(itemSummary.avgPrice24h).toLocaleString()}</>
+                )}
+              </p>
+            )}
           </div>
 
           {/* Duration toggle */}

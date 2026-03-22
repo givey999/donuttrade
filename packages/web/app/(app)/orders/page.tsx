@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { FadeIn } from '@/components/ui/animate';
+import { EditPriceModal } from '@/components/orders/edit-price-modal';
 import type { OrderRecord, PaginationMeta, OrderStatus } from '@donuttrade/shared';
 
 const STATUS_TABS = [
@@ -42,6 +43,8 @@ function MyOrdersContent() {
   const [statusFilter, setStatusFilter] = useState('');
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,7 +71,7 @@ function MyOrdersContent() {
       });
 
     return () => { cancelled = true; };
-  }, [page, statusFilter]);
+  }, [page, statusFilter, refreshKey]);
 
   const handleCancel = async (orderId: string) => {
     setCancelling(orderId);
@@ -119,7 +122,7 @@ function MyOrdersContent() {
                   <Th>Qty</Th>
                   <Th>Price/ea</Th>
                   <Th>Status</Th>
-                  <Th>Expires</Th>
+                  <Th className="hidden sm:table-cell">Expires</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
               </Thead>
@@ -142,7 +145,7 @@ function MyOrdersContent() {
                         {order.status}
                       </Badge>
                     </Td>
-                    <Td className="text-xs text-neutral-500">
+                    <Td className="hidden sm:table-cell text-xs text-neutral-500">
                       {new Date(order.expiresAt).toLocaleDateString()}
                     </Td>
                     <Td className="text-right">
@@ -153,6 +156,14 @@ function MyOrdersContent() {
                         >
                           View
                         </Link>
+                        {order.status === 'active' && order.filledQuantity === 0 && !isTimedOut && (
+                          <button
+                            onClick={() => setEditingOrder(order)}
+                            className="text-xs text-amber-400 transition-colors hover:text-amber-300"
+                          >
+                            Edit
+                          </button>
+                        )}
                         {order.status === 'active' && !isTimedOut && (
                           <button
                             onClick={() => handleCancel(order.id)}
@@ -172,6 +183,17 @@ function MyOrdersContent() {
 
           {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />}
         </FadeIn>
+      )}
+
+      {editingOrder && (
+        <EditPriceModal
+          order={editingOrder}
+          onClose={() => setEditingOrder(null)}
+          onSuccess={() => {
+            setEditingOrder(null);
+            setRefreshKey((k) => k + 1);
+          }}
+        />
       )}
     </main>
   );

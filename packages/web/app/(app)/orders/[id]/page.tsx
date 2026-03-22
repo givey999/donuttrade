@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
 import { FadeIn } from '@/components/ui/animate';
+import { EditPriceModal } from '@/components/orders/edit-price-modal';
 import type { OrderDetailRecord } from '@donuttrade/shared';
 
 const TYPE_VARIANT: Record<string, string> = {
@@ -32,6 +33,8 @@ function OrderDetailContent() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const id = params.id as string;
 
@@ -40,7 +43,7 @@ function OrderDetailContent() {
       .then(setOrder)
       .catch(() => setOrder(null))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, refreshKey]);
 
   const handleCancel = async () => {
     setCancelling(true);
@@ -137,16 +140,27 @@ function OrderDetailContent() {
             </div>
           </div>
 
-          {/* Cancel button */}
+          {/* Action buttons */}
           {isOwner && order.status === 'active' && !isTimedOut && (
-            <Button
-              variant="danger"
-              onClick={handleCancel}
-              disabled={cancelling}
-              className="mt-5 w-full"
-            >
-              {cancelling ? 'Cancelling...' : 'Cancel Order'}
-            </Button>
+            <div className="mt-5 flex gap-2">
+              {order.filledQuantity === 0 && (
+                <Button
+                  variant="secondary"
+                  onClick={() => setEditingPrice(true)}
+                  className="flex-1"
+                >
+                  Edit Price
+                </Button>
+              )}
+              <Button
+                variant="danger"
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="flex-1"
+              >
+                {cancelling ? 'Cancelling...' : 'Cancel Order'}
+              </Button>
+            </div>
           )}
           {cancelError && (
             <p className="mt-2 text-xs text-red-400">{cancelError}</p>
@@ -167,8 +181,8 @@ function OrderDetailContent() {
                     <Th>Filled by</Th>
                     <Th>Qty</Th>
                     <Th className="text-right">Total</Th>
-                    <Th className="text-right">Commission</Th>
-                    <Th className="text-right">Net</Th>
+                    <Th className="hidden sm:table-cell text-right">Commission</Th>
+                    <Th className="hidden sm:table-cell text-right">Net</Th>
                   </tr>
                 </Thead>
                 <Tbody>
@@ -180,8 +194,8 @@ function OrderDetailContent() {
                       <Td>{fill.filledByUsername}</Td>
                       <Td>{fill.quantity}</Td>
                       <Td className="text-right">${Number(fill.totalPrice).toLocaleString()}</Td>
-                      <Td className="text-right text-neutral-500">${Number(fill.commissionAmount).toLocaleString()}</Td>
-                      <Td className="text-right text-green-400">${Number(fill.netAmount).toLocaleString()}</Td>
+                      <Td className="hidden sm:table-cell text-right text-neutral-500">${Number(fill.commissionAmount).toLocaleString()}</Td>
+                      <Td className="hidden sm:table-cell text-right text-green-400">${Number(fill.netAmount).toLocaleString()}</Td>
                     </tr>
                   ))}
                 </Tbody>
@@ -189,6 +203,17 @@ function OrderDetailContent() {
             </div>
           </div>
         </FadeIn>
+      )}
+
+      {editingPrice && order && (
+        <EditPriceModal
+          order={order}
+          onClose={() => setEditingPrice(false)}
+          onSuccess={() => {
+            setEditingPrice(false);
+            setRefreshKey((k) => k + 1);
+          }}
+        />
       )}
     </main>
   );

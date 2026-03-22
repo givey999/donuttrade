@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { RequireAuth } from '@/lib/require-auth';
 import { apiFetch } from '@/lib/api';
 import { FillOrderModal } from '@/components/marketplace/fill-order-modal';
+import { PriceChart } from '@/components/marketplace/price-chart';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -137,6 +138,15 @@ function MarketplaceContent() {
           </Select>
         </div>
       </FadeIn>
+
+      {/* Price chart */}
+      {itemFilter && (
+        <FadeIn delay={150}>
+          <div className="mt-4">
+            <PriceChart catalogItemId={itemFilter} />
+          </div>
+        </FadeIn>
+      )}
 
       {/* Orders grid */}
       {loading ? (

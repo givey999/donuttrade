@@ -638,6 +638,125 @@ export const marketplaceService = {
   },
 
   /**
+   * Update the price of an active, unfilled order.
+   */
+  async updateOrderPrice(orderId: string, userId: string, newPricePerUnit: number) {
+    mktLogger.info('updateOrderPrice', 'Updating order price', { orderId, userId, newPricePerUnit });
+
+    // Validate price limits
+    if (newPricePerUnit < MARKETPLACE_MIN_PRICE || newPricePerUnit > MARKETPLACE_MAX_PRICE) {
+      throw new ValidationError('Price out of limits', {
+        min: MARKETPLACE_MIN_PRICE, max: MARKETPLACE_MAX_PRICE, requested: newPricePerUnit,
+      });
+    }
+
+    // Timeout check
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { timedOutUntil: true, timeoutReason: true } });
+    if (user?.timedOutUntil && user.timedOutUntil > new Date()) {
+      throw new AppError('Account is currently timed out', {
+        code: 'ACCOUNT_TIMED_OUT', statusCode: 403,
+        details: { until: user.timedOutUntil.toISOString(), reason: user.timeoutReason },
+      });
+    }
+
+    // Pre-validate
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new AppError('Order not found', { code: 'ORDER_NOT_FOUND', statusCode: 404 });
+    if (order.userId !== userId) throw new AppError('Not your order', { code: 'FORBIDDEN', statusCode: 403 });
+    if (order.status !== 'active') {
+      throw new AppError('Only active orders can be edited', { code: 'ORDER_NOT_ACTIVE', statusCode: 400, details: { currentStatus: order.status } });
+    }
+    if (order.filledQuantity !== 0) {
+      throw new AppError('Cannot edit price of partially filled order', { code: 'ORDER_PARTIALLY_FILLED', statusCode: 400 });
+    }
+
+    const oldPricePerUnit = (order.pricePerUnit as Prisma.Decimal).toNumber();
+    if (newPricePerUnit === oldPricePerUnit) {
+      throw new ValidationError('Price unchanged');
+    }
+
+    await withTransaction(async (tx) => {
+      // Atomically claim the order for editing
+      const result = await tx.$executeRaw`
+        UPDATE orders SET price_per_unit = ${newPricePerUnit}, updated_at = NOW()
+        WHERE id = ${orderId} AND status = 'active' AND filled_quantity = 0 AND user_id = ${userId}
+      `;
+      if (result === 0) {
+        throw new AppError('Order cannot be edited — it may have been filled, cancelled, or expired', {
+          code: 'EDIT_FAILED', statusCode: 409,
+        });
+      }
+
+      if (order.type === 'buy') {
+        // Recalculate escrow
+        const oldEscrow = oldPricePerUnit * order.quantity;
+        const newEscrow = newPricePerUnit * order.quantity;
+        const diff = newEscrow - oldEscrow;
+
+        // Update escrow amount
+        await tx.order.update({
+          where: { id: orderId },
+          data: { escrowAmount: newEscrow },
+        });
+
+        if (diff > 0) {
+          // Price increased — charge more from user
+          const freshUser = await tx.user.findUnique({ where: { id: userId }, select: { balance: true } });
+          if (!freshUser) throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
+          const balanceBefore = freshUser.balance.toNumber();
+
+          if (balanceBefore < diff) {
+            throw new AppError('Insufficient balance for price increase', {
+              code: 'INSUFFICIENT_BALANCE', statusCode: 400,
+              details: { available: balanceBefore.toString(), required: diff },
+            });
+          }
+
+          await userRepository.decrementBalance(userId, diff, tx);
+
+          await transactionRepository.create({
+            userId,
+            type: 'escrow',
+            amount: diff,
+            balanceBefore,
+            balanceAfter: balanceBefore - diff,
+            description: `Additional escrow for price increase on order`,
+            metadata: { orderId, oldPrice: oldPricePerUnit, newPrice: newPricePerUnit },
+          }, tx);
+        } else if (diff < 0) {
+          // Price decreased — refund difference
+          const refund = Math.abs(diff);
+          const freshUser = await tx.user.findUnique({ where: { id: userId }, select: { balance: true } });
+          if (!freshUser) throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
+          const balanceBefore = freshUser.balance.toNumber();
+
+          await userRepository.incrementBalance(userId, refund, tx);
+
+          await transactionRepository.create({
+            userId,
+            type: 'escrow_refund',
+            amount: refund,
+            balanceBefore,
+            balanceAfter: balanceBefore + refund,
+            description: `Escrow refund for price decrease on order`,
+            metadata: { orderId, oldPrice: oldPricePerUnit, newPrice: newPricePerUnit },
+          }, tx);
+        }
+      }
+      // For sell orders: price already updated by the raw SQL above, no balance changes needed
+    });
+
+    mktLogger.info('updateOrderPrice.success', 'Order price updated', {
+      orderId, userId, oldPrice: oldPricePerUnit, newPrice: newPricePerUnit,
+    });
+
+    // Notify
+    void eventBus.publish(userId, 'order.price_updated', {
+      orderId, oldPrice: oldPricePerUnit, newPrice: newPricePerUnit,
+    });
+  },
+
+  /**
    * Admin cancel — bypasses ownership check but reuses refund logic.
    */
   async adminCancelOrder(orderId: string, adminId: string) {

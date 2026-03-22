@@ -46,6 +46,7 @@ const EVENT_TYPES = [
   'deposit.confirmed',
   'withdrawal.completed',
   'item_withdrawal.completed',
+  'order.price_updated',
 ] as const;
 
 function eventToMessage(type: string, data: Record<string, unknown>): string {
@@ -64,6 +65,8 @@ function eventToMessage(type: string, data: Record<string, unknown>): string {
       return `Withdrawal of $${data.amount} completed`;
     case 'item_withdrawal.completed':
       return `Item withdrawal completed (${data.quantity}x items)`;
+    case 'order.price_updated':
+      return `Order price updated to $${Number(data.newPrice).toLocaleString()}`;
     default:
       return 'New notification';
   }

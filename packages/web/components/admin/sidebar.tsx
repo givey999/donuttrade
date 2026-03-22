@@ -43,7 +43,12 @@ const SECTIONS = [
   },
 ];
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  open?: boolean;
+  onClose?: () => void;
+}
+
+export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -60,8 +65,14 @@ export function AdminSidebar() {
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-[#1a1a1a] bg-[#0a0a0f] px-3 py-4">
+  // Auto-close mobile sidebar on navigation
+  useEffect(() => {
+    if (onClose) onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  const sidebarContent = (
+    <>
       {SECTIONS.map((section) => (
         <div key={section.label} className="mb-5">
           <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
@@ -99,6 +110,25 @@ export function AdminSidebar() {
           })}
         </div>
       ))}
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:block sticky top-14 h-[calc(100vh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-[#1a1a1a] bg-[#0a0a0f] px-3 py-4">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile overlay */}
+      {open && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+          <aside className="absolute left-0 top-0 h-full w-56 overflow-y-auto border-r border-[#1a1a1a] bg-[#0a0a0f] px-3 py-4">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
