@@ -52,7 +52,9 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.post<{
     Body: { refreshToken?: string };
-  }>('/refresh', async (request, reply) => {
+  }>('/refresh', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const refreshToken =
       (request.body as { refreshToken?: string } | null)?.refreshToken
       ?? request.cookies?.['dt_refresh_token'];

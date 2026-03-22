@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { NotificationBell } from '@/components/notification-bell';
 
 const NAV_LINKS = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -61,6 +62,7 @@ export function Navbar() {
 
         {/* User info + logout */}
         <div className="flex items-center gap-3">
+          <NotificationBell />
           <span className="text-xs text-neutral-500">
             {user?.minecraftUsername}
           </span>

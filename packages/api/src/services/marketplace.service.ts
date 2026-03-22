@@ -18,6 +18,7 @@ import {
 } from '@donuttrade/shared';
 import type { CreateOrderInput, OrderType } from '@donuttrade/shared';
 import { platformSettingsService } from './platform-settings.service.js';
+import { eventBus } from './event-bus.service.js';
 import { cosmeticsService } from './cosmetics.service.js';
 import { getColor, getFont } from '@donuttrade/shared';
 
@@ -412,6 +413,20 @@ export const marketplaceService = {
       sellerReceives: sellerReceives.toNumber(),
     });
 
+    // Notify both parties
+    void eventBus.publish(order.userId, 'order.filled', {
+      orderId: order.id,
+      itemName: order.catalogItem.displayName,
+      quantity: fillQuantity,
+      role: 'buyer',
+    });
+    void eventBus.publish(sellerUserId, 'order.filled', {
+      orderId: order.id,
+      itemName: order.catalogItem.displayName,
+      quantity: fillQuantity,
+      role: 'seller',
+    });
+
     return fill;
   },
 
@@ -527,6 +542,20 @@ export const marketplaceService = {
       sellerReceives: sellerReceives.toNumber(),
     });
 
+    // Notify both parties
+    void eventBus.publish(order.userId, 'order.filled', {
+      orderId: order.id,
+      itemName: order.catalogItem.displayName,
+      quantity: fillQuantity,
+      role: 'seller',
+    });
+    void eventBus.publish(buyerUserId, 'order.filled', {
+      orderId: order.id,
+      itemName: order.catalogItem.displayName,
+      quantity: fillQuantity,
+      role: 'buyer',
+    });
+
     return fill;
   },
 
@@ -535,6 +564,15 @@ export const marketplaceService = {
    */
   async cancelOrder(orderId: string, userId: string) {
     mktLogger.info('cancelOrder', 'Cancelling order', { orderId, userId });
+
+    // Timeout check
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { timedOutUntil: true, timeoutReason: true } });
+    if (user?.timedOutUntil && user.timedOutUntil > new Date()) {
+      throw new AppError('Account is currently timed out', {
+        code: 'ACCOUNT_TIMED_OUT', statusCode: 403,
+        details: { until: user.timedOutUntil.toISOString(), reason: user.timeoutReason },
+      });
+    }
 
     // Pre-validate ownership (non-atomic, for fast feedback)
     const order = await prisma.order.findUnique({ where: { id: orderId } });
@@ -592,6 +630,11 @@ export const marketplaceService = {
       userId,
       type: order.type,
     });
+
+    void eventBus.publish(userId, 'order.cancelled', {
+      orderId,
+      type: order.type,
+    });
   },
 
   /**
@@ -644,6 +687,12 @@ export const marketplaceService = {
     });
 
     mktLogger.info('adminCancelOrder.success', 'Order cancelled by admin', { orderId, adminId });
+
+    void eventBus.publish(order.userId, 'order.cancelled', {
+      orderId,
+      type: order.type,
+      adminCancelled: true,
+    });
   },
 
   /**
@@ -697,6 +746,11 @@ export const marketplaceService = {
         });
 
         mktLogger.info('processExpiredOrders.expired', 'Order expired', {
+          orderId: order.id,
+          type: order.type,
+        });
+
+        void eventBus.publish(order.userId, 'order.expired', {
           orderId: order.id,
           type: order.type,
         });

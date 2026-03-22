@@ -31,6 +31,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     preHandler: [fastify.authenticate],
   }, async (request) => {
     if (request.user!.impersonatedBy) {
@@ -62,6 +63,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     preHandler: [fastify.authenticate],
   }, async (request) => {
     if (request.user!.impersonatedBy) {
@@ -93,6 +95,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete<{
     Params: { id: string };
   }>('/:id', {
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     preHandler: [fastify.authenticate],
   }, async (request) => {
     if (request.user!.impersonatedBy) {

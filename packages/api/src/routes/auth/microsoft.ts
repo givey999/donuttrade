@@ -27,7 +27,9 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.get<{
     Querystring: { redirect?: string };
-  }>('/microsoft', async (request, reply) => {
+  }>('/microsoft', {
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     // Check if OAuth is configured
     if (!isMicrosoftOAuthConfigured()) {
       throw new InternalError('OAuth is not configured');
@@ -62,7 +64,9 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
       error?: string;
       error_description?: string;
     };
-  }>('/microsoft/callback', async (request, reply) => {
+  }>('/microsoft/callback', {
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const { code, state, error, error_description } = request.query;
 
     const frontendUrl = config.CORS_ORIGIN;

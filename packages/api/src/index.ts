@@ -7,12 +7,13 @@ import cookie from '@fastify/cookie';
 import { config, getRedactedConfig, isDevelopment } from './config/index.js';
 import { logger } from './lib/logger.js';
 import { connectDatabase, disconnectDatabase } from './services/database.js';
-import { connectRedis, disconnectRedis } from './services/redis.js';
+import { connectRedis, disconnectRedis, disconnectSubscriber } from './services/redis.js';
 
 import requestContextPlugin from './plugins/request-context.js';
 import requestLoggingPlugin from './plugins/request-logging.js';
 import errorHandlerPlugin from './plugins/error-handler.js';
 import { authPlugin } from './plugins/auth.js';
+import rateLimitPlugin from './plugins/rate-limit.js';
 import maintenancePlugin from './plugins/maintenance.js';
 import { platformSettingsService } from './services/platform-settings.service.js';
 
@@ -31,6 +32,7 @@ import { adminRoutes } from './routes/admin/index.js';
 import { publicStatsRoutes } from './routes/public/stats.js';
 import { cosmeticsRoutes } from './routes/cosmetics.js';
 import { publicSettingsRoutes } from './routes/public/settings.js';
+import { eventsRoutes } from './routes/events.js';
 import { startOrderExpiryJob, stopOrderExpiryJob } from './services/order-expiry.service.js';
 
 const startupLogger = logger.module('startup');
@@ -63,6 +65,7 @@ async function buildApp() {
 
   await app.register(sensible);
   await app.register(cookie);
+  await app.register(rateLimitPlugin);
 
   // Register custom plugins
   await app.register(requestContextPlugin);
@@ -87,6 +90,7 @@ async function buildApp() {
   await app.register(publicStatsRoutes, { prefix: '/public/stats' });
   await app.register(cosmeticsRoutes, { prefix: '/cosmetics' });
   await app.register(publicSettingsRoutes, { prefix: '/public/settings' });
+  await app.register(eventsRoutes, { prefix: '/events' });
 
   return app;
 }
@@ -136,6 +140,7 @@ async function start() {
         startupLogger.info('server.closed', 'HTTP server closed');
 
         await disconnectDatabase();
+        await disconnectSubscriber();
         await disconnectRedis();
 
         startupLogger.info('server.shutdown.complete', 'Shutdown complete');

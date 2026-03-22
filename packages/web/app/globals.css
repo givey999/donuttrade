@@ -39,6 +39,15 @@
   }
 }
 
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
+}
+
 /* Sparkle effect for premium (3B volume) font */
 @keyframes sparkle-1 {
   0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }

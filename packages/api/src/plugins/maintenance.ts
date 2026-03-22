@@ -1,11 +1,12 @@
 import { FastifyPluginAsync } from 'fastify';
+import fp from 'fastify-plugin';
 import { platformSettingsService } from '../services/platform-settings.service.js';
 import { prisma } from '../services/database.js';
 import { verifyAccessToken } from '../lib/jwt.js';
 
-const EXEMPT_PREFIXES = ['/health', '/auth', '/internal', '/public'];
+const EXEMPT_PREFIXES = ['/health', '/auth', '/internal', '/public', '/events'];
 
-const maintenancePlugin: FastifyPluginAsync = async (fastify) => {
+const maintenancePluginCallback: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('onRequest', async (request, reply) => {
     const path = request.url.split('?')[0] ?? '';
     if (EXEMPT_PREFIXES.some(prefix => path.startsWith(prefix))) {
@@ -46,4 +47,6 @@ const maintenancePlugin: FastifyPluginAsync = async (fastify) => {
   });
 };
 
-export default maintenancePlugin;
+export default fp(maintenancePluginCallback, {
+  name: 'maintenance',
+});

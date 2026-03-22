@@ -2,9 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { ToastProvider } from '@/lib/toast';
 import { Navbar } from '@/components/navbar';
 import { TimeoutBanner } from '@/components/timeout-banner';
 import { MaintenanceScreen } from '@/components/maintenance-screen';
+import { NotificationProvider } from '@/lib/notifications';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moldo.go.ro:9443';
 
 function ImpersonationBanner() {
   const { impersonating, stopImpersonating } = useAuth();
@@ -38,6 +42,23 @@ function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     if (window.__maintenanceMessage) {
       setMaintenanceMessage(window.__maintenanceMessage);
     }
+
+    // Proactively check maintenance status on mount
+    fetch(`${API_URL}/public/settings/maintenance`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((json) => {
+        if (json?.data?.enabled) {
+          const msg = json.data.message || 'Platform is under maintenance';
+          window.__maintenanceMessage = msg;
+          setMaintenanceMessage(msg);
+        } else if (json?.data && !json.data.enabled) {
+          // Maintenance was disabled — clear any stale state
+          delete window.__maintenanceMessage;
+          setMaintenanceMessage(null);
+        }
+      })
+      .catch(() => {});
+
     return () => window.removeEventListener('maintenance', handler);
   }, []);
 
@@ -66,12 +87,16 @@ export default function AppLayout({
 }) {
   return (
     <AuthProvider>
-      <ImpersonationBanner />
-      <MaintenanceGuard>
-        <Navbar />
-        <TimeoutBanner />
-        {children}
-      </MaintenanceGuard>
+      <ToastProvider>
+        <NotificationProvider>
+          <ImpersonationBanner />
+          <MaintenanceGuard>
+            <Navbar />
+            <TimeoutBanner />
+            {children}
+          </MaintenanceGuard>
+        </NotificationProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

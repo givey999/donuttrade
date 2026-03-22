@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { FadeIn } from '@/components/ui/animate';
+import { useAuth } from '@/lib/auth';
 import { COSMETIC_COLORS, COSMETIC_FONTS } from '@donuttrade/shared';
 import type { OrderRecord, PaginationMeta, CatalogItemRecord } from '@donuttrade/shared';
 
@@ -25,6 +26,7 @@ function timeRemaining(expiresAt: string): string {
 }
 
 function MarketplaceContent() {
+  const { isTimedOut } = useAuth();
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [catalogItems, setCatalogItems] = useState<CatalogItemRecord[]>([]);
@@ -94,9 +96,11 @@ function MarketplaceContent() {
               Platform fee: {(commissionRate * 100).toFixed(0)}%
             </span>
           )}
-          <Link href="/marketplace/create">
-            <Button>Create Order</Button>
-          </Link>
+          {!isTimedOut && (
+            <Link href="/marketplace/create">
+              <Button>Create Order</Button>
+            </Link>
+          )}
         </PageHeader>
       </FadeIn>
 
@@ -194,7 +198,7 @@ function MarketplaceContent() {
                       by {order.username}
                       {order.usernameFont === 'premium' && <span className="sparkle-extra">✦</span>}
                     </span>
-                    <Button size="sm" onClick={() => setFillOrder(order)}>
+                    <Button size="sm" onClick={() => setFillOrder(order)} disabled={isTimedOut}>
                       Fill
                     </Button>
                   </div>

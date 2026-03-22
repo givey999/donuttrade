@@ -27,7 +27,7 @@ const STATUS_VARIANT: Record<string, string> = {
 function OrderDetailContent() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isTimedOut } = useAuth();
   const [order, setOrder] = useState<OrderDetailRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
@@ -138,7 +138,7 @@ function OrderDetailContent() {
           </div>
 
           {/* Cancel button */}
-          {isOwner && order.status === 'active' && (
+          {isOwner && order.status === 'active' && !isTimedOut && (
             <Button
               variant="danger"
               onClick={handleCancel}

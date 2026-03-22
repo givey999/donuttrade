@@ -31,7 +31,7 @@ interface CosmeticsData {
 
 function CreateOrderContent() {
   const router = useRouter();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, isTimedOut } = useAuth();
   const [catalogItems, setCatalogItems] = useState<CatalogItemRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +125,24 @@ function CreateOrderContent() {
       setLoading(false);
     }
   }, [type, catalogItemId, qty, price, isPremium, borderColor, usernameColor, usernameFont, router, refreshUser]);
+
+  if (isTimedOut) {
+    return (
+      <main className="mx-auto max-w-lg px-4 py-8">
+        <FadeIn>
+          <PageHeader title="Create Order" />
+        </FadeIn>
+        <FadeIn delay={100}>
+          <Card className="mt-6 p-6 text-center">
+            <p className="text-sm text-red-400">Your account is currently timed out. You cannot create orders.</p>
+            <Button variant="secondary" className="mt-4" onClick={() => router.push('/marketplace')}>
+              Back to Marketplace
+            </Button>
+          </Card>
+        </FadeIn>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-lg px-4 py-8">

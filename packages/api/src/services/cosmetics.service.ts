@@ -44,6 +44,14 @@ export const cosmeticsService = {
   },
 
   async unlockCosmetic(userId: string, type: 'color' | 'font', id: string) {
+    const userCheck = await prisma.user.findUnique({ where: { id: userId }, select: { timedOutUntil: true, timeoutReason: true } });
+    if (userCheck?.timedOutUntil && userCheck.timedOutUntil > new Date()) {
+      throw new AppError('Account is currently timed out', {
+        code: 'ACCOUNT_TIMED_OUT', statusCode: 403,
+        details: { until: userCheck.timedOutUntil.toISOString(), reason: userCheck.timeoutReason },
+      });
+    }
+
     const item = type === 'color' ? getColor(id) : getFont(id);
     if (!item) throw new ValidationError(`Unknown ${type}: ${id}`);
     if (item.tier !== 'paid') throw new ValidationError(`${type} "${id}" is not purchasable`);
@@ -98,6 +106,14 @@ export const cosmeticsService = {
   },
 
   async purchaseHiddenMode(userId: string) {
+    const userCheck = await prisma.user.findUnique({ where: { id: userId }, select: { timedOutUntil: true, timeoutReason: true } });
+    if (userCheck?.timedOutUntil && userCheck.timedOutUntil > new Date()) {
+      throw new AppError('Account is currently timed out', {
+        code: 'ACCOUNT_TIMED_OUT', statusCode: 403,
+        details: { until: userCheck.timedOutUntil.toISOString(), reason: userCheck.timeoutReason },
+      });
+    }
+
     const price = await platformSettingsService.getHiddenModePrice();
 
     await withTransaction(async (tx) => {

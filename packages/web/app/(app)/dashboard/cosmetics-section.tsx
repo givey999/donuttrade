@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ interface CosmeticsData {
 }
 
 export function CosmeticsSection() {
+  const { isTimedOut } = useAuth();
   const [data, setData] = useState<CosmeticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -151,7 +153,7 @@ export function CosmeticsSection() {
                 />
               </button>
             )}
-            <Button onClick={() => setShowModal(true)}>Customize</Button>
+            <Button onClick={() => setShowModal(true)} disabled={isTimedOut}>Customize</Button>
           </div>
         </div>
         {data.hiddenMode && (

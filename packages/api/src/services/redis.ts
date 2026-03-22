@@ -86,6 +86,30 @@ export async function disconnectRedis(): Promise<void> {
 }
 
 /**
+ * Subscriber client for Pub/Sub (lazily created)
+ */
+let subscriberClient: RedisClient | null = null;
+
+export function createSubscriberClient(): RedisClient {
+  if (!subscriberClient) {
+    subscriberClient = createRedisClient();
+  }
+  return subscriberClient;
+}
+
+export async function disconnectSubscriber(): Promise<void> {
+  if (subscriberClient) {
+    try {
+      await subscriberClient.quit();
+      subscriberClient = null;
+      redisLogger.info('subscriber.disconnect', 'Redis subscriber disconnected');
+    } catch (error) {
+      redisLogger.error('subscriber.disconnect.failed', 'Failed to disconnect subscriber', error);
+    }
+  }
+}
+
+/**
  * Check Redis health
  */
 export async function checkRedisHealth(): Promise<{ ok: boolean; latency: number }> {

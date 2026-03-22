@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { RequireAuth } from '@/lib/require-auth';
+import { useAuth } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tabs } from '@/components/ui/tabs';
@@ -33,6 +34,7 @@ const STATUS_VARIANT: Record<string, string> = {
 };
 
 function MyOrdersContent() {
+  const { isTimedOut } = useAuth();
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -151,7 +153,7 @@ function MyOrdersContent() {
                         >
                           View
                         </Link>
-                        {order.status === 'active' && (
+                        {order.status === 'active' && !isTimedOut && (
                           <button
                             onClick={() => handleCancel(order.id)}
                             disabled={cancelling === order.id}

@@ -326,7 +326,7 @@ function TransactionHistory() {
 // ─── Dashboard Content ─────────────────────────────────────────────────────────
 
 function DashboardContent() {
-  const { user, logout, refreshUser } = useAuth();
+  const { user, logout, refreshUser, isTimedOut } = useAuth();
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
 
@@ -361,10 +361,10 @@ function DashboardContent() {
             {/* Deposit / Withdraw buttons */}
             {isVerified && (
               <div className="mt-6 flex justify-center gap-3">
-                <Button onClick={() => setShowDeposit(true)}>
+                <Button onClick={() => setShowDeposit(true)} disabled={isTimedOut}>
                   Deposit
                 </Button>
-                <Button variant="secondary" onClick={() => setShowWithdraw(true)}>
+                <Button variant="secondary" onClick={() => setShowWithdraw(true)} disabled={isTimedOut}>
                   Withdraw
                 </Button>
               </div>

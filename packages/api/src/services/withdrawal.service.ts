@@ -4,6 +4,7 @@ import { withdrawalRepository } from '../repositories/withdrawal.repository.js';
 import { withTransaction } from './database.js';
 import { logger } from '../lib/logger.js';
 import { AppError, ValidationError } from '../lib/errors.js';
+import { eventBus } from './event-bus.service.js';
 import {
   WITHDRAWAL_MIN_AMOUNT,
   WITHDRAWAL_MAX_AMOUNT,
@@ -42,6 +43,13 @@ export const withdrawalService = {
 
     if (user.bannedAt) {
       throw new AppError('Account is banned', { code: 'ACCOUNT_BANNED', statusCode: 403 });
+    }
+
+    if (user.timedOutUntil && user.timedOutUntil > new Date()) {
+      throw new AppError('Account is currently timed out', {
+        code: 'ACCOUNT_TIMED_OUT', statusCode: 403,
+        details: { until: user.timedOutUntil.toISOString(), reason: user.timeoutReason },
+      });
     }
 
     if (!user.minecraftUsername) {
@@ -156,6 +164,11 @@ export const withdrawalService = {
     wdLogger.info('confirmWithdrawal.success', 'Withdrawal confirmed', {
       withdrawalId,
       userId: withdrawal.userId,
+      amount: withdrawal.amount.toString(),
+    });
+
+    void eventBus.publish(withdrawal.userId, 'withdrawal.completed', {
+      withdrawalId,
       amount: withdrawal.amount.toString(),
     });
   },

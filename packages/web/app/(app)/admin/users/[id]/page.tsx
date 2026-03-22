@@ -68,6 +68,8 @@ export default function AdminUserDetailPage() {
   const [customTimeoutMs, setCustomTimeoutMs] = useState('');
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
 
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const fetchUser = useCallback(() => {
     setLoading(true);
     apiFetch<UserDetail>(`/admin/users/${params.id}`)
@@ -86,8 +88,6 @@ export default function AdminUserDetailPage() {
   const isSelf = currentUser?.id === userDetail.id;
   const isTimedOut = userDetail.timedOutUntil && new Date(userDetail.timedOutUntil) > new Date();
   const isBanned = !!userDetail.bannedAt;
-
-  const [actionError, setActionError] = useState<string | null>(null);
 
   const doAction = async (path: string, body?: unknown) => {
     setActionLoading(true);

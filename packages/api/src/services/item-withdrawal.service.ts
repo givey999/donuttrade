@@ -5,6 +5,7 @@ import { catalogItemRepository } from '../repositories/catalog-item.repository.j
 import { userRepository } from '../repositories/user.repository.js';
 import { logger } from '../lib/logger.js';
 import { AppError, ValidationError } from '../lib/errors.js';
+import { eventBus } from './event-bus.service.js';
 
 const wdLogger = logger.module('item-withdrawal.service');
 
@@ -130,6 +131,12 @@ export const itemWithdrawalService = {
       userId: withdrawal.userId,
       quantity: withdrawal.quantity,
     });
+
+    void eventBus.publish(withdrawal.userId, 'item_withdrawal.completed', {
+      withdrawalId,
+      catalogItemId: withdrawal.catalogItemId,
+      quantity: withdrawal.quantity,
+    });
   },
 
   /**
@@ -179,6 +186,15 @@ export const itemWithdrawalService = {
    */
   async cancelWithdrawal(withdrawalId: string, userId: string) {
     wdLogger.info('cancelWithdrawal', 'User cancelling item withdrawal', { withdrawalId, userId });
+
+    // Timeout check
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { timedOutUntil: true, timeoutReason: true } });
+    if (user?.timedOutUntil && user.timedOutUntil > new Date()) {
+      throw new AppError('Account is currently timed out', {
+        code: 'ACCOUNT_TIMED_OUT', statusCode: 403,
+        details: { until: user.timedOutUntil.toISOString(), reason: user.timeoutReason },
+      });
+    }
 
     const withdrawal = await prisma.itemWithdrawal.findUnique({ where: { id: withdrawalId } });
     if (!withdrawal) throw new AppError('Withdrawal not found', { code: 'WITHDRAWAL_NOT_FOUND', statusCode: 404 });

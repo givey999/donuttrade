@@ -24,6 +24,7 @@ export const withdrawalRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     preHandler: [fastify.authenticate],
   }, async (request) => {
     const userId = request.user!.id;

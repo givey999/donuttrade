@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moldo.go.ro:9443';
@@ -21,17 +20,13 @@ function formatVolume(v: string): string {
 }
 
 export default function LandingPage() {
-  const router = useRouter();
   const [stats, setStats] = useState<PublicStats | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Redirect authenticated users to dashboard
     try {
       const token = localStorage.getItem('dt_access_token');
-      if (token) {
-        router.push('/dashboard');
-        return;
-      }
+      if (token) setIsLoggedIn(true);
     } catch {
       // localStorage unavailable
     }
@@ -43,7 +38,9 @@ export default function LandingPage() {
       .then((r) => r.json())
       .then((json) => { if (json.data) setStats(json.data); })
       .catch(() => {});
-  }, [router]);
+  }, []);
+
+  const ctaHref = isLoggedIn ? '/dashboard' : '/login';
 
   return (
     <>
@@ -92,10 +89,10 @@ export default function LandingPage() {
         <div className="mx-auto flex h-14 max-w-[1100px] items-center justify-between px-6">
           <span className="text-lg font-extrabold tracking-tight">DonutTrade</span>
           <Link
-            href="/login"
+            href={ctaHref}
             className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-[#0a0a0f] transition-colors hover:bg-amber-600"
           >
-            Start Trading
+            {isLoggedIn ? 'Go to Dashboard' : 'Start Trading'}
           </Link>
         </div>
       </nav>
@@ -160,10 +157,10 @@ export default function LandingPage() {
             Deposit. Trade. Withdraw. Simple.
           </p>
           <Link
-            href="/login"
+            href={ctaHref}
             className="mt-7 inline-block rounded-xl bg-amber-500 px-9 py-3.5 text-[15px] font-bold text-[#0a0a0f] transition-colors hover:bg-amber-600"
           >
-            Start Trading
+            {isLoggedIn ? 'Go to Dashboard' : 'Start Trading'}
           </Link>
         </div>
       </section>
@@ -241,10 +238,10 @@ export default function LandingPage() {
         <h2 className="text-[32px] font-extrabold tracking-tight">Ready to trade?</h2>
         <p className="mb-7 mt-3 text-sm text-neutral-500">Sign in with your Microsoft account and start trading in seconds.</p>
         <Link
-          href="/login"
+          href={ctaHref}
           className="inline-block rounded-xl bg-amber-500 px-9 py-3.5 text-[15px] font-bold text-[#0a0a0f] transition-colors hover:bg-amber-600"
         >
-          Start Trading
+          {isLoggedIn ? 'Go to Dashboard' : 'Start Trading'}
         </Link>
       </section>
 

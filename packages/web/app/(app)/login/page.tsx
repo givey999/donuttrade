@@ -1,9 +1,19 @@
+'use client';
+
+import { useEffect } from 'react';
 import { LoginButton } from '@/components/auth/login-button';
 import { MicrosoftIcon } from '@/components/icons/microsoft';
+import { clearAccessToken } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moldo.go.ro:9443';
 
 export default function LoginPage() {
+  // Clear any stale access token so the AuthProvider doesn't try to use it
+  // during the OAuth callback flow and race-redirect to /login
+  useEffect(() => {
+    clearAccessToken();
+  }, []);
+
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
       {/* Gradient glow */}
