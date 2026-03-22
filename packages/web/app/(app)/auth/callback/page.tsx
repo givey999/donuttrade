@@ -27,11 +27,12 @@ function CallbackContent() {
     if (success && token) {
       setAccessToken(token); // writes to both in-memory + localStorage
       const timer = setTimeout(() => {
-        router.push('/dashboard');
+        // Full page load so AuthProvider re-mounts and picks up the token
+        window.location.href = '/dashboard';
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [success, token, router]);
+  }, [success, token]);
 
   // Timeout: if callback page has no success/error after 10s, redirect to login
   useEffect(() => {
@@ -63,12 +64,12 @@ function CallbackContent() {
         <h2 className="text-lg font-semibold text-green-400">Signed in successfully</h2>
         <p className="mt-3 text-sm text-neutral-300">Welcome to the DonutTrade Family</p>
         <p className="mt-2 text-sm text-neutral-400">Redirecting to dashboard...</p>
-        <Link
+        <a
           href="/dashboard"
           className="mt-4 inline-block text-xs text-neutral-500 underline hover:text-neutral-300 transition-colors"
         >
           Go now
-        </Link>
+        </a>
       </div>
     );
   }
