@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getAccessToken } from '@/lib/api';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tabs } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -65,6 +65,31 @@ export default function AdminOrdersPage() {
 
   const canCancel = user?.role === 'admin' || user?.role === 'manager';
 
+  const handleExport = () => {
+    const params = new URLSearchParams();
+    if (status !== 'all') params.set('status', status);
+    if (typeFilter) params.set('type', typeFilter);
+
+    const token = getAccessToken();
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://moldo.go.ro:9443';
+    const url = `${apiUrl}/admin/orders/export?${params}`;
+
+    fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
+    })
+      .then((res) => res.blob())
+      .then((blob) => {
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = 'orders-export.csv';
+        link.click();
+        URL.revokeObjectURL(blobUrl);
+      })
+      .catch(() => {});
+  };
+
   const fetchOrders = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -112,6 +137,12 @@ export default function AdminOrdersPage() {
             <option value="buy">Buy</option>
             <option value="sell">Sell</option>
           </Select>
+          <button
+            onClick={handleExport}
+            className="rounded-lg border border-[#1a1a1a] bg-white/[0.03] px-3 py-1.5 text-xs text-neutral-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+          >
+            Export CSV
+          </button>
         </div>
       </FadeIn>
 

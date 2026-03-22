@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { prisma } from '../../services/database.js';
 import { AppError } from '../../lib/errors.js';
 import { auditService } from '../../services/audit.service.js';
+import { del } from '../../services/redis.js';
 
 export const adminCatalogRoutes: FastifyPluginAsync = async (fastify) => {
   /**
@@ -59,6 +60,8 @@ export const adminCatalogRoutes: FastifyPluginAsync = async (fastify) => {
 
     await auditService.log({ actorId: request.user!.id, action: 'catalog.create', targetType: 'catalog', targetId: item.id, details: { name, displayName, category } });
 
+    await del('cache:catalog:items');
+
     return {
       success: true,
       data: {
@@ -99,6 +102,8 @@ export const adminCatalogRoutes: FastifyPluginAsync = async (fastify) => {
     const item = await prisma.catalogItem.update({ where: { id: request.params.id }, data });
 
     await auditService.log({ actorId: request.user!.id, action: 'catalog.update', targetType: 'catalog', targetId: request.params.id, details: data });
+
+    await del('cache:catalog:items');
 
     return {
       success: true,

@@ -4,7 +4,14 @@ import { get, set } from '../../services/redis.js';
 import { ValidationError } from '../../lib/errors.js';
 
 export const publicStatsRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get('/', async () => {
+  fastify.get('/', async (_request, reply) => {
+    const cacheKey = 'cache:public_stats';
+    const cached = await get(cacheKey);
+    if (cached) {
+      reply.header('Cache-Control', 'public, max-age=60');
+      return JSON.parse(cached);
+    }
+
     const [totalTraders, activeOrders] = await Promise.all([
       prisma.user.count({ where: { verificationStatus: 'verified' } }),
       prisma.order.count({ where: { status: 'active' } }),
@@ -20,7 +27,7 @@ export const publicStatsRoutes: FastifyPluginAsync = async (fastify) => {
       FROM order_fills
     `;
 
-    return {
+    const response = {
       success: true,
       data: {
         totalTraders,
@@ -29,6 +36,11 @@ export const publicStatsRoutes: FastifyPluginAsync = async (fastify) => {
         activeOrders,
       },
     };
+
+    await set(cacheKey, JSON.stringify(response), 120);
+
+    reply.header('Cache-Control', 'public, max-age=60');
+    return response;
   });
 
   fastify.get<{

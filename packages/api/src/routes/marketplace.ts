@@ -94,6 +94,8 @@ export const marketplaceRoutes: FastifyPluginAsync = async (fastify) => {
       perPage,
       total,
       totalPages: Math.ceil(total / perPage),
+      nextCursor: orders.length > 0 ? orders[orders.length - 1]!.id : null,
+      prevCursor: orders.length > 0 ? orders[0]!.id : null,
     };
 
     return {

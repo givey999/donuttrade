@@ -63,6 +63,61 @@ export const adminOrderRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   /**
+   * GET /admin/orders/export
+   * Export all matching orders as CSV.
+   */
+  fastify.get<{
+    Querystring: {
+      status?: string;
+      type?: string;
+      catalogItemId?: string;
+      userId?: string;
+    };
+  }>('/export', async (request, reply) => {
+    const where: Record<string, unknown> = {};
+    if (request.query.status) where.status = request.query.status;
+    if (request.query.type) where.type = request.query.type;
+    if (request.query.catalogItemId) where.catalogItemId = request.query.catalogItemId;
+    if (request.query.userId) where.userId = request.query.userId;
+
+    const orders = await prisma.order.findMany({
+      where,
+      include: {
+        catalogItem: { select: { displayName: true } },
+        user: { select: { minecraftUsername: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10000,
+    });
+
+    const headers = ['ID', 'Username', 'Type', 'Item', 'Quantity', 'Filled', 'Price/ea', 'Status', 'Premium', 'Created', 'Expires', 'Completed'];
+    const rows = orders.map((o) => [
+      o.id,
+      o.user?.minecraftUsername || '',
+      o.type,
+      o.catalogItem?.displayName || '',
+      o.quantity,
+      o.filledQuantity,
+      o.pricePerUnit.toString(),
+      o.status,
+      o.isPremium ? 'Yes' : 'No',
+      o.createdAt.toISOString(),
+      o.expiresAt.toISOString(),
+      o.completedAt?.toISOString() || '',
+    ]);
+
+    const csv = [
+      headers.join(','),
+      ...rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
+
+    return reply
+      .header('Content-Type', 'text/csv')
+      .header('Content-Disposition', 'attachment; filename=orders-export.csv')
+      .send(csv);
+  });
+
+  /**
    * DELETE /admin/orders/:id
    * Admin/Manager cancel any order (bypasses ownership check).
    */

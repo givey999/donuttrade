@@ -217,7 +217,7 @@ function MarketplaceContent() {
             ))}
           </div>
 
-          {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />}
+          {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} nextCursor={meta.nextCursor} prevCursor={meta.prevCursor} />}
         </>
       )}
 

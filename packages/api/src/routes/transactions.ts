@@ -60,6 +60,8 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
       perPage,
       total,
       totalPages: Math.ceil(total / perPage),
+      nextCursor: transactions.length > 0 ? transactions[transactions.length - 1]!.id : null,
+      prevCursor: transactions.length > 0 ? transactions[0]!.id : null,
     };
 
     return {

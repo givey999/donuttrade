@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getAccessToken } from '@/lib/api';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tabs } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -72,6 +72,30 @@ export default function AdminAuditLogPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const handleExport = () => {
+    const params = new URLSearchParams();
+    if (targetType !== 'all') params.set('targetType', targetType);
+
+    const token = getAccessToken();
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://moldo.go.ro:9443';
+    const url = `${apiUrl}/admin/audit-logs/export?${params}`;
+
+    fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
+    })
+      .then((res) => res.blob())
+      .then((blob) => {
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = 'audit-log-export.csv';
+        link.click();
+        URL.revokeObjectURL(blobUrl);
+      })
+      .catch(() => {});
+  };
+
   const fetchLogs = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -94,12 +118,18 @@ export default function AdminAuditLogPage() {
       </FadeIn>
 
       <FadeIn delay={100}>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <Tabs
             tabs={TARGET_TYPE_TABS}
             value={targetType}
             onChange={(v) => { setTargetType(v); setPage(1); }}
           />
+          <button
+            onClick={handleExport}
+            className="rounded-lg border border-[#1a1a1a] bg-white/[0.03] px-3 py-1.5 text-xs text-neutral-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+          >
+            Export CSV
+          </button>
         </div>
       </FadeIn>
 

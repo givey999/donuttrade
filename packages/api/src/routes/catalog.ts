@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { catalogItemRepository } from '../repositories/catalog-item.repository.js';
+import { get, set } from '../services/redis.js';
 import type { CatalogItemRecord } from '@donuttrade/shared';
 
 /**
@@ -21,9 +22,24 @@ export const catalogRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, async (request) => {
+  }, async (request, reply) => {
+    const cacheKey = 'cache:catalog:items';
+    const cached = await get(cacheKey);
+    if (cached) {
+      const allItems: CatalogItemRecord[] = JSON.parse(cached);
+      const category = request.query.category;
+      const filtered = category
+        ? allItems.filter((item) => item.category === category)
+        : allItems;
+
+      reply.header('Cache-Control', 'public, max-age=60');
+      return {
+        success: true,
+        data: { items: filtered },
+      };
+    }
+
     const items = await catalogItemRepository.findAll({
-      category: request.query.category,
       enabled: true,
     });
 
@@ -37,9 +53,17 @@ export const catalogRoutes: FastifyPluginAsync = async (fastify) => {
       enabled: item.enabled,
     }));
 
+    await set(cacheKey, JSON.stringify(mapped), 300);
+
+    const category = request.query.category;
+    const filtered = category
+      ? mapped.filter((item) => item.category === category)
+      : mapped;
+
+    reply.header('Cache-Control', 'public, max-age=60');
     return {
       success: true,
-      data: { items: mapped },
+      data: { items: filtered },
     };
   });
 };

@@ -76,6 +76,8 @@ export interface PaginationMeta {
   perPage: number;
   total: number;
   totalPages: number;
+  nextCursor?: string | null;
+  prevCursor?: string | null;
 }
 
 /**

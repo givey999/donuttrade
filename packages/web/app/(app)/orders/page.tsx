@@ -181,7 +181,7 @@ function MyOrdersContent() {
             </Table>
           </div>
 
-          {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />}
+          {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} nextCursor={meta.nextCursor} prevCursor={meta.prevCursor} />}
         </FadeIn>
       )}
 
