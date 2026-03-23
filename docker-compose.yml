@@ -82,6 +82,20 @@ services:
       - api
     restart: unless-stopped
 
+  # Discord Management Bot
+  management-bot:
+    build:
+      context: .
+      dockerfile: packages/management-bot/Dockerfile
+    container_name: donuttrade-management-bot
+    environment:
+      - API_URL=http://api:3001
+    env_file:
+      - .env
+    depends_on:
+      - api
+    restart: unless-stopped
+
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
