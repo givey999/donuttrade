@@ -115,6 +115,8 @@ model ItemDeposit {
   codeExpiresAt    DateTime? @map("code_expires_at")
   codeVerifiedAt   DateTime? @map("code_verified_at")
   ticketChannelId  String?   @map("ticket_channel_id")
+  closedBy         String?   @map("closed_by")       // Discord username of mod who ran /close
+  closeReason      String?   @map("close_reason")     // Reason when rejected
 }
 
 model ItemWithdrawal {
@@ -123,6 +125,8 @@ model ItemWithdrawal {
   codeExpiresAt    DateTime? @map("code_expires_at")
   codeVerifiedAt   DateTime? @map("code_verified_at")
   ticketChannelId  String?   @map("ticket_channel_id")
+  closedBy         String?   @map("closed_by")       // Discord username of mod who ran /close
+  closeReason      String?   @map("close_reason")     // Reason when rejected
 }
 ```
 
@@ -151,7 +155,13 @@ Update the Prisma schema comments to reflect the new status values.
 
 ### New platform setting
 
-Use the existing `PlatformSettings` table (key/value store) with a row `key: 'ticket_counter'`, `value: '0'`. Increment atomically via `UPDATE platform_settings SET value = (value::int + 1)::text WHERE key = 'ticket_counter' RETURNING value`.
+Use the existing `PlatformSettings` table (key/value store) with a row `key: 'ticket_counter'`, `value: '0'`. Seed this row via the Prisma migration or seed script. Increment atomically via:
+```sql
+INSERT INTO platform_settings (key, value) VALUES ('ticket_counter', '1')
+ON CONFLICT (key) DO UPDATE SET value = (platform_settings.value::int + 1)::text
+RETURNING value
+```
+This UPSERT pattern handles both the first-use case (row doesn't exist) and concurrent increments safely.
 
 ### New environment variable
 
@@ -237,7 +247,7 @@ Response (error): `{ success: false, error: "Invalid or expired code" }`
 Request: `{ closedBy: string }` — Discord username of the moderator who ran `/close`
 
 - Checks deposit status is `verified` (not `pending` — uses separate service method from existing admin flow)
-- Marks deposit as `confirmed`, sets `completedAt`, stores `closedBy` in `adminNotes`
+- Marks deposit as `confirmed`, sets `completedAt`, stores `closedBy` in dedicated `closed_by` column
 - Credits items to user's inventory (same business logic as existing `confirmDeposit`)
 - Returns `{ success: true }`
 
@@ -246,7 +256,7 @@ Request: `{ closedBy: string }` — Discord username of the moderator who ran `/
 Request: `{ closedBy: string }` — Discord username of the moderator
 
 - Checks withdrawal status is `verified` (separate service method)
-- Marks withdrawal as `completed`, sets `completedAt`, stores `closedBy` in `failReason` field (repurposed as admin notes)
+- Marks withdrawal as `completed`, sets `completedAt`, stores `closedBy` in dedicated `closed_by` column
 - Debits items from user's inventory (same business logic as existing `confirmWithdrawal`)
 - Returns `{ success: true }`
 
@@ -392,7 +402,7 @@ Registration: On `ClientReady`, register a guild-scoped slash command:
 
 Handler:
 1. Check caller has moderator role → if not, ephemeral error
-2. Look up deposit/withdrawal record by `ticketChannelId` matching the current channel ID → if no record found, ephemeral error: "This command can only be used in a ticket channel."
+2. Determine type from channel name prefix (`deposit-` → search ItemDeposit, `withdraw-` → search ItemWithdrawal), then look up record by `ticketChannelId` matching the current channel ID → if no record found, ephemeral error: "This command can only be used in a ticket channel."
 3. If action is "confirm" (default):
    - Call `POST /internal/management-bot/confirm-deposit/:id` or `confirm-withdrawal/:id` with `{ closedBy: moderator.username }`
 4. If action is "reject":
