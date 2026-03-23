@@ -22,7 +22,7 @@ export async function createTicketChannel(guild: Guild, opts: {
   const channel = await guild.channels.create({
     name: channelName,
     type: ChannelType.GuildText,
-    parent: config.DISCORD_TICKET_CATEGORY_ID,
+    parent: opts.type === 'deposit' ? config.DISCORD_DEPOSIT_CATEGORY_ID : config.DISCORD_WITHDRAWAL_CATEGORY_ID,
     topic: opts.recordId, // Store record ID for /close lookup
     permissionOverwrites: [
       {

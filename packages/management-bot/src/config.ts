@@ -9,7 +9,8 @@ dotenv.config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 const envSchema = z.object({
   DISCORD_BOT_TOKEN: z.string().min(1),
   DISCORD_GUILD_ID: z.string().min(1),
-  DISCORD_TICKET_CATEGORY_ID: z.string().min(1),
+  DISCORD_DEPOSIT_CATEGORY_ID: z.string().min(1),
+  DISCORD_WITHDRAWAL_CATEGORY_ID: z.string().min(1),
   DISCORD_MODERATOR_ROLE_ID: z.string().min(1),
   DISCORD_PANEL_CHANNEL_ID: z.string().min(1),
   DISCORD_LOGS_CHANNEL_ID: z.string().min(1),
