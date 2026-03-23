@@ -135,6 +135,7 @@ export const ROLE_HIERARCHY: Record<string, number> = {
   moderator: 1,
   manager: 2,
   admin: 3,
+  leader: 4,
 };
 
 /**

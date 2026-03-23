@@ -26,7 +26,7 @@ export default function AdminSettingsPage() {
   const [feedback, setFeedback] = useState<Record<string, { type: 'success' | 'error'; msg: string }>>({});
 
   useEffect(() => {
-    if (!authLoading && user?.role !== 'admin') {
+    if (!authLoading && user?.role !== 'admin' && user?.role !== 'leader') {
       router.push('/admin');
     }
   }, [authLoading, user, router]);
@@ -66,7 +66,7 @@ export default function AdminSettingsPage() {
     return <p className="text-sm text-neutral-400">Loading settings...</p>;
   }
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.role !== 'leader') {
     return <p className="text-sm text-neutral-400">Redirecting...</p>;
   }
 

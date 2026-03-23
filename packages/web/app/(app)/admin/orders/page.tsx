@@ -63,7 +63,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const canCancel = user?.role === 'admin' || user?.role === 'manager';
+  const canCancel = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'leader';
 
   const handleExport = () => {
     const params = new URLSearchParams();

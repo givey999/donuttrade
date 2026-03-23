@@ -35,7 +35,8 @@ interface UserDetail {
 }
 
 const ROLE_VARIANT: Record<string, string> = {
-  admin: 'danger',
+  leader: 'danger',
+  admin: 'warning',
   manager: 'purple',
   moderator: 'info',
   user: 'neutral',
@@ -83,8 +84,8 @@ export default function AdminUserDetailPage() {
   if (loading) return <p className="text-sm text-neutral-400">Loading...</p>;
   if (!userDetail) return <p className="text-sm text-red-400">User not found.</p>;
 
-  const isAdmin = currentUser?.role === 'admin';
-  const isManagerOrAdmin = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'leader';
+  const isManagerOrAdmin = currentUser?.role === 'admin' || currentUser?.role === 'manager' || currentUser?.role === 'leader';
   const isSelf = currentUser?.id === userDetail.id;
   const isTimedOut = userDetail.timedOutUntil && new Date(userDetail.timedOutUntil) > new Date();
   const isBanned = !!userDetail.bannedAt;
@@ -199,7 +200,7 @@ export default function AdminUserDetailPage() {
                 Adjust Balance
               </Button>
             )}
-            {isAdmin && !isSelf && userDetail.role !== 'admin' && (
+            {isAdmin && !isSelf && userDetail.role !== 'leader' && !(userDetail.role === 'admin' && currentUser?.role !== 'leader') && (
               <Select
                 value=""
                 onChange={(e) => { if (e.target.value) handleRoleChange(e.target.value); }}
@@ -207,12 +208,12 @@ export default function AdminUserDetailPage() {
                 className="text-xs"
               >
                 <option value="">Change Role...</option>
-                {['user', 'moderator', 'manager', 'admin'].filter((r) => r !== userDetail.role).map((r) => (
+                {['user', 'moderator', 'manager', 'admin', 'leader'].filter((r) => r !== userDetail.role && (r !== 'leader' || currentUser?.role === 'leader')).map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </Select>
             )}
-            {isAdmin && !isSelf && userDetail.role !== 'admin' && (
+            {isAdmin && !isSelf && userDetail.role !== 'leader' && !(userDetail.role === 'admin' && currentUser?.role !== 'leader') && (
               <Button variant="secondary" size="sm" onClick={() => { if (confirm(`View the platform as ${userDetail.minecraftUsername}?`)) impersonate(userDetail.id); }} disabled={actionLoading}>
                 Impersonate
               </Button>

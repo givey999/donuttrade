@@ -12,6 +12,7 @@ export interface AccessTokenPayload {
   username: string;      // Minecraft username
   authProvider: string;  // 'microsoft' | 'discord' | 'email'
   impersonatedBy?: string; // Admin user ID when impersonating
+  impersonatorRole?: string; // Role of the impersonating user
   iat: number;
   exp: number;
 }

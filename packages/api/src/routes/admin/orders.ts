@@ -123,7 +123,7 @@ export const adminOrderRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.delete<{ Params: { id: string } }>('/:id', async (request) => {
     const role = request.user!.role;
-    if (role !== 'admin' && role !== 'manager') {
+    if (role !== 'admin' && role !== 'manager' && role !== 'leader') {
       throw new AppError('Only managers and admins can cancel orders', {
         code: 'FORBIDDEN',
         statusCode: 403,

@@ -34,6 +34,16 @@ moldo.go.ro:9443 {
         reverse_proxy api:3001
     }
 
+    # SSE events endpoint (EventSource doesn't send Content-Type: application/json)
+    handle /events/* {
+        reverse_proxy api:3001
+    }
+
+    # Public stats/settings (browser fetches without Content-Type on initial load)
+    handle /public/* {
+        reverse_proxy api:3001
+    }
+
     # Note: /internal/* routes are NOT exposed through Caddy.
     # The bot-bridge calls http://api:3001 directly on the Docker network.
 

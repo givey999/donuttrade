@@ -287,7 +287,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { id: string };
     Body: { amount: number; direction: 'add' | 'subtract'; reason: string };
   }>('/:id/balance', async (request) => {
-    if (request.user!.role !== 'admin') {
+    if (request.user!.role !== 'admin' && request.user!.role !== 'leader') {
       throw new AppError('Only admins can adjust balances', { code: 'FORBIDDEN', statusCode: 403 });
     }
 
@@ -372,7 +372,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { id: string };
     Body: { role: string };
   }>('/:id/role', async (request) => {
-    if (request.user!.role !== 'admin') {
+    if (request.user!.role !== 'admin' && request.user!.role !== 'leader') {
       throw new AppError('Only admins can change roles', { code: 'FORBIDDEN', statusCode: 403 });
     }
 
@@ -381,7 +381,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const { role: newRole } = request.body as { role: string };
-    const validRoles = ['user', 'moderator', 'manager', 'admin'];
+    const validRoles = ['user', 'moderator', 'manager', 'admin', 'leader'];
     if (!validRoles.includes(newRole)) {
       throw new AppError('Invalid role', { code: 'VALIDATION_ERROR', statusCode: 400, details: { validRoles } });
     }
@@ -389,9 +389,17 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
     const target = await prisma.user.findUnique({ where: { id: request.params.id }, select: { role: true } });
     if (!target) throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
 
-    // Cannot demote another admin
-    if (target.role === 'admin') {
+    // Cannot change a leader's role
+    if (target.role === 'leader') {
+      throw new AppError('Cannot change a leader\'s role', { code: 'HIERARCHY_VIOLATION', statusCode: 403 });
+    }
+    // Only leaders can change an admin's role
+    if (target.role === 'admin' && request.user!.role !== 'leader') {
       throw new AppError('Cannot change another admin\'s role', { code: 'HIERARCHY_VIOLATION', statusCode: 403 });
+    }
+    // Only leaders can assign the leader role
+    if (newRole === 'leader' && request.user!.role !== 'leader') {
+      throw new AppError('Only leaders can assign the leader role', { code: 'HIERARCHY_VIOLATION', statusCode: 403 });
     }
 
     await prisma.user.update({

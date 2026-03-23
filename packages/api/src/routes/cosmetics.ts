@@ -11,7 +11,7 @@ export const cosmeticsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post<{ Body: { type: 'color' | 'font'; id: string } }>('/unlock', async (request) => {
-    if (request.user!.impersonatedBy) {
+    if (request.user!.impersonatedBy && request.user!.impersonatorRole !== 'leader') {
       throw new AppError('Cannot perform financial actions while impersonating', { code: 'IMPERSONATION_BLOCKED', statusCode: 403 });
     }
     const { type, id } = request.body;
@@ -23,7 +23,7 @@ export const cosmeticsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/hidden/purchase', async (request) => {
-    if (request.user!.impersonatedBy) {
+    if (request.user!.impersonatedBy && request.user!.impersonatorRole !== 'leader') {
       throw new AppError('Cannot perform financial actions while impersonating', { code: 'IMPERSONATION_BLOCKED', statusCode: 403 });
     }
     await cosmeticsService.purchaseHiddenMode(request.user!.id);

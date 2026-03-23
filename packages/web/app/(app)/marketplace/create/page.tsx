@@ -15,6 +15,37 @@ import type { CatalogItemRecord } from '@donuttrade/shared';
 
 const PREMIUM_FEE = 10_000_000;
 
+const SUFFIXES: Record<string, number> = {
+  k: 1_000,
+  m: 1_000_000,
+  b: 1_000_000_000,
+  t: 1_000_000_000_000,
+};
+
+/**
+ * Parse a price string with optional K/M/B/T suffix.
+ * Accepts: "3.8m", "4,3M", "1,500", "100.000", "2.5k"
+ * Dots/commas followed by exactly 3 digits are treated as thousands separators.
+ */
+function parsePrice(input: string): number {
+  const trimmed = input.trim().toLowerCase();
+  if (!trimmed) return 0;
+
+  const suffix = trimmed.slice(-1);
+  const multiplier = SUFFIXES[suffix];
+
+  if (multiplier) {
+    const num = parseFloat(trimmed.slice(0, -1).replace(',', '.'));
+    return isNaN(num) ? 0 : Math.round(num * multiplier);
+  }
+
+  // No suffix — strip dots/commas used as thousands separators (followed by exactly 3 digits)
+  const stripped = trimmed.replace(/[.,](?=\d{3}(?:[.,]|$))/g, '');
+  // Replace remaining comma with dot for decimal parsing
+  const num = parseFloat(stripped.replace(',', '.'));
+  return isNaN(num) ? 0 : Math.round(num);
+}
+
 interface CosmeticItem {
   id: string;
   available: boolean;
@@ -88,7 +119,7 @@ function CreateOrderContent() {
   }, [catalogItemId]);
 
   const qty = parseInt(quantity, 10) || 0;
-  const price = parseFloat(pricePerUnit) || 0;
+  const price = parsePrice(pricePerUnit);
   const totalValue = qty * price;
   const premiumFee = isPremium ? PREMIUM_FEE : 0;
   const totalCost = type === 'buy' ? totalValue + premiumFee : premiumFee;
@@ -232,13 +263,16 @@ function CreateOrderContent() {
             <label htmlFor="price" className="block text-xs text-neutral-400">Price per unit ($)</label>
             <Input
               id="price"
-              type="number"
-              min={1}
+              type="text"
+              inputMode="decimal"
               value={pricePerUnit}
               onChange={(e) => setPricePerUnit(e.target.value)}
-              placeholder="100000"
+              placeholder="3.8M"
               className="mt-1.5"
             />
+            {pricePerUnit && price > 0 && /[a-zA-Z]/.test(pricePerUnit) && (
+              <p className="mt-1 text-xs text-amber-500/80">${price.toLocaleString()}</p>
+            )}
             {itemSummary?.lastSoldPrice && (
               <p className="mt-1 text-xs text-neutral-500">
                 Last sold for ${Number(itemSummary.lastSoldPrice).toLocaleString()}

@@ -25,7 +25,8 @@ interface AdminUser {
 }
 
 const ROLE_VARIANT: Record<string, string> = {
-  admin: 'danger',
+  leader: 'danger',
+  admin: 'warning',
   manager: 'purple',
   moderator: 'info',
   user: 'neutral',

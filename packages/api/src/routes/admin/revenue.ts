@@ -3,7 +3,7 @@ import { requireRole } from '../../plugins/require-role.js';
 import { prisma } from '../../services/database.js';
 
 export const adminRevenueRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.addHook('preHandler', requireRole('admin'));
+  fastify.addHook('preHandler', requireRole('admin', 'leader'));
 
   fastify.get('/', async () => {
     const now = new Date();

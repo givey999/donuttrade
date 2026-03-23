@@ -28,7 +28,7 @@ const maintenancePluginCallback: FastifyPluginAsync = async (fastify) => {
             where: { id: payload.sub },
             select: { role: true },
           });
-          if (user?.role === 'admin') return;
+          if (user?.role === 'admin' || user?.role === 'leader') return;
         } catch {
           // Token invalid/expired — proceed to block
         }

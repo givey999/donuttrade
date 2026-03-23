@@ -36,7 +36,7 @@ export default function AdminCatalogPage() {
   const [newCategory, setNewCategory] = useState('spawner');
 
   useEffect(() => {
-    if (user && user.role !== 'admin') {
+    if (user && user.role !== 'admin' && user.role !== 'leader') {
       router.push('/admin');
     }
   }, [user, router]);
@@ -79,7 +79,7 @@ export default function AdminCatalogPage() {
     setActionLoading(false);
   };
 
-  if (user?.role !== 'admin') return null;
+  if (user?.role !== 'admin' && user?.role !== 'leader') return null;
 
   return (
     <div className="max-w-4xl">

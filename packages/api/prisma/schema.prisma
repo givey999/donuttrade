@@ -42,7 +42,7 @@ model User {
 
   // Account state
   balance                     Decimal   @default(0) @db.Decimal(20, 2)
-  role                        String    @default("user")          // 'user' | 'moderator' | 'manager' | 'admin'
+  role                        String    @default("user")          // 'user' | 'moderator' | 'manager' | 'admin' | 'leader'
   timedOutUntil               DateTime? @map("timed_out_until")
   timeoutReason               String?   @map("timeout_reason")
   createdAt                   DateTime  @default(now()) @map("created_at")

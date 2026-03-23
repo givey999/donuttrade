@@ -13,7 +13,7 @@ export const adminImpersonateRoutes: FastifyPluginAsync = async (fastify) => {
    * Admin-only: generate an access token to view the platform as another user.
    */
   fastify.post<{ Params: { userId: string } }>('/:userId', async (request) => {
-    if (request.user!.role !== 'admin') {
+    if (request.user!.role !== 'admin' && request.user!.role !== 'leader') {
       throw new AppError('Only admins can impersonate users', { code: 'FORBIDDEN', statusCode: 403 });
     }
 
@@ -32,7 +32,10 @@ export const adminImpersonateRoutes: FastifyPluginAsync = async (fastify) => {
       throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
     }
 
-    if (target.role === 'admin') {
+    if (target.role === 'leader') {
+      throw new AppError('Cannot impersonate a leader', { code: 'HIERARCHY_VIOLATION', statusCode: 403 });
+    }
+    if (target.role === 'admin' && request.user!.role !== 'leader') {
       throw new AppError('Cannot impersonate another admin', { code: 'HIERARCHY_VIOLATION', statusCode: 403 });
     }
 
@@ -41,6 +44,7 @@ export const adminImpersonateRoutes: FastifyPluginAsync = async (fastify) => {
       username: target.minecraftUsername || 'unknown',
       authProvider: target.authProvider,
       impersonatedBy: request.user!.id,
+      impersonatorRole: request.user!.role,
     });
 
     await auditService.log({

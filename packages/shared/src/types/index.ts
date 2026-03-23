@@ -199,7 +199,7 @@ export interface CreateAuthStateInput {
 // FINANCIAL TYPES (Phase 7)
 // ============================================================================
 
-export type UserRole = 'user' | 'moderator' | 'manager' | 'admin';
+export type UserRole = 'user' | 'moderator' | 'manager' | 'admin' | 'leader';
 
 export type TransactionType = 'deposit' | 'withdrawal' | 'purchase' | 'sale' | 'escrow' | 'escrow_refund' | 'listing_fee' | 'admin_adjustment' | 'cosmetic_purchase' | 'hidden_mode_purchase';
 export type WithdrawalStatus = 'pending' | 'processing' | 'completed' | 'failed';

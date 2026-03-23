@@ -18,7 +18,7 @@ import { adminImpersonateRoutes } from './impersonate.js';
 export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   // Apply auth + role check to all routes in this scope
   fastify.addHook('preHandler', fastify.authenticate);
-  fastify.addHook('preHandler', requireRole('moderator', 'manager', 'admin'));
+  fastify.addHook('preHandler', requireRole('moderator', 'manager', 'admin', 'leader'));
 
   await fastify.register(adminStatsRoutes, { prefix: '/stats' });
   await fastify.register(adminItemDepositRoutes, { prefix: '/item-deposits' });

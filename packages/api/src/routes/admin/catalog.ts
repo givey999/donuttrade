@@ -10,7 +10,7 @@ export const adminCatalogRoutes: FastifyPluginAsync = async (fastify) => {
    * All catalog items (including disabled). Admin only.
    */
   fastify.get('/', async (request) => {
-    if (request.user!.role !== 'admin') {
+    if (request.user!.role !== 'admin' && request.user!.role !== 'leader') {
       throw new AppError('Only admins can manage catalog', { code: 'FORBIDDEN', statusCode: 403 });
     }
 
@@ -42,7 +42,7 @@ export const adminCatalogRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{
     Body: { name: string; displayName: string; category: string; description?: string; iconUrl?: string };
   }>('/', async (request) => {
-    if (request.user!.role !== 'admin') {
+    if (request.user!.role !== 'admin' && request.user!.role !== 'leader') {
       throw new AppError('Only admins can manage catalog', { code: 'FORBIDDEN', statusCode: 403 });
     }
 
@@ -85,7 +85,7 @@ export const adminCatalogRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { id: string };
     Body: { displayName?: string; description?: string; iconUrl?: string; enabled?: boolean };
   }>('/:id', async (request) => {
-    if (request.user!.role !== 'admin') {
+    if (request.user!.role !== 'admin' && request.user!.role !== 'leader') {
       throw new AppError('Only admins can manage catalog', { code: 'FORBIDDEN', statusCode: 403 });
     }
 

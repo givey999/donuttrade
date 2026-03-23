@@ -4,7 +4,7 @@ import { platformSettingsService } from '../../services/platform-settings.servic
 import { auditService } from '../../services/audit.service.js';
 
 export const adminSettingsRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.addHook('preHandler', requireRole('admin'));
+  fastify.addHook('preHandler', requireRole('admin', 'leader'));
 
   fastify.get('/', async () => {
     const settings = await platformSettingsService.getAll();

@@ -79,7 +79,7 @@ export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
             {section.label}
           </p>
           {section.links.map((link) => {
-            if ('adminOnly' in link && link.adminOnly && user?.role !== 'admin') return null;
+            if ('adminOnly' in link && link.adminOnly && user?.role !== 'admin' && user?.role !== 'leader') return null;
 
             const isActive = 'exact' in link && link.exact
               ? pathname === link.href

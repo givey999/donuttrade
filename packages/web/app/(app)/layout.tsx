@@ -62,7 +62,7 @@ function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('maintenance', handler);
   }, []);
 
-  if (maintenanceMessage && user?.role !== 'admin') {
+  if (maintenanceMessage && user?.role !== 'admin' && user?.role !== 'leader') {
     // ImpersonationBanner is rendered above MaintenanceGuard, so the
     // switch-back button is always accessible even on the maintenance screen.
     return <MaintenanceScreen message={maintenanceMessage} />;
@@ -70,7 +70,7 @@ function MaintenanceGuard({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {maintenanceMessage && user?.role === 'admin' && (
+      {maintenanceMessage && (user?.role === 'admin' || user?.role === 'leader') && (
         <div className="bg-amber-500/20 border-b border-amber-500/30 px-4 py-2 text-center text-sm text-amber-300">
           Platform is in maintenance mode
         </div>

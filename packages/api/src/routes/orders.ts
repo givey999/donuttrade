@@ -34,7 +34,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     preHandler: [fastify.authenticate],
   }, async (request) => {
-    if (request.user!.impersonatedBy) {
+    if (request.user!.impersonatedBy && request.user!.impersonatorRole !== 'leader') {
       throw new AppError('Cannot perform financial actions while impersonating', { code: 'IMPERSONATION_BLOCKED', statusCode: 403 });
     }
     const userId = request.user!.id;
@@ -66,7 +66,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     preHandler: [fastify.authenticate],
   }, async (request) => {
-    if (request.user!.impersonatedBy) {
+    if (request.user!.impersonatedBy && request.user!.impersonatorRole !== 'leader') {
       throw new AppError('Cannot perform financial actions while impersonating', { code: 'IMPERSONATION_BLOCKED', statusCode: 403 });
     }
     const fillerUserId = request.user!.id;
@@ -98,7 +98,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     preHandler: [fastify.authenticate],
   }, async (request) => {
-    if (request.user!.impersonatedBy) {
+    if (request.user!.impersonatedBy && request.user!.impersonatorRole !== 'leader') {
       throw new AppError('Cannot perform financial actions while impersonating', { code: 'IMPERSONATION_BLOCKED', statusCode: 403 });
     }
     const userId = request.user!.id;
@@ -132,7 +132,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     preHandler: [fastify.authenticate],
   }, async (request) => {
-    if (request.user!.impersonatedBy) {
+    if (request.user!.impersonatedBy && request.user!.impersonatorRole !== 'leader') {
       throw new AppError('Cannot perform financial actions while impersonating', {
         code: 'IMPERSONATION_BLOCKED', statusCode: 403,
       });
