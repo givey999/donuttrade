@@ -11,7 +11,7 @@ export async function onInteractionCreate(interaction: Interaction) {
     }
 
     if (interaction.isModalSubmit()) {
-      if (interaction.customId === 'modal_deposit' || interaction.customId === 'modal_withdraw') {
+      if (interaction.customId === 'modal_deposit' || interaction.customId === 'modal_withdrawal') {
         return handleModalSubmit(interaction);
       }
     }
