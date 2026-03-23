@@ -7,9 +7,11 @@ const headers = {
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const url = `${config.API_URL}/internal/management-bot${path}`;
+  const reqHeaders: Record<string, string> = { ...headers };
+  if (!body) delete reqHeaders['Content-Type'];
   const res = await fetch(url, {
     method,
-    headers,
+    headers: reqHeaders,
     body: body ? JSON.stringify(body) : undefined,
   });
 
