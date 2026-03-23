@@ -5,6 +5,7 @@ import { catalogItemRepository } from '../repositories/catalog-item.repository.j
 import { userRepository } from '../repositories/user.repository.js';
 import { logger } from '../lib/logger.js';
 import { AppError, ValidationError } from '../lib/errors.js';
+import { generateCode } from '../lib/deposit-code.js';
 
 const depLogger = logger.module('item-deposit.service');
 
@@ -48,6 +49,20 @@ export const itemDepositService = {
       include: { catalogItem: true },
     });
 
+    // Generate HMAC code for Discord verification
+    const { code, expiresAt } = generateCode({
+      type: 'deposit',
+      id: deposit.id,
+      userId,
+      itemId: catalogItemId,
+      quantity,
+    });
+
+    await prisma.itemDeposit.update({
+      where: { id: deposit.id },
+      data: { code, codeExpiresAt: expiresAt },
+    });
+
     depLogger.info('requestDeposit.success', 'Item deposit created', {
       depositId: deposit.id,
       userId,
@@ -62,6 +77,8 @@ export const itemDepositService = {
       catalogItemDisplayName: deposit.catalogItem.displayName,
       quantity: deposit.quantity,
       status: deposit.status,
+      code,
+      codeExpiresAt: expiresAt.toISOString(),
       adminNotes: null,
       createdAt: deposit.createdAt.toISOString(),
       completedAt: null,
@@ -163,6 +180,102 @@ export const itemDepositService = {
         user: { select: { id: true, minecraftUsername: true } },
       },
       orderBy: { createdAt: 'asc' },
+    });
+  },
+
+  async verifyAndClaimDeposit(depositId: string): Promise<boolean> {
+    const result = await prisma.itemDeposit.updateMany({
+      where: { id: depositId, status: 'pending' },
+      data: { status: 'verified', codeVerifiedAt: new Date() },
+    });
+    return result.count > 0;
+  },
+
+  async isRecentlyVerified(depositId: string): Promise<boolean> {
+    const deposit = await prisma.itemDeposit.findUnique({
+      where: { id: depositId },
+      select: { status: true, codeVerifiedAt: true },
+    });
+    if (!deposit || deposit.status !== 'verified' || !deposit.codeVerifiedAt) return false;
+    return (Date.now() - deposit.codeVerifiedAt.getTime()) < 60_000;
+  },
+
+  async confirmVerifiedDeposit(depositId: string, closedBy: string): Promise<void> {
+    const deposit = await prisma.itemDeposit.findUnique({
+      where: { id: depositId },
+      include: { catalogItem: true },
+    });
+
+    if (!deposit) {
+      throw new AppError('Deposit not found', { code: 'DEPOSIT_NOT_FOUND', statusCode: 404 });
+    }
+    if (deposit.status !== 'verified') {
+      throw new AppError('Deposit is not in verified state', {
+        code: 'INVALID_DEPOSIT_STATE',
+        statusCode: 400,
+        details: { currentStatus: deposit.status },
+      });
+    }
+
+    await withTransaction(async (tx) => {
+      await inventoryRepository.addItems(deposit.userId, deposit.catalogItemId, deposit.quantity, tx);
+      await tx.itemDeposit.update({
+        where: { id: depositId },
+        data: {
+          status: 'confirmed',
+          completedAt: new Date(),
+          closedBy,
+        },
+      });
+    });
+
+    depLogger.info('confirmVerifiedDeposit', 'Verified deposit confirmed via Discord', {
+      depositId, closedBy, userId: deposit.userId,
+    });
+  },
+
+  async rejectVerifiedDeposit(depositId: string, closedBy: string, reason: string): Promise<void> {
+    const deposit = await prisma.itemDeposit.findUnique({
+      where: { id: depositId },
+    });
+
+    if (!deposit) {
+      throw new AppError('Deposit not found', { code: 'DEPOSIT_NOT_FOUND', statusCode: 404 });
+    }
+    if (deposit.status !== 'verified') {
+      throw new AppError('Deposit is not in verified state', {
+        code: 'INVALID_DEPOSIT_STATE',
+        statusCode: 400,
+        details: { currentStatus: deposit.status },
+      });
+    }
+
+    await prisma.itemDeposit.update({
+      where: { id: depositId },
+      data: {
+        status: 'rejected',
+        completedAt: new Date(),
+        closedBy,
+        closeReason: reason,
+      },
+    });
+
+    depLogger.info('rejectVerifiedDeposit', 'Verified deposit rejected via Discord', {
+      depositId, closedBy, reason,
+    });
+  },
+
+  async findByTicketChannel(channelId: string) {
+    return prisma.itemDeposit.findFirst({
+      where: { ticketChannelId: channelId },
+      include: { catalogItem: true, user: true },
+    });
+  },
+
+  async setTicketChannel(depositId: string, channelId: string): Promise<void> {
+    await prisma.itemDeposit.update({
+      where: { id: depositId },
+      data: { ticketChannelId: channelId },
     });
   },
 };

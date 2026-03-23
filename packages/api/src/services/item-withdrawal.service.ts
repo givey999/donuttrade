@@ -6,6 +6,7 @@ import { userRepository } from '../repositories/user.repository.js';
 import { logger } from '../lib/logger.js';
 import { AppError, ValidationError } from '../lib/errors.js';
 import { eventBus } from './event-bus.service.js';
+import { generateCode } from '../lib/deposit-code.js';
 
 const wdLogger = logger.module('item-withdrawal.service');
 
@@ -57,6 +58,20 @@ export const itemWithdrawalService = {
       return withdrawal;
     });
 
+    const { code, expiresAt } = generateCode({
+      type: 'withdrawal',
+      id: result.id,
+      userId,
+      itemId: catalogItemId,
+      quantity,
+    });
+
+    // Update with code outside transaction (non-critical)
+    await prisma.itemWithdrawal.update({
+      where: { id: result.id },
+      data: { code, codeExpiresAt: expiresAt },
+    });
+
     wdLogger.info('requestWithdrawal.success', 'Item withdrawal created', {
       withdrawalId: result.id,
       userId,
@@ -71,6 +86,8 @@ export const itemWithdrawalService = {
       catalogItemDisplayName: result.catalogItem.displayName,
       quantity: result.quantity,
       status: result.status,
+      code,
+      codeExpiresAt: expiresAt.toISOString(),
       failReason: null,
       createdAt: result.createdAt.toISOString(),
       completedAt: null,
@@ -271,6 +288,134 @@ export const itemWithdrawalService = {
     });
 
     return result.count > 0;
+  },
+
+  async verifyAndClaimWithdrawal(withdrawalId: string): Promise<boolean> {
+    const result = await prisma.itemWithdrawal.updateMany({
+      where: { id: withdrawalId, status: 'pending' },
+      data: { status: 'verified', codeVerifiedAt: new Date() },
+    });
+    return result.count > 0;
+  },
+
+  async isRecentlyVerified(withdrawalId: string): Promise<boolean> {
+    const withdrawal = await prisma.itemWithdrawal.findUnique({
+      where: { id: withdrawalId },
+      select: { status: true, codeVerifiedAt: true },
+    });
+    if (!withdrawal || withdrawal.status !== 'verified' || !withdrawal.codeVerifiedAt) return false;
+    return (Date.now() - withdrawal.codeVerifiedAt.getTime()) < 60_000;
+  },
+
+  async confirmVerifiedWithdrawal(withdrawalId: string, closedBy: string): Promise<void> {
+    const withdrawal = await prisma.itemWithdrawal.findUnique({
+      where: { id: withdrawalId },
+      include: { catalogItem: true },
+    });
+
+    if (!withdrawal) {
+      throw new AppError('Withdrawal not found', { code: 'WITHDRAWAL_NOT_FOUND', statusCode: 404 });
+    }
+    if (withdrawal.status !== 'verified') {
+      throw new AppError('Withdrawal is not in verified state', {
+        code: 'INVALID_WITHDRAWAL_STATE',
+        statusCode: 400,
+        details: { currentStatus: withdrawal.status },
+      });
+    }
+
+    await withTransaction(async (tx) => {
+      // Debit items: reduce both quantity and reservedQuantity (with safety guard)
+      const result = await tx.inventoryItem.updateMany({
+        where: {
+          userId: withdrawal.userId,
+          catalogItemId: withdrawal.catalogItemId,
+          quantity: { gte: withdrawal.quantity },
+          reservedQuantity: { gte: withdrawal.quantity },
+        },
+        data: {
+          quantity: { decrement: withdrawal.quantity },
+          reservedQuantity: { decrement: withdrawal.quantity },
+        },
+      });
+      if (result.count === 0) {
+        throw new AppError('Failed to remove items — inventory inconsistency', {
+          code: 'INVENTORY_INCONSISTENCY',
+          statusCode: 500,
+        });
+      }
+      await tx.itemWithdrawal.update({
+        where: { id: withdrawalId },
+        data: {
+          status: 'completed',
+          completedAt: new Date(),
+          closedBy,
+        },
+      });
+    });
+
+    // Publish SSE event for real-time updates
+    void eventBus.publish(withdrawal.userId, 'item_withdrawal.completed', {
+      withdrawalId,
+      catalogItemId: withdrawal.catalogItemId,
+      quantity: withdrawal.quantity,
+    });
+
+    wdLogger.info('confirmVerifiedWithdrawal', 'Verified withdrawal confirmed via Discord', {
+      withdrawalId, closedBy, userId: withdrawal.userId,
+    });
+  },
+
+  async rejectVerifiedWithdrawal(withdrawalId: string, closedBy: string, reason: string): Promise<void> {
+    const withdrawal = await prisma.itemWithdrawal.findUnique({
+      where: { id: withdrawalId },
+      include: { catalogItem: true },
+    });
+
+    if (!withdrawal) {
+      throw new AppError('Withdrawal not found', { code: 'WITHDRAWAL_NOT_FOUND', statusCode: 404 });
+    }
+    if (withdrawal.status !== 'verified') {
+      throw new AppError('Withdrawal is not in verified state', {
+        code: 'INVALID_WITHDRAWAL_STATE',
+        statusCode: 400,
+        details: { currentStatus: withdrawal.status },
+      });
+    }
+
+    await withTransaction(async (tx) => {
+      // Release the reservation — items go back to user's available inventory
+      await inventoryRepository.releaseReservation(
+        withdrawal.userId, withdrawal.catalogItemId, withdrawal.quantity, tx
+      );
+      await tx.itemWithdrawal.update({
+        where: { id: withdrawalId },
+        data: {
+          status: 'failed',
+          completedAt: new Date(),
+          closedBy,
+          closeReason: reason,
+        },
+      });
+    });
+
+    wdLogger.info('rejectVerifiedWithdrawal', 'Verified withdrawal rejected via Discord', {
+      withdrawalId, closedBy, reason,
+    });
+  },
+
+  async findByTicketChannel(channelId: string) {
+    return prisma.itemWithdrawal.findFirst({
+      where: { ticketChannelId: channelId },
+      include: { catalogItem: true, user: true },
+    });
+  },
+
+  async setTicketChannel(withdrawalId: string, channelId: string): Promise<void> {
+    await prisma.itemWithdrawal.update({
+      where: { id: withdrawalId },
+      data: { ticketChannelId: channelId },
+    });
   },
 };
 

@@ -88,6 +88,20 @@ export const platformSettingsService = {
     return defaults[key];
   },
 
+  /**
+   * Atomically increment the ticket counter and return the new value.
+   * Uses UPSERT to handle first-use case (row doesn't exist yet).
+   */
+  async incrementTicketCounter(): Promise<number> {
+    const result = await prisma.$queryRaw<[{ value: string }]>`
+      INSERT INTO platform_settings (key, value, updated_by, updated_at)
+      VALUES ('ticket_counter', '1', 'system', NOW())
+      ON CONFLICT (key) DO UPDATE SET value = (platform_settings.value::int + 1)::text, updated_at = NOW()
+      RETURNING value
+    `;
+    return parseInt(result[0].value, 10);
+  },
+
   _validateValue(key: SettingKey, value: string): void {
     switch (key) {
       case 'commission_rate': {
