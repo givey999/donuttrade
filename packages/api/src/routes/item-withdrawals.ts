@@ -70,6 +70,8 @@ export const itemWithdrawalRoutes: FastifyPluginAsync = async (fastify) => {
       quantity: w.quantity,
       status: w.status as ItemWithdrawalRecord['status'],
       failReason: w.failReason,
+      code: w.code ?? null,
+      codeExpiresAt: w.codeExpiresAt?.toISOString() ?? null,
       createdAt: w.createdAt.toISOString(),
       completedAt: w.completedAt?.toISOString() ?? null,
     }));

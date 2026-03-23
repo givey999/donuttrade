@@ -69,6 +69,8 @@ export const itemDepositRoutes: FastifyPluginAsync = async (fastify) => {
       quantity: d.quantity,
       status: d.status as ItemDepositRecord['status'],
       adminNotes: d.adminNotes,
+      code: d.code ?? null,
+      codeExpiresAt: d.codeExpiresAt?.toISOString() ?? null,
       createdAt: d.createdAt.toISOString(),
       completedAt: d.completedAt?.toISOString() ?? null,
     }));
