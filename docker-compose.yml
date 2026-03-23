@@ -43,6 +43,7 @@ services:
       args:
         - NEXT_PUBLIC_API_URL=https://moldo.go.ro:9443
         - NEXT_PUBLIC_DEPOSIT_BOT_NAME=${DEPOSIT_BOT_DISPLAY_NAME:-DonutTradeDeposit}
+        - NEXT_PUBLIC_DISCORD_INVITE_URL=${NEXT_PUBLIC_DISCORD_INVITE_URL:-}
     container_name: donuttrade-web
     environment:
       - NODE_ENV=production
@@ -78,6 +79,20 @@ services:
       - .env
     volumes:
       - deposit_bot_nmp_cache:/root/.minecraft/nmp-cache
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Discord Management Bot
+  management-bot:
+    build:
+      context: .
+      dockerfile: packages/management-bot/Dockerfile
+    container_name: donuttrade-management-bot
+    environment:
+      - API_URL=http://api:3001
+    env_file:
+      - .env
     depends_on:
       - api
     restart: unless-stopped
