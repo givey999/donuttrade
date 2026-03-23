@@ -45,9 +45,9 @@ function DepositModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (tab === 'items' && catalogItems.length === 0) {
-      apiFetch<{ data: CatalogItem[] }>('/catalog/items')
+      apiFetch<{ items: CatalogItem[] }>('/catalog/items')
         .then((res) => {
-          const enabled = res.data.filter((i) => i.enabled);
+          const enabled = res.items.filter((i) => i.enabled);
           setCatalogItems(enabled);
           if (enabled.length > 0) setSelectedItemId(enabled[0].id);
         })
@@ -59,12 +59,12 @@ function DepositModal({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch<{ data: { code: string; codeExpiresAt: string } }>('/item-deposits', {
+      const res = await apiFetch<{ code: string; codeExpiresAt: string }>('/item-deposits', {
         method: 'POST',
         body: JSON.stringify({ catalogItemId: selectedItemId, quantity: parseInt(quantity, 10) || 1 }),
       });
-      setGeneratedCode(res.data.code);
-      setCodeExpiresAt(res.data.codeExpiresAt);
+      setGeneratedCode(res.code);
+      setCodeExpiresAt(res.codeExpiresAt);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to generate code');
     } finally {
@@ -267,11 +267,11 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     setItemLoading(true);
     setItemError(null);
     try {
-      const res = await apiFetch<{ data: { code: string; codeExpiresAt: string } }>('/item-withdrawals', {
+      const res = await apiFetch<{ code: string; codeExpiresAt: string }>('/item-withdrawals', {
         method: 'POST',
         body: JSON.stringify({ catalogItemId: selectedItemId, quantity: parseInt(quantity, 10) || 1 }),
       });
-      setGeneratedCode(res.data.code);
+      setGeneratedCode(res.code);
     } catch (err) {
       setItemError(err instanceof ApiError ? err.message : 'Failed to generate code');
     } finally {
