@@ -201,11 +201,17 @@ model ItemDeposit {
   catalogItemId String    @map("catalog_item_id")
   catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
   quantity      Int
-  status        String    @default("pending")  // pending | confirmed | rejected
+  status        String    @default("pending")  // pending | verified | confirmed | rejected
   adminId       String?   @map("admin_id")
   adminNotes    String?   @map("admin_notes")
   createdAt     DateTime  @default(now()) @map("created_at")
   completedAt   DateTime? @map("completed_at")
+  code             String?   @unique
+  codeExpiresAt    DateTime? @map("code_expires_at")
+  codeVerifiedAt   DateTime? @map("code_verified_at")
+  ticketChannelId  String?   @map("ticket_channel_id")
+  closedBy         String?   @map("closed_by")
+  closeReason      String?   @map("close_reason")
 
   @@index([userId])
   @@index([status])
@@ -219,11 +225,17 @@ model ItemWithdrawal {
   catalogItemId String    @map("catalog_item_id")
   catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
   quantity      Int
-  status        String    @default("pending")  // pending | processing | completed | failed | cancelled
+  status        String    @default("pending")  // pending | verified | processing | completed | failed | cancelled
   adminId       String?   @map("admin_id")
   failReason    String?   @map("fail_reason")
   createdAt     DateTime  @default(now()) @map("created_at")
   completedAt   DateTime? @map("completed_at")
+  code             String?   @unique
+  codeExpiresAt    DateTime? @map("code_expires_at")
+  codeVerifiedAt   DateTime? @map("code_verified_at")
+  ticketChannelId  String?   @map("ticket_channel_id")
+  closedBy         String?   @map("closed_by")
+  closeReason      String?   @map("close_reason")
 
   @@index([userId])
   @@index([status])

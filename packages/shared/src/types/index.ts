@@ -266,8 +266,8 @@ export interface InventoryItemRecord {
 // ITEM DEPOSIT & WITHDRAWAL TYPES
 // ============================================================================
 
-export type ItemDepositStatus = 'pending' | 'confirmed' | 'rejected';
-export type ItemWithdrawalStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+export type ItemDepositStatus = 'pending' | 'verified' | 'confirmed' | 'rejected';
+export type ItemWithdrawalStatus = 'pending' | 'verified' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
 export interface ItemDepositRecord {
   id: string;
@@ -279,6 +279,8 @@ export interface ItemDepositRecord {
   adminNotes: string | null;
   createdAt: string;
   completedAt: string | null;
+  code: string | null;
+  codeExpiresAt: string | null;
 }
 
 export interface ItemWithdrawalRecord {
@@ -291,6 +293,8 @@ export interface ItemWithdrawalRecord {
   failReason: string | null;
   createdAt: string;
   completedAt: string | null;
+  code: string | null;
+  codeExpiresAt: string | null;
 }
 
 // ============================================================================
