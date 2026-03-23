@@ -45,6 +45,9 @@ const envSchema = z.object({
   // Marketplace
   MARKETPLACE_COMMISSION_RATE: z.string().transform(Number).default('0.02'),
 
+  // Code signing
+  CODE_SIGNING_SECRET: z.string().min(32),
+
   // CORS
   CORS_ORIGIN: z.string().default('https://moldo.go.ro:9443'),
 });
@@ -103,6 +106,7 @@ export function getRedactedConfig(): Record<string, string | number | boolean | 
     JWT_ACCESS_SECRET: config.JWT_ACCESS_SECRET ? '[REDACTED]' : '[NOT SET]',
     JWT_REFRESH_SECRET: config.JWT_REFRESH_SECRET ? '[REDACTED]' : '[NOT SET]',
     BOT_WEBHOOK_SECRET: config.BOT_WEBHOOK_SECRET ? '[REDACTED]' : '[NOT SET]',
+    CODE_SIGNING_SECRET: config.CODE_SIGNING_SECRET ? '[REDACTED]' : '[NOT SET]',
     VERIFICATION_BOT_DISPLAY_NAME: config.VERIFICATION_BOT_DISPLAY_NAME,
     DEPOSIT_BOT_DISPLAY_NAME: config.DEPOSIT_BOT_DISPLAY_NAME,
   };
