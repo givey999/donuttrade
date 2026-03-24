@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { microsoftAuthRoutes } from './microsoft.js';
+import { discordAuthRoutes } from './discord.js';
 import { sessionRoutes } from './session.js';
 import { usernameRoutes } from './username.js';
 import { verificationRoutes } from './verification.js';
@@ -10,6 +11,9 @@ import { verificationRoutes } from './verification.js';
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Microsoft OAuth routes
   await fastify.register(microsoftAuthRoutes);
+
+  // Discord OAuth routes
+  await fastify.register(discordAuthRoutes);
 
   // Session routes (me, refresh, logout)
   await fastify.register(sessionRoutes);
