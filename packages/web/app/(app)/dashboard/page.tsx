@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { apiFetch, ApiError } from '@/lib/api';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input, Select } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
@@ -145,15 +145,15 @@ function DepositModal({ onClose }: { onClose: () => void }) {
         <>
           <div className="mt-3">
             <label className="block text-xs text-neutral-400">Item</label>
-            <select
+            <Select
               value={selectedItemId}
               onChange={(e) => setSelectedItemId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-700 bg-white/[0.03] px-3 py-2 text-sm text-neutral-200"
+              className="mt-1 w-full"
             >
               {catalogItems.map((item) => (
                 <option key={item.id} value={item.id}>{item.displayName}</option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="mt-3">
             <label className="block text-xs text-neutral-400">Quantity</label>
@@ -394,17 +394,17 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         <>
           <div className="mt-3">
             <label className="block text-xs text-neutral-400">Item</label>
-            <select
+            <Select
               value={selectedItemId}
               onChange={(e) => { setSelectedItemId(e.target.value); setQuantity('1'); }}
-              className="mt-1 w-full rounded-lg border border-neutral-700 bg-white/[0.03] px-3 py-2 text-sm text-neutral-200"
+              className="mt-1 w-full"
             >
               {inventoryItems.map((item) => (
                 <option key={item.catalogItemId} value={item.catalogItemId}>
                   {item.catalogItemDisplayName} ({item.availableQuantity} available)
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="mt-3">
             <label className="block text-xs text-neutral-400">Quantity (max: {maxQty})</label>

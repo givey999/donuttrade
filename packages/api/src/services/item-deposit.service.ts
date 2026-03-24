@@ -272,10 +272,10 @@ export const itemDepositService = {
     });
   },
 
-  async setTicketChannel(depositId: string, channelId: string): Promise<void> {
+  async setTicketChannel(depositId: string, channelId: string, ticketLabel?: string): Promise<void> {
     await prisma.itemDeposit.update({
       where: { id: depositId },
-      data: { ticketChannelId: channelId },
+      data: { ticketChannelId: channelId, ...(ticketLabel && { ticketLabel }) },
     });
   },
 };

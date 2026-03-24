@@ -146,6 +146,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
           catalogItemDisplayName: d.catalogItem.displayName,
           quantity: d.quantity,
           status: d.status,
+          ticketLabel: d.ticketLabel,
           createdAt: d.createdAt.toISOString(),
         })),
         recentWithdrawals: user.itemWithdrawals.map((w) => ({
@@ -153,6 +154,7 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
           catalogItemDisplayName: w.catalogItem.displayName,
           quantity: w.quantity,
           status: w.status,
+          ticketLabel: w.ticketLabel,
           createdAt: w.createdAt.toISOString(),
         })),
       },

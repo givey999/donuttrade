@@ -109,7 +109,7 @@ export async function handleCloseCommand(interaction: ChatInputCommandInteractio
           openedAt: channel.createdAt || new Date(),
         });
 
-        await logsChannel.send({ embeds: [embed], files: [transcript] });
+        await logsChannel.send({ content: channelName, embeds: [embed], files: [transcript] });
 
         // Forward messages that have attachments to preserve them
         const messagesWithAttachments = allMessages.filter((m) => m.attachments.size > 0);

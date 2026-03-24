@@ -411,10 +411,10 @@ export const itemWithdrawalService = {
     });
   },
 
-  async setTicketChannel(withdrawalId: string, channelId: string): Promise<void> {
+  async setTicketChannel(withdrawalId: string, channelId: string, ticketLabel?: string): Promise<void> {
     await prisma.itemWithdrawal.update({
       where: { id: withdrawalId },
-      data: { ticketChannelId: channelId },
+      data: { ticketChannelId: channelId, ...(ticketLabel && { ticketLabel }) },
     });
   },
 };

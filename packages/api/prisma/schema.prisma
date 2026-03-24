@@ -210,6 +210,7 @@ model ItemDeposit {
   codeExpiresAt    DateTime? @map("code_expires_at")
   codeVerifiedAt   DateTime? @map("code_verified_at")
   ticketChannelId  String?   @map("ticket_channel_id")
+  ticketLabel      String?   @map("ticket_label")
   closedBy         String?   @map("closed_by")
   closeReason      String?   @map("close_reason")
 
@@ -234,6 +235,7 @@ model ItemWithdrawal {
   codeExpiresAt    DateTime? @map("code_expires_at")
   codeVerifiedAt   DateTime? @map("code_verified_at")
   ticketChannelId  String?   @map("ticket_channel_id")
+  ticketLabel      String?   @map("ticket_label")
   closedBy         String?   @map("closed_by")
   closeReason      String?   @map("close_reason")
 

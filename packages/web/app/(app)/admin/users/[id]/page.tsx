@@ -30,8 +30,8 @@ interface UserDetail {
   lastLoginAt: string | null;
   recentTransactions: Array<{ id: string; type: string; amount: string; description: string | null; createdAt: string }>;
   recentOrders: Array<{ id: string; type: string; catalogItemDisplayName: string; quantity: number; filledQuantity: number; pricePerUnit: string; status: string; createdAt: string }>;
-  recentDeposits: Array<{ id: string; catalogItemDisplayName: string; quantity: number; status: string; createdAt: string }>;
-  recentWithdrawals: Array<{ id: string; catalogItemDisplayName: string; quantity: number; status: string; createdAt: string }>;
+  recentDeposits: Array<{ id: string; catalogItemDisplayName: string; quantity: number; status: string; ticketLabel: string | null; createdAt: string }>;
+  recentWithdrawals: Array<{ id: string; catalogItemDisplayName: string; quantity: number; status: string; ticketLabel: string | null; createdAt: string }>;
 }
 
 const ROLE_VARIANT: Record<string, string> = {
@@ -306,6 +306,7 @@ export default function AdminUserDetailPage() {
               <Table>
                 <Thead>
                   <tr>
+                    <Th>Ticket</Th>
                     <Th>Date</Th>
                     <Th>Item</Th>
                     <Th className="text-right">Qty</Th>
@@ -314,9 +315,10 @@ export default function AdminUserDetailPage() {
                 </Thead>
                 <Tbody>
                   {userDetail.recentDeposits.length === 0 ? (
-                    <tr><td colSpan={4} className="px-3 py-4 text-center text-xs text-neutral-500">No deposits</td></tr>
+                    <tr><td colSpan={5} className="px-3 py-4 text-center text-xs text-neutral-500">No deposits</td></tr>
                   ) : userDetail.recentDeposits.map((d) => (
                     <tr key={d.id}>
+                      <Td className="text-xs font-mono text-amber-400">{d.ticketLabel || '—'}</Td>
                       <Td className="whitespace-nowrap text-xs text-neutral-500">{new Date(d.createdAt).toLocaleDateString()}</Td>
                       <Td className="text-xs">{d.catalogItemDisplayName}</Td>
                       <Td className="text-right text-xs">{d.quantity}</Td>
@@ -330,6 +332,7 @@ export default function AdminUserDetailPage() {
               <Table>
                 <Thead>
                   <tr>
+                    <Th>Ticket</Th>
                     <Th>Date</Th>
                     <Th>Item</Th>
                     <Th className="text-right">Qty</Th>
@@ -338,9 +341,10 @@ export default function AdminUserDetailPage() {
                 </Thead>
                 <Tbody>
                   {userDetail.recentWithdrawals.length === 0 ? (
-                    <tr><td colSpan={4} className="px-3 py-4 text-center text-xs text-neutral-500">No withdrawals</td></tr>
+                    <tr><td colSpan={5} className="px-3 py-4 text-center text-xs text-neutral-500">No withdrawals</td></tr>
                   ) : userDetail.recentWithdrawals.map((w) => (
                     <tr key={w.id}>
+                      <Td className="text-xs font-mono text-amber-400">{w.ticketLabel || '—'}</Td>
                       <Td className="whitespace-nowrap text-xs text-neutral-500">{new Date(w.createdAt).toLocaleDateString()}</Td>
                       <Td className="text-xs">{w.catalogItemDisplayName}</Td>
                       <Td className="text-right text-xs">{w.quantity}</Td>

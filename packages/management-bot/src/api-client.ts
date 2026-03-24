@@ -63,7 +63,7 @@ export const apiClient = {
     return result.data.number;
   },
 
-  async setTicketChannel(type: 'deposit' | 'withdrawal', recordId: string, channelId: string) {
-    return request('PATCH', '/ticket-channel', { type, recordId, channelId });
+  async setTicketChannel(type: 'deposit' | 'withdrawal', recordId: string, channelId: string, ticketLabel: string) {
+    return request('PATCH', '/ticket-channel', { type, recordId, channelId, ticketLabel });
   },
 };

@@ -59,8 +59,8 @@ export async function createTicketChannel(guild: Guild, opts: {
     ],
   });
 
-  // Store channel ID on the record
-  await apiClient.setTicketChannel(opts.type, opts.recordId, channel.id);
+  // Store channel ID and label on the record
+  await apiClient.setTicketChannel(opts.type, opts.recordId, channel.id, channelName);
 
   // Send welcome embed
   const embed = buildTicketWelcomeEmbed({

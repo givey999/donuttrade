@@ -230,7 +230,7 @@ export const managementBotRoutes: FastifyPluginAsync = async (fastify) => {
 
   // PATCH /internal/management-bot/ticket-channel
   fastify.patch<{
-    Body: { type: 'deposit' | 'withdrawal'; recordId: string; channelId: string };
+    Body: { type: 'deposit' | 'withdrawal'; recordId: string; channelId: string; ticketLabel?: string };
   }>('/management-bot/ticket-channel', {
     schema: {
       body: {
@@ -240,16 +240,17 @@ export const managementBotRoutes: FastifyPluginAsync = async (fastify) => {
           type: { type: 'string', enum: ['deposit', 'withdrawal'] },
           recordId: { type: 'string' },
           channelId: { type: 'string' },
+          ticketLabel: { type: 'string' },
         },
       },
     },
     preHandler: authenticateBot,
   }, async (request) => {
-    const { type, recordId, channelId } = request.body;
+    const { type, recordId, channelId, ticketLabel } = request.body;
     if (type === 'deposit') {
-      await itemDepositService.setTicketChannel(recordId, channelId);
+      await itemDepositService.setTicketChannel(recordId, channelId, ticketLabel);
     } else {
-      await itemWithdrawalService.setTicketChannel(recordId, channelId);
+      await itemWithdrawalService.setTicketChannel(recordId, channelId, ticketLabel);
     }
     return { success: true };
   });
