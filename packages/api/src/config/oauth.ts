@@ -18,6 +18,22 @@ export const microsoftOAuthConfig = {
 };
 
 /**
+ * Discord OAuth 2.0 Configuration
+ * Route guards on isDiscordOAuthConfigured() before any service method is called.
+ */
+export const discordOAuthConfig = {
+  clientId: config.DISCORD_CLIENT_ID!,
+  clientSecret: config.DISCORD_CLIENT_SECRET!,
+  redirectUri: config.DISCORD_REDIRECT_URI!,
+
+  authorizationEndpoint: 'https://discord.com/oauth2/authorize',
+  tokenEndpoint: 'https://discord.com/api/oauth2/token',
+  userInfoEndpoint: 'https://discord.com/api/users/@me',
+
+  scopes: ['identify', 'email'],
+};
+
+/**
  * OAuth state configuration
  */
 export const authStateConfig = {
