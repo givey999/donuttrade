@@ -83,34 +83,46 @@ export async function handleCloseCommand(interaction: ChatInputCommandInteractio
       }
     }
 
-    // Extract ticket info from welcome embed
-    const messages = await channel.messages.fetch({ limit: 10 });
-    const welcomeMsg = messages.find(
-      (m) => m.author.id === interaction.client.user!.id && m.embeds.length > 0
-    );
-    const fields = welcomeMsg?.embeds[0]?.fields;
-    const username = fields?.find((f) => f.name === 'Player')?.value ?? '(unknown)';
-    const itemName = fields?.find((f) => f.name === 'Item')?.value ?? '(unknown)';
-    const quantity = parseInt(fields?.find((f) => f.name === 'Quantity')?.value ?? '0', 10);
+    // Transcript and cleanup — errors here should not undo the confirm/reject
+    try {
+      const { transcript, allMessages } = await generateTranscript(channel);
 
-    // Generate transcript
-    const transcript = await generateTranscript(channel);
+      // Find welcome embed from the fetched messages (always first message)
+      const welcomeMsg = allMessages.find(
+        (m) => m.author.id === interaction.client.user!.id && m.embeds.length > 0
+      );
+      const fields = welcomeMsg?.embeds[0]?.fields;
+      const username = fields?.find((f) => f.name === 'Player')?.value ?? '(unknown)';
+      const itemName = fields?.find((f) => f.name === 'Item')?.value ?? '(unknown)';
+      const quantity = parseInt(fields?.find((f) => f.name === 'Quantity')?.value ?? '0', 10);
 
-    // Send to ticket-logs
-    const logsChannel = interaction.guild!.channels.cache.get(config.DISCORD_LOGS_CHANNEL_ID) as TextChannel;
-    if (logsChannel) {
-      const embed = buildTranscriptEmbed({
-        channelName,
-        type,
-        username,
-        itemName,
-        quantity,
-        result: action === 'confirm' ? 'confirmed' : 'rejected',
-        closedBy,
-        openedAt: channel.createdAt || new Date(),
-      });
+      const logsChannel = interaction.guild!.channels.cache.get(config.DISCORD_LOGS_CHANNEL_ID) as TextChannel;
+      if (logsChannel) {
+        const embed = buildTranscriptEmbed({
+          channelName,
+          type,
+          username,
+          itemName,
+          quantity,
+          result: action === 'confirm' ? 'confirmed' : 'rejected',
+          closedBy,
+          openedAt: channel.createdAt || new Date(),
+        });
 
-      await logsChannel.send({ embeds: [embed], files: [transcript] });
+        await logsChannel.send({ embeds: [embed], files: [transcript] });
+
+        // Forward messages that have attachments to preserve them
+        const messagesWithAttachments = allMessages.filter((m) => m.attachments.size > 0);
+        for (const msg of messagesWithAttachments) {
+          try {
+            await msg.forward(logsChannel);
+          } catch (fwdErr) {
+            console.error(`Failed to forward message ${msg.id}:`, fwdErr);
+          }
+        }
+      }
+    } catch (transcriptErr) {
+      console.error('Failed to generate/send transcript:', transcriptErr);
     }
 
     await interaction.editReply({ content: `Ticket ${action}ed. Deleting channel in 5 seconds...` });

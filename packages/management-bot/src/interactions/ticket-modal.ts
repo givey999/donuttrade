@@ -63,6 +63,7 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
 
     await interaction.editReply({ content: `Ticket created: ${channel}` });
   } catch (err: any) {
+    console.error('Ticket creation failed:', err);
     const message = err.message?.includes('expired') || err.message?.includes('Invalid')
       ? 'Invalid or expired code. Please generate a new one on the website.'
       : err.message?.includes('already been used')

@@ -95,7 +95,7 @@ export const platformSettingsService = {
   async incrementTicketCounter(): Promise<number> {
     const result = await prisma.$queryRaw<[{ value: string }]>`
       INSERT INTO platform_settings (key, value, updated_by, updated_at)
-      VALUES ('ticket_counter', '1', 'system', NOW())
+      VALUES ('ticket_counter', '1', NULL, NOW())
       ON CONFLICT (key) DO UPDATE SET value = (platform_settings.value::int + 1)::text, updated_at = NOW()
       RETURNING value
     `;

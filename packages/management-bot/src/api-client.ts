@@ -18,7 +18,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const json = await res.json() as any;
 
   if (!res.ok) {
-    const errMsg = json?.error || json?.message || `API error ${res.status}`;
+    const errMsg = json?.message || (typeof json?.error === 'string' ? json.error : json?.error?.message) || `API error ${res.status}`;
     throw new Error(errMsg);
   }
 

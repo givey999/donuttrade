@@ -1,9 +1,13 @@
 import { TextChannel, AttachmentBuilder, Message } from 'discord.js';
 
 /**
- * Fetch all messages from a channel and format as a text transcript.
+ * Fetch all messages from a channel and return them sorted chronologically,
+ * plus a formatted text transcript.
  */
-export async function generateTranscript(channel: TextChannel): Promise<AttachmentBuilder> {
+export async function generateTranscript(channel: TextChannel): Promise<{
+  transcript: AttachmentBuilder;
+  allMessages: Message[];
+}> {
   const allMessages: Message[] = [];
   let lastId: string | undefined;
 
@@ -26,12 +30,23 @@ export async function generateTranscript(channel: TextChannel): Promise<Attachme
   const lines = allMessages.map((msg) => {
     const time = msg.createdAt.toISOString().replace('T', ' ').slice(0, 19);
     const author = msg.author.bot ? `[BOT] ${msg.author.username}` : msg.author.username;
-    const content = msg.content || (msg.embeds.length > 0 ? '[embed]' : '[no content]');
+
+    const parts: string[] = [];
+    if (msg.content) parts.push(msg.content);
+    if (msg.embeds.length > 0) parts.push('[embed]');
+    for (const att of msg.attachments.values()) {
+      parts.push(`[attachment: ${att.name}]`);
+    }
+    const content = parts.join(' ') || '[no content]';
+
     return `[${time}] ${author}: ${content}`;
   });
 
-  const transcript = lines.join('\n') || '(empty conversation)';
+  const text = lines.join('\n') || '(empty conversation)';
   const fileName = `${channel.name}-transcript.txt`;
 
-  return new AttachmentBuilder(Buffer.from(transcript, 'utf-8'), { name: fileName });
+  return {
+    transcript: new AttachmentBuilder(Buffer.from(text, 'utf-8'), { name: fileName }),
+    allMessages,
+  };
 }
