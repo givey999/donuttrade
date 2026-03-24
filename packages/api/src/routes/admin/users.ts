@@ -346,8 +346,8 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.patch<{ Params: { id: string } }>('/:id/verify', async (request) => {
     const actorRole = request.user!.role;
-    if (actorRole !== 'admin' && actorRole !== 'manager') {
-      throw new AppError('Only managers and admins can verify users', { code: 'FORBIDDEN', statusCode: 403 });
+    if (actorRole !== 'admin' && actorRole !== 'manager' && actorRole !== 'leader') {
+      throw new AppError('Only managers and above can verify users', { code: 'FORBIDDEN', statusCode: 403 });
     }
 
     const target = await prisma.user.findUnique({ where: { id: request.params.id }, select: { verificationStatus: true } });

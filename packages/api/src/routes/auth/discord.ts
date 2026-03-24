@@ -135,51 +135,42 @@ export const discordAuthRoutes: FastifyPluginAsync = async (fastify) => {
       let user = await userRepository.findByDiscordId(discordUser.id);
 
       if (user) {
-        // Branch A: Returning verified user
-        if (user.verificationStatus === 'verified') {
-          // Update discordUsername if it has changed
-          if (user.discordUsername !== discordUser.username) {
-            await userRepository.update(user.id, { discordUsername: discordUser.username });
-          }
-
-          await userRepository.updateLastLogin(user.id);
-
-          const sessionTokens = await sessionService.createSession(
-            user.id,
-            request.headers['user-agent'],
-            request.ip,
-          );
-
-          reply.setCookie(Cookies.REFRESH_TOKEN, sessionTokens.refreshToken, {
-            ...cookieOptions,
-            maxAge: 30 * 24 * 60 * 60, // 30 days
-          });
-
-          authLogger.info('oauth.callback.returningUser', 'Returning verified user logged in', {
-            userId: user.id,
-          });
-
-          return reply.redirect(`${frontendUrl}${callbackPath}?success=true#token=${sessionTokens.accessToken}`);
+        // Update discordUsername if it has changed
+        if (user.discordUsername !== discordUser.username) {
+          await userRepository.update(user.id, { discordUsername: discordUser.username });
         }
 
-        // Branch B: Returning user in setup (not yet verified)
-        const pendingToken = signPendingToken(user.id);
-        reply.setCookie(Cookies.PENDING_TOKEN, pendingToken, {
-          ...cookieOptions,
-          maxAge: 30 * 60, // 30 minutes
-        });
-
+        // Check if user still needs setup (username or verification)
         if (!user.minecraftUsername) {
-          authLogger.info('oauth.callback.setupUsername', 'Returning user needs username', {
-            userId: user.id,
-          });
+          const pendingToken = signPendingToken(user.id);
+          reply.setCookie(Cookies.PENDING_TOKEN, pendingToken, { ...cookieOptions, maxAge: 30 * 60 });
+          authLogger.info('oauth.callback.setupUsername', 'Returning user needs username', { userId: user.id });
           return reply.redirect(`${frontendUrl}/signup/username`);
         }
 
-        authLogger.info('oauth.callback.setupVerify', 'Returning user needs verification', {
-          userId: user.id,
+        if (user.verificationStatus !== 'verified') {
+          const pendingToken = signPendingToken(user.id);
+          reply.setCookie(Cookies.PENDING_TOKEN, pendingToken, { ...cookieOptions, maxAge: 30 * 60 });
+          authLogger.info('oauth.callback.setupVerify', 'Returning user needs verification', { userId: user.id });
+          return reply.redirect(`${frontendUrl}/verify`);
+        }
+
+        // Fully set up user — create session
+        await userRepository.updateLastLogin(user.id);
+
+        const sessionTokens = await sessionService.createSession(
+          user.id,
+          request.headers['user-agent'],
+          request.ip,
+        );
+
+        reply.setCookie(Cookies.REFRESH_TOKEN, sessionTokens.refreshToken, {
+          ...cookieOptions,
+          maxAge: 30 * 24 * 60 * 60,
         });
-        return reply.redirect(`${frontendUrl}/verify`);
+
+        authLogger.info('oauth.callback.returningUser', 'Returning verified user logged in', { userId: user.id });
+        return reply.redirect(`${frontendUrl}${callbackPath}?success=true#token=${sessionTokens.accessToken}`);
       }
 
       // Branch C: New user

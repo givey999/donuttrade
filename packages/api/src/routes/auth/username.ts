@@ -52,7 +52,7 @@ export const usernameRoutes: FastifyPluginAsync = async (fastify) => {
       throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
     }
 
-    if (user.verificationStatus === 'verified') {
+    if (user.verificationStatus === 'verified' && user.minecraftUsername) {
       throw new AppError('User is already verified', { code: 'ALREADY_VERIFIED', statusCode: 400 });
     }
 
