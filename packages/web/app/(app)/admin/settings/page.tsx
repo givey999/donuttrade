@@ -156,7 +156,7 @@ export default function AdminSettingsPage() {
             <button
               onClick={() => setMaintenanceEnabled(!maintenanceEnabled)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                maintenanceEnabled ? 'bg-amber-500' : 'bg-neutral-700'
+                maintenanceEnabled ? 'bg-violet-500' : 'bg-neutral-700'
               }`}
             >
               <span
@@ -176,7 +176,7 @@ export default function AdminSettingsPage() {
               value={maintenanceMessage}
               onChange={(e) => setMaintenanceMessage(e.target.value)}
               rows={3}
-              className="mt-1 w-full rounded-lg border border-[#1a1a1a] bg-white/[0.03] px-3 py-2 text-sm text-white placeholder-neutral-600 transition-colors focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/30"
+              className="mt-1 w-full rounded-lg border border-[#1a1a1a] bg-white/[0.03] px-3 py-2 text-sm text-white placeholder-neutral-600 transition-colors focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
               placeholder="The platform is currently under maintenance..."
             />
           </div>

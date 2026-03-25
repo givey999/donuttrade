@@ -43,7 +43,7 @@ const STATUS_TABS = [
 
 const TYPE_VARIANT: Record<string, string> = {
   buy: 'emerald',
-  sell: 'amber',
+  sell: 'violet',
 };
 
 const STATUS_VARIANT: Record<string, string> = {

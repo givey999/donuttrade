@@ -2,14 +2,14 @@ import type { ReactNode } from 'react';
 
 const VARIANT_CLASSES: Record<string, string> = {
   success: 'border-green-900/50 bg-green-950/20 text-green-400',
-  warning: 'border-amber-900/50 bg-amber-950/20 text-amber-400',
+  warning: 'border-violet-900/50 bg-violet-950/20 text-violet-400',
   danger: 'border-red-900/50 bg-red-950/20 text-red-400',
   info: 'border-blue-900/50 bg-blue-950/20 text-blue-400',
   purple: 'border-purple-900/50 bg-purple-950/20 text-purple-400',
   orange: 'border-orange-900/50 bg-orange-950/20 text-orange-400',
   neutral: 'border-neutral-700 bg-neutral-800/50 text-neutral-400',
   emerald: 'border-emerald-500/30 bg-emerald-500/[0.08] text-emerald-400',
-  amber: 'border-amber-500/30 bg-amber-500/[0.08] text-amber-500',
+  violet: 'border-violet-500/30 bg-violet-500/[0.08] text-violet-500',
 };
 
 interface BadgeProps {

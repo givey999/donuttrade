@@ -142,7 +142,7 @@ export function CosmeticsSection() {
                 onClick={handleToggleHidden}
                 disabled={actionLoading === 'hidden-toggle'}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  data.hiddenMode ? 'bg-amber-500' : 'bg-neutral-700'
+                  data.hiddenMode ? 'bg-violet-500' : 'bg-neutral-700'
                 }`}
                 title={data.hiddenMode ? 'Disable hidden mode' : 'Enable hidden mode'}
               >
@@ -157,7 +157,7 @@ export function CosmeticsSection() {
           </div>
         </div>
         {data.hiddenMode && (
-          <p className="mt-2 text-xs text-amber-400">
+          <p className="mt-2 text-xs text-violet-400">
             Your customizations are hidden on listings while hidden mode is active
           </p>
         )}
@@ -199,7 +199,7 @@ export function CosmeticsSection() {
                           color.tier === 'volume'
                             ? 'border-purple-500/50'
                             : color.tier === 'paid'
-                              ? 'border-amber-500/40'
+                              ? 'border-violet-500/40'
                               : 'border-[#1a1a1a]'
                         }`}
                         style={{
@@ -248,7 +248,7 @@ export function CosmeticsSection() {
                         </p>
                         <div className="mt-1 h-1 w-full rounded-full bg-[#1a1a1a]">
                           <div
-                            className="h-1 rounded-full bg-amber-500 transition-all"
+                            className="h-1 rounded-full bg-violet-500 transition-all"
                             style={{
                               width: `${Math.min(100, (tradingVolume / (color.requiredVolume || 1)) * 100)}%`,
                             }}
@@ -319,7 +319,7 @@ export function CosmeticsSection() {
                         </p>
                         <div className="mt-1 h-1 w-full rounded-full bg-[#1a1a1a]">
                           <div
-                            className="h-1 rounded-full bg-amber-500 transition-all"
+                            className="h-1 rounded-full bg-violet-500 transition-all"
                             style={{
                               width: `${Math.min(100, (tradingVolume / (font.requiredVolume || 1)) * 100)}%`,
                             }}
@@ -354,7 +354,7 @@ export function CosmeticsSection() {
                     onClick={handleToggleHidden}
                     disabled={actionLoading === 'hidden-toggle'}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      data.hiddenMode ? 'bg-amber-500' : 'bg-neutral-700'
+                      data.hiddenMode ? 'bg-violet-500' : 'bg-neutral-700'
                     }`}
                   >
                     <span
@@ -370,7 +370,7 @@ export function CosmeticsSection() {
               )}
 
               {data.hiddenMode && (
-                <p className="mt-2 text-xs text-amber-400">
+                <p className="mt-2 text-xs text-violet-400">
                   Your customizations are hidden on listings while this is active
                 </p>
               )}

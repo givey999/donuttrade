@@ -20,7 +20,7 @@ interface ToastContainerProps {
 const variantStyles: Record<ToastType, string> = {
   success: 'border-emerald-500/30 bg-emerald-950/80 text-emerald-200',
   error: 'border-red-500/30 bg-red-950/80 text-red-200',
-  warning: 'border-amber-500/30 bg-amber-950/80 text-amber-200',
+  warning: 'border-violet-500/30 bg-violet-950/80 text-violet-200',
   info: 'border-blue-500/30 bg-blue-950/80 text-blue-200',
 };
 

@@ -27,7 +27,7 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-40 border-b border-[#1a1a1a] bg-[#0a0a0f]/90 backdrop-blur-xl">
       {/* Amber glow line */}
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
 
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         {/* Logo - always visible */}
@@ -45,7 +45,7 @@ export function Navbar() {
                 href={link.href}
                 className={`rounded-lg px-3 py-1.5 text-sm transition-all duration-200 ${
                   isActive
-                    ? 'border border-amber-500/20 bg-amber-500/[0.06] text-amber-500'
+                    ? 'border border-violet-500/20 bg-violet-500/[0.06] text-violet-500'
                     : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200'
                 }`}
               >
@@ -58,8 +58,8 @@ export function Navbar() {
               href="/admin"
               className={`rounded-lg px-3 py-1.5 text-sm transition-all duration-200 ${
                 pathname.startsWith('/admin')
-                  ? 'border border-amber-500/20 bg-amber-500/[0.06] text-amber-500'
-                  : 'text-amber-500/70 hover:bg-amber-500/[0.04] hover:text-amber-400'
+                  ? 'border border-violet-500/20 bg-violet-500/[0.06] text-violet-500'
+                  : 'text-violet-500/70 hover:bg-violet-500/[0.04] hover:text-violet-400'
               }`}
             >
               Admin
@@ -114,7 +114,7 @@ export function Navbar() {
                   href={link.href}
                   className={`rounded-lg px-3 py-2 text-sm transition-all duration-200 ${
                     isActive
-                      ? 'border border-amber-500/20 bg-amber-500/[0.06] text-amber-500'
+                      ? 'border border-violet-500/20 bg-violet-500/[0.06] text-violet-500'
                       : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200'
                   }`}
                 >
@@ -127,8 +127,8 @@ export function Navbar() {
                 href="/admin"
                 className={`rounded-lg px-3 py-2 text-sm transition-all duration-200 ${
                   pathname.startsWith('/admin')
-                    ? 'border border-amber-500/20 bg-amber-500/[0.06] text-amber-500'
-                    : 'text-amber-500/70 hover:bg-amber-500/[0.04] hover:text-amber-400'
+                    ? 'border border-violet-500/20 bg-violet-500/[0.06] text-violet-500'
+                    : 'text-violet-500/70 hover:bg-violet-500/[0.04] hover:text-violet-400'
                 }`}
               >
                 Admin

@@ -90,7 +90,7 @@ export default function LandingPage() {
           <span className="text-lg font-extrabold tracking-tight">DonutTrade</span>
           <Link
             href={ctaHref}
-            className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-[#0a0a0f] transition-colors hover:bg-amber-600"
+            className="rounded-lg bg-violet-500 px-5 py-2 text-sm font-semibold text-[#0a0a0f] transition-colors hover:bg-violet-600"
           >
             {isLoggedIn ? 'Go to Dashboard' : 'Start Trading'}
           </Link>
@@ -102,7 +102,7 @@ export default function LandingPage() {
         {/* Gradient glow */}
         <div
           className="pointer-events-none absolute -top-28 left-1/2 h-[500px] w-[800px] -translate-x-1/2"
-          style={{ background: 'radial-gradient(ellipse, rgba(245,158,11,0.10) 0%, rgba(245,158,11,0.03) 40%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(ellipse, rgba(139,92,246,0.10) 0%, rgba(139,92,246,0.03) 40%, transparent 70%)' }}
         />
         {/* Grid */}
         <div
@@ -143,13 +143,13 @@ export default function LandingPage() {
 
         {/* Content */}
         <div className="relative z-10">
-          <div className="mb-5 inline-block rounded-full border border-amber-500/30 bg-amber-500/[0.06] px-4 py-1 text-[11px] font-medium text-amber-500">
+          <div className="mb-5 inline-block rounded-full border border-violet-500/30 bg-violet-500/[0.06] px-4 py-1 text-[11px] font-medium text-violet-500">
             DonutSMP Trading Platform
           </div>
           <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-[52px]">
             The trusted way to{' '}
             <br className="hidden md:block" />
-            trade on <span className="text-amber-500">DonutSMP</span>
+            trade on <span className="text-violet-500">DonutSMP</span>
           </h1>
           <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-neutral-500 md:text-[16px]">
             Secure escrow trading for Minecraft items.
@@ -158,7 +158,7 @@ export default function LandingPage() {
           </p>
           <Link
             href={ctaHref}
-            className="mt-7 inline-block rounded-xl bg-amber-500 px-9 py-3.5 text-[15px] font-bold text-[#0a0a0f] transition-colors hover:bg-amber-600"
+            className="mt-7 inline-block rounded-xl bg-violet-500 px-9 py-3.5 text-[15px] font-bold text-[#0a0a0f] transition-colors hover:bg-violet-600"
           >
             {isLoggedIn ? 'Go to Dashboard' : 'Start Trading'}
           </Link>
@@ -239,7 +239,7 @@ export default function LandingPage() {
         <p className="mb-7 mt-3 text-sm text-neutral-500">Sign in with your Microsoft account and start trading in seconds.</p>
         <Link
           href={ctaHref}
-          className="inline-block rounded-xl bg-amber-500 px-9 py-3.5 text-[15px] font-bold text-[#0a0a0f] transition-colors hover:bg-amber-600"
+          className="inline-block rounded-xl bg-violet-500 px-9 py-3.5 text-[15px] font-bold text-[#0a0a0f] transition-colors hover:bg-violet-600"
         >
           {isLoggedIn ? 'Go to Dashboard' : 'Start Trading'}
         </Link>
@@ -262,7 +262,7 @@ function Particle({ cls, top, left, right, size, opacity, delay, blur }: {
   const style: React.CSSProperties = {
     position: 'absolute', top, borderRadius: '50%', pointerEvents: 'none',
     width: size, height: size,
-    background: `rgba(245,158,11,${opacity})`,
+    background: `rgba(139,92,246,${opacity})`,
     animation: `${cls} ${cls.startsWith('pulse') ? 4 : cls.includes('drift') ? 8 : 7}s ease-in-out infinite`,
     animationDelay: `${delay}s`,
     ...(left ? { left } : {}),
@@ -284,7 +284,7 @@ function StatItem({ value, label }: { value: string; label: string }) {
 function StepCard({ num, title, desc }: { num: number; title: string; desc: string }) {
   return (
     <div className="rounded-xl border border-[#1a1a1a] bg-white/[0.02] p-8 text-center">
-      <div className="mx-auto mb-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-sm font-bold text-amber-500">
+      <div className="mx-auto mb-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-violet-500/20 bg-violet-500/10 text-sm font-bold text-violet-500">
         {num}
       </div>
       <h3 className="mb-2 text-base font-bold">{title}</h3>
@@ -297,7 +297,7 @@ function TrustCard({ icon, title, desc }: { icon: string; title: string; desc: s
   return (
     <div className="rounded-xl border border-[#1a1a1a] bg-white/[0.02] p-8">
       <div
-        className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-lg"
+        className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-violet-500/20 bg-violet-500/10 text-lg"
         dangerouslySetInnerHTML={{ __html: icon }}
       />
       <h3 className="mb-2 text-base font-bold">{title}</h3>
@@ -315,7 +315,7 @@ function PreviewRow({ type, item, qty, price, trader, expires }: {
         <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase ${
           type === 'buy'
             ? 'border-emerald-500/30 bg-emerald-500/[0.08] text-emerald-400'
-            : 'border-amber-500/30 bg-amber-500/[0.08] text-amber-500'
+            : 'border-violet-500/30 bg-violet-500/[0.08] text-violet-500'
         }`}>
           {type}
         </span>

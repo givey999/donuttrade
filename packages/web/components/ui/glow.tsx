@@ -4,7 +4,7 @@ export function GradientGlow() {
       className="pointer-events-none absolute -top-28 left-1/2 h-[500px] w-[800px] -translate-x-1/2"
       style={{
         background:
-          'radial-gradient(ellipse, rgba(245,158,11,0.10) 0%, rgba(245,158,11,0.03) 40%, transparent 70%)',
+          'radial-gradient(ellipse, rgba(139,92,246,0.10) 0%, rgba(139,92,246,0.03) 40%, transparent 70%)',
       }}
     />
   );

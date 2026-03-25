@@ -82,7 +82,7 @@ export function EditPriceModal({ order, onClose, onSuccess }: EditPriceModalProp
         {newPriceNum > 0 && newPriceNum !== currentPrice && order.type === 'buy' && (
           <div className={`rounded-lg border px-3 py-2 text-sm ${
             escrowDiff > 0
-              ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
+              ? 'border-violet-500/30 bg-violet-500/10 text-violet-200'
               : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
           }`}>
             {escrowDiff > 0

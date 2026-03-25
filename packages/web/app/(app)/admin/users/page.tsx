@@ -131,7 +131,7 @@ export default function AdminUsersPage() {
                       {u.isBanned ? (
                         <span className="text-xs text-red-400">Banned</span>
                       ) : u.isTimedOut ? (
-                        <span className="text-xs text-amber-400">Timed Out</span>
+                        <span className="text-xs text-violet-400">Timed Out</span>
                       ) : u.verificationStatus === 'verified' ? (
                         <span className="text-xs text-green-400">Verified</span>
                       ) : (

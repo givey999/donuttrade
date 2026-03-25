@@ -219,7 +219,7 @@ function CreateOrderContent() {
                 onClick={() => setType('sell')}
                 className={`rounded-lg border px-3 py-2 text-sm font-medium transition-all duration-200 ${
                   type === 'sell'
-                    ? 'border-amber-500/30 bg-amber-500/[0.08] text-amber-500'
+                    ? 'border-violet-500/30 bg-violet-500/[0.08] text-violet-500'
                     : 'border-[#1a1a1a] bg-white/[0.02] text-neutral-400 hover:bg-white/[0.04]'
                 }`}
               >
@@ -271,7 +271,7 @@ function CreateOrderContent() {
               className="mt-1.5"
             />
             {pricePerUnit && price > 0 && /[a-zA-Z]/.test(pricePerUnit) && (
-              <p className="mt-1 text-xs text-amber-500/80">${price.toLocaleString()}</p>
+              <p className="mt-1 text-xs text-violet-500/80">${price.toLocaleString()}</p>
             )}
             {itemSummary?.lastSoldPrice && (
               <p className="mt-1 text-xs text-neutral-500">
@@ -291,7 +291,7 @@ function CreateOrderContent() {
                 onClick={() => setIsPremium(false)}
                 className={`rounded-lg border px-3 py-2 text-sm transition-all duration-200 ${
                   !isPremium
-                    ? 'border-amber-500/30 bg-amber-500/[0.08] text-amber-500'
+                    ? 'border-violet-500/30 bg-violet-500/[0.08] text-violet-500'
                     : 'border-[#1a1a1a] bg-white/[0.02] text-neutral-400 hover:bg-white/[0.04]'
                 }`}
               >
@@ -301,7 +301,7 @@ function CreateOrderContent() {
                 onClick={() => setIsPremium(true)}
                 className={`rounded-lg border px-3 py-2 text-sm transition-all duration-200 ${
                   isPremium
-                    ? 'border-amber-500/30 bg-amber-500/[0.08] text-amber-500'
+                    ? 'border-violet-500/30 bg-violet-500/[0.08] text-violet-500'
                     : 'border-[#1a1a1a] bg-white/[0.02] text-neutral-400 hover:bg-white/[0.04]'
                 }`}
               >
@@ -318,7 +318,7 @@ function CreateOrderContent() {
                 <button
                   onClick={() => setBorderColor('')}
                   className={`h-7 w-7 rounded-full border-2 transition-all ${
-                    !borderColor ? 'border-amber-500 ring-2 ring-amber-500/30' : 'border-[#1a1a1a]'
+                    !borderColor ? 'border-violet-500 ring-2 ring-violet-500/30' : 'border-[#1a1a1a]'
                   } bg-[#1a1a1a]`}
                   title="None"
                 />
@@ -351,7 +351,7 @@ function CreateOrderContent() {
                 <button
                   onClick={() => setUsernameColor('')}
                   className={`h-7 w-7 rounded-full border-2 transition-all ${
-                    !usernameColor ? 'border-amber-500 ring-2 ring-amber-500/30' : 'border-[#1a1a1a]'
+                    !usernameColor ? 'border-violet-500 ring-2 ring-violet-500/30' : 'border-[#1a1a1a]'
                   } bg-[#1a1a1a]`}
                   title="None"
                 />
@@ -385,7 +385,7 @@ function CreateOrderContent() {
                   onClick={() => setUsernameFont('')}
                   className={`rounded-lg border px-3 py-1.5 text-xs transition-all ${
                     !usernameFont
-                      ? 'border-amber-500/30 bg-amber-500/[0.08] text-amber-500'
+                      ? 'border-violet-500/30 bg-violet-500/[0.08] text-violet-500'
                       : 'border-[#1a1a1a] bg-white/[0.02] text-neutral-400 hover:bg-white/[0.04]'
                   }`}
                 >
@@ -397,7 +397,7 @@ function CreateOrderContent() {
                     onClick={() => setUsernameFont(font.id)}
                     className={`rounded-lg border px-3 py-1.5 text-xs transition-all ${
                       usernameFont === font.id
-                        ? 'border-amber-500/30 bg-amber-500/[0.08] text-amber-500'
+                        ? 'border-violet-500/30 bg-violet-500/[0.08] text-violet-500'
                         : 'border-[#1a1a1a] bg-white/[0.02] text-neutral-400 hover:bg-white/[0.04]'
                     }`}
                     style={{ fontFamily: font.fontFamily }}
@@ -442,7 +442,7 @@ function CreateOrderContent() {
                 {type === 'sell' && (
                   <div className="flex justify-between border-t border-[#1a1a1a] pt-1 font-medium">
                     <span>Items reserved</span>
-                    <span className="text-amber-400">{qty}x {selectedItem?.displayName}</span>
+                    <span className="text-violet-400">{qty}x {selectedItem?.displayName}</span>
                   </div>
                 )}
               </div>

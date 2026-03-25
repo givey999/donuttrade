@@ -166,7 +166,7 @@ function MarketplaceContent() {
                   } : undefined}
                 >
                   <div className="flex items-center justify-between">
-                    <Badge variant={order.type === 'buy' ? 'emerald' : 'amber'}>
+                    <Badge variant={order.type === 'buy' ? 'emerald' : 'violet'}>
                       {order.type}
                     </Badge>
                     <span className="text-xs text-neutral-500">{timeRemaining(order.expiresAt)}</span>
@@ -192,7 +192,7 @@ function MarketplaceContent() {
                   {/* Progress bar */}
                   <div className="mt-3 h-1.5 rounded-full bg-[#1a1a1a]">
                     <div
-                      className="h-1.5 rounded-full bg-amber-500 transition-all"
+                      className="h-1.5 rounded-full bg-violet-500 transition-all"
                       style={{ width: `${(order.filledQuantity / order.quantity) * 100}%` }}
                     />
                   </div>

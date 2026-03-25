@@ -24,7 +24,7 @@ const STATUS_TABS = [
 
 const TYPE_VARIANT: Record<string, string> = {
   buy: 'emerald',
-  sell: 'amber',
+  sell: 'violet',
 };
 
 const STATUS_VARIANT: Record<string, string> = {
@@ -152,14 +152,14 @@ function MyOrdersContent() {
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           href={`/orders/${order.id}`}
-                          className="text-xs text-neutral-400 transition-colors hover:text-amber-400"
+                          className="text-xs text-neutral-400 transition-colors hover:text-violet-400"
                         >
                           View
                         </Link>
                         {order.status === 'active' && order.filledQuantity === 0 && !isTimedOut && (
                           <button
                             onClick={() => setEditingOrder(order)}
-                            className="text-xs text-amber-400 transition-colors hover:text-amber-300"
+                            className="text-xs text-violet-400 transition-colors hover:text-violet-300"
                           >
                             Edit
                           </button>
