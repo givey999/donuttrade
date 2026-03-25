@@ -24,7 +24,7 @@ interface PendingWithdrawal {
 
 /**
  * WebhookClient — HTTP client for communicating with the DonutTrade API.
- * Handles deposit reporting, withdrawal polling, and withdrawal confirmations.
+ * Handles verification, deposit reporting, withdrawal polling, and withdrawal confirmations.
  */
 export class WebhookClient {
   private apiUrl: string;
@@ -40,6 +40,43 @@ export class WebhookClient {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Report a payment to the verification API.
+   * Returns whether the payment matched a pending verification.
+   */
+  async reportVerification(username: string, amount: number): Promise<boolean> {
+    try {
+      const res = await fetch(`${this.apiUrl}/internal/verification/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.secret}`,
+        },
+        body: JSON.stringify({
+          username,
+          amount,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      if (!res.ok) {
+        console.error(`[Webhook] Verification API returned ${res.status}: ${await res.text()}`);
+        return false;
+      }
+
+      const data = await res.json() as { success: boolean; data: { verified: boolean } };
+
+      if (data.data.verified) {
+        console.log(`[Webhook] Payment matched verification for ${username}`);
+      }
+
+      return data.data.verified;
+    } catch (err) {
+      console.error(`[Webhook] Failed to report verification:`, (err as Error).message);
+      return false;
+    }
   }
 
   /**

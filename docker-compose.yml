@@ -42,7 +42,7 @@ services:
       dockerfile: packages/web/Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=https://moldo.go.ro:9443
-        - NEXT_PUBLIC_DEPOSIT_BOT_NAME=${DEPOSIT_BOT_DISPLAY_NAME:-DonutTradeDeposit}
+        - NEXT_PUBLIC_MC_BOT_NAME=${MC_BOT_DISPLAY_NAME:-DonutTrade}
         - NEXT_PUBLIC_DISCORD_INVITE_URL=${NEXT_PUBLIC_DISCORD_INVITE_URL:-}
     container_name: donuttrade-web
     environment:
@@ -51,34 +51,18 @@ services:
       - api
     restart: unless-stopped
 
-  # Verification Bot
-  bot-bridge:
+  # Minecraft Bot (unified: verification + deposits + withdrawals)
+  mc-bot:
     build:
       context: .
-      dockerfile: packages/bot-bridge/Dockerfile
-    container_name: donuttrade-bot-bridge
+      dockerfile: packages/mc-bot/Dockerfile
+    container_name: donuttrade-mc-bot
     environment:
       - API_URL=http://api:3001
     env_file:
       - .env
     volumes:
-      - bot_nmp_cache:/root/.minecraft/nmp-cache
-    depends_on:
-      - api
-    restart: unless-stopped
-
-  # Deposit Bot
-  deposit-bot:
-    build:
-      context: .
-      dockerfile: packages/deposit-bot/Dockerfile
-    container_name: donuttrade-deposit-bot
-    environment:
-      - API_URL=http://api:3001
-    env_file:
-      - .env
-    volumes:
-      - deposit_bot_nmp_cache:/root/.minecraft/nmp-cache
+      - mc_bot_nmp_cache:/root/.minecraft/nmp-cache
     depends_on:
       - api
     restart: unless-stopped
@@ -171,7 +155,5 @@ volumes:
     driver: local
   caddy_config:
     driver: local
-  bot_nmp_cache:
-    driver: local
-  deposit_bot_nmp_cache:
+  mc_bot_nmp_cache:
     driver: local

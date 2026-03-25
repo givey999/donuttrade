@@ -11,16 +11,16 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY tsconfig.base.json ./
 
 # Copy package files for dependency installation
-COPY packages/bot-bridge/package.json ./packages/bot-bridge/
+COPY packages/mc-bot/package.json ./packages/mc-bot/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile --filter @donuttrade/bot-bridge
+RUN pnpm install --frozen-lockfile --filter @donuttrade/mc-bot
 
 # Copy source code
-COPY packages/bot-bridge/ ./packages/bot-bridge/
+COPY packages/mc-bot/ ./packages/mc-bot/
 
 # Build
-RUN pnpm --filter @donuttrade/bot-bridge build
+RUN pnpm --filter @donuttrade/mc-bot build
 
 # Production stage
 FROM node:20-alpine AS runner
@@ -31,9 +31,9 @@ WORKDIR /app
 
 # Copy built output and dependencies
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/bot-bridge ./packages/bot-bridge
+COPY --from=builder /app/packages/mc-bot ./packages/mc-bot
 COPY package.json pnpm-workspace.yaml ./
 
-WORKDIR /app/packages/bot-bridge
+WORKDIR /app/packages/mc-bot
 
 CMD ["node", "dist/index.js"]

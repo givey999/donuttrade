@@ -1,7 +1,7 @@
 {
-  "name": "@donuttrade/deposit-bot",
+  "name": "@donuttrade/mc-bot",
   "version": "1.0.0",
-  "description": "Minecraft deposit bot for DonutTrade — handles deposits and withdrawals",
+  "description": "Unified Minecraft bot for DonutTrade — handles verification, deposits, and withdrawals",
   "private": true,
   "type": "module",
   "scripts": {

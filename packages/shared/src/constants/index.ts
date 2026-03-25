@@ -66,7 +66,7 @@ export const AUTH_PROVIDERS = ['microsoft', 'discord', 'email'] as const;
  * Payment verification constants
  */
 export const VERIFICATION_AMOUNT_MIN = 1;
-export const VERIFICATION_AMOUNT_MAX = 1000;
+export const VERIFICATION_AMOUNT_MAX = 999;
 export const VERIFICATION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
@@ -91,7 +91,7 @@ export const RateLimits = {
 /**
  * Deposit & Withdrawal limits (Phase 7)
  */
-export const DEPOSIT_MIN_AMOUNT = 1;
+export const DEPOSIT_MIN_AMOUNT = 1_000;
 export const DEPOSIT_MAX_AMOUNT = 10_000_000;
 export const WITHDRAWAL_MIN_AMOUNT = 1;
 export const WITHDRAWAL_MAX_AMOUNT = 10_000_000;

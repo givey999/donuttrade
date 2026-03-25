@@ -37,10 +37,9 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32).optional(),
   JWT_REFRESH_SECRET: z.string().min(32).optional(),
 
-  // Bot Bridge
+  // Bot
   BOT_WEBHOOK_SECRET: z.string().min(32),
-  VERIFICATION_BOT_DISPLAY_NAME: z.string().default('DonutTradeBot'),
-  DEPOSIT_BOT_DISPLAY_NAME: z.string().default('DonutTradeDeposit'),
+  MC_BOT_DISPLAY_NAME: z.string().default('DonutTrade'),
 
   // Marketplace
   MARKETPLACE_COMMISSION_RATE: z.string().transform(Number).default('0.02'),
@@ -107,8 +106,7 @@ export function getRedactedConfig(): Record<string, string | number | boolean | 
     JWT_REFRESH_SECRET: config.JWT_REFRESH_SECRET ? '[REDACTED]' : '[NOT SET]',
     BOT_WEBHOOK_SECRET: config.BOT_WEBHOOK_SECRET ? '[REDACTED]' : '[NOT SET]',
     CODE_SIGNING_SECRET: config.CODE_SIGNING_SECRET ? '[REDACTED]' : '[NOT SET]',
-    VERIFICATION_BOT_DISPLAY_NAME: config.VERIFICATION_BOT_DISPLAY_NAME,
-    DEPOSIT_BOT_DISPLAY_NAME: config.DEPOSIT_BOT_DISPLAY_NAME,
+    MC_BOT_DISPLAY_NAME: config.MC_BOT_DISPLAY_NAME,
   };
 }
 

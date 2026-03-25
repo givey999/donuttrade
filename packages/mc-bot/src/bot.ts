@@ -19,10 +19,10 @@ export interface BotConfig {
 }
 
 /**
- * MinecraftDepositBot — connection layer wrapping Mineflayer.
- * Same pattern as bot-bridge but with sendChat/sendCommand for payouts.
+ * MinecraftBot — unified connection layer wrapping Mineflayer.
+ * Handles verification payments, deposits, and withdrawal payouts.
  */
-export class MinecraftDepositBot extends EventEmitter {
+export class MinecraftBot extends EventEmitter {
   private config: BotConfig;
   private bot: mineflayer.Bot | null = null;
   private reconnectAttempts = 0;

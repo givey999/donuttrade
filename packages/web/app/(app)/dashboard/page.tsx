@@ -15,8 +15,8 @@ import { FadeIn } from '@/components/ui/animate';
 import { CosmeticsSection } from './cosmetics-section';
 import type { TransactionRecord, TransactionType, PaginationMeta, InventoryItemRecord } from '@donuttrade/shared';
 
-const DEPOSIT_BOT_NAME = process.env.NEXT_PUBLIC_DEPOSIT_BOT_NAME || 'DonutTradeDeposit';
-const DEPOSIT_MIN = 1;
+const DEPOSIT_BOT_NAME = process.env.NEXT_PUBLIC_MC_BOT_NAME || 'DonutTrade';
+const DEPOSIT_MIN = 1_000;
 const DEPOSIT_MAX = 10_000_000;
 const WITHDRAWAL_MIN = 1;
 const WITHDRAWAL_MAX = 10_000_000;

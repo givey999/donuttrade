@@ -54,7 +54,7 @@ export const verificationService = {
     return {
       amount,
       expiresAt,
-      botUsername: config.VERIFICATION_BOT_DISPLAY_NAME,
+      botUsername: config.MC_BOT_DISPLAY_NAME,
     };
   },
 
@@ -80,7 +80,7 @@ export const verificationService = {
         status: 'expired' as const,
         amount: user.verificationAmount,
         expiresAt: user.verificationExpiresAt,
-        botUsername: config.VERIFICATION_BOT_DISPLAY_NAME,
+        botUsername: config.MC_BOT_DISPLAY_NAME,
       };
     }
 
@@ -88,7 +88,7 @@ export const verificationService = {
       status: user.verificationStatus as 'pending' | 'verified' | 'expired',
       amount: user.verificationAmount,
       expiresAt: user.verificationExpiresAt,
-      botUsername: config.VERIFICATION_BOT_DISPLAY_NAME,
+      botUsername: config.MC_BOT_DISPLAY_NAME,
     };
   },
 
@@ -130,7 +130,7 @@ export const verificationService = {
     return {
       amount,
       expiresAt,
-      botUsername: config.VERIFICATION_BOT_DISPLAY_NAME,
+      botUsername: config.MC_BOT_DISPLAY_NAME,
     };
   },
 
