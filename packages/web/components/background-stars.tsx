@@ -32,7 +32,7 @@ export function BackgroundStars() {
   const [stars, setStars] = useState<Star[]>([]);
 
   useEffect(() => {
-    setStars(Array.from({ length: 30 }, (_, i) => generateStar(i)));
+    setStars(Array.from({ length: 60 }, (_, i) => generateStar(i)));
 
     // Slowly regenerate some stars for variety
     const interval = setInterval(() => {
