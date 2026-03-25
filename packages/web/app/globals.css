@@ -124,6 +124,15 @@
   animation: sparkle-pop 2s ease-in-out infinite;
 }
 
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.animate-star-twinkle {
+  animation: star-twinkle 4s ease-in-out infinite;
+}
+
 /* Dark scrollbar for dropdowns and panels */
 .scrollbar-dark::-webkit-scrollbar {
   width: 6px;
