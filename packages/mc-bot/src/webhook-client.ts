@@ -162,7 +162,6 @@ export class WebhookClient {
       const res = await fetch(`${this.apiUrl}/internal/withdrawals/${id}/claim`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.secret}`,
         },
       });
@@ -187,7 +186,6 @@ export class WebhookClient {
       const res = await fetch(`${this.apiUrl}/internal/withdrawals/${id}/confirm`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.secret}`,
         },
       });
