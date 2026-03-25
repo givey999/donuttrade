@@ -22,6 +22,45 @@ const WITHDRAWAL_MIN = 1;
 const WITHDRAWAL_MAX = 10_000_000;
 const DISCORD_INVITE_URL = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || '#';
 
+const SUFFIXES: Record<string, number> = {
+  k: 1_000,
+  m: 1_000_000,
+  b: 1_000_000_000,
+  t: 1_000_000_000_000,
+};
+
+/**
+ * Parse an amount string with optional K/M/B/T suffix.
+ * Accepts: "3.8m", "4,3M", "1,500", "100.000", "2.5k"
+ */
+function parseAmount(input: string): number {
+  const trimmed = input.trim().toLowerCase();
+  if (!trimmed) return 0;
+
+  const suffix = trimmed.slice(-1);
+  const multiplier = SUFFIXES[suffix];
+
+  if (multiplier) {
+    const num = parseFloat(trimmed.slice(0, -1).replace(',', '.'));
+    return isNaN(num) ? 0 : Math.round(num * multiplier);
+  }
+
+  const stripped = trimmed.replace(/[.,](?=\d{3}(?:[.,]|$))/g, '');
+  const num = parseFloat(stripped.replace(',', '.'));
+  return isNaN(num) ? 0 : Math.round(num);
+}
+
+/**
+ * Format a large number as a short string: 12253667889 → "~12.25B"
+ */
+function formatShortBalance(value: number): string | null {
+  if (value >= 1_000_000_000_000) return `~${(value / 1_000_000_000_000).toFixed(2)}T`;
+  if (value >= 1_000_000_000) return `~${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `~${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 10_000) return `~${(value / 1_000).toFixed(1)}K`;
+  return null; // Don't show for small amounts
+}
+
 interface CatalogItem {
   id: string;
   displayName: string;
@@ -226,8 +265,8 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   };
 
   const handleMoneySubmit = useCallback(async () => {
-    const num = parseFloat(amount);
-    if (isNaN(num) || num < WITHDRAWAL_MIN || num > WITHDRAWAL_MAX) {
+    const num = parseAmount(amount);
+    if (!num || num < WITHDRAWAL_MIN || num > WITHDRAWAL_MAX) {
       setError(`Amount must be between $${WITHDRAWAL_MIN.toLocaleString()} and $${WITHDRAWAL_MAX.toLocaleString()}`);
       return;
     }
@@ -328,14 +367,12 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-500">$</span>
                 <Input
                   id="wd-amount"
-                  type="number"
-                  min={WITHDRAWAL_MIN}
-                  max={WITHDRAWAL_MAX}
-                  step="1"
+                  type="text"
+                  inputMode="decimal"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   disabled={loading || cooldownSeconds > 0}
-                  placeholder="0"
+                  placeholder="3.8M"
                   className="pl-7"
                 />
               </div>
@@ -608,6 +645,9 @@ function DashboardContent() {
             <p className="mt-2 text-4xl font-extrabold text-green-400">
               ${formattedBalance}
             </p>
+            {formatShortBalance(balance) && (
+              <p className="mt-1 text-sm text-neutral-500">{formatShortBalance(balance)}</p>
+            )}
 
             {/* Deposit / Withdraw buttons */}
             {isVerified && (
