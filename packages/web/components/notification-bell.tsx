@@ -99,7 +99,7 @@ export function NotificationBell() {
               No notifications yet
             </div>
           ) : (
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-80 overflow-y-auto scrollbar-dark">
               {visible.map((n) => (
                 <button
                   key={n.id}
