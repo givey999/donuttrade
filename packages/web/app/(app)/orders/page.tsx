@@ -152,14 +152,14 @@ function MyOrdersContent() {
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           href={`/orders/${order.id}`}
-                          className="text-xs text-neutral-400 transition-colors hover:text-violet-400"
+                          className="text-xs text-neutral-400 transition-colors hover:text-violet-500"
                         >
                           View
                         </Link>
                         {order.status === 'active' && order.filledQuantity === 0 && !isTimedOut && (
                           <button
                             onClick={() => setEditingOrder(order)}
-                            className="text-xs text-violet-400 transition-colors hover:text-violet-300"
+                            className="text-xs text-violet-500 transition-colors hover:text-violet-400"
                           >
                             Edit
                           </button>

@@ -88,13 +88,13 @@ function DepositModal({ onClose }: { onClose: () => void }) {
       <div className="mt-3 flex gap-1 border-b border-neutral-800">
         <button
           onClick={() => { setTab('money'); setGeneratedCode(null); setError(null); }}
-          className={`px-3 py-1.5 text-xs font-medium rounded-t ${tab === 'money' ? 'bg-white/5 text-violet-400' : 'text-neutral-500'}`}
+          className={`px-3 py-1.5 text-xs font-medium rounded-t ${tab === 'money' ? 'bg-white/5 text-violet-500' : 'text-neutral-500'}`}
         >
           Deposit Money
         </button>
         <button
           onClick={() => { setTab('items'); setGeneratedCode(null); setError(null); }}
-          className={`px-3 py-1.5 text-xs font-medium rounded-t ${tab === 'items' ? 'bg-white/5 text-violet-400' : 'text-neutral-500'}`}
+          className={`px-3 py-1.5 text-xs font-medium rounded-t ${tab === 'items' ? 'bg-white/5 text-violet-500' : 'text-neutral-500'}`}
         >
           Deposit Items
         </button>
@@ -104,7 +104,7 @@ function DepositModal({ onClose }: { onClose: () => void }) {
         <>
           <p className="mt-3 text-sm text-neutral-400">Send money to the deposit bot in-game:</p>
           <div className="mt-3 rounded-lg border border-[#1a1a1a] bg-white/[0.03] p-3">
-            <code className="text-sm text-violet-400">/pay {DEPOSIT_BOT_NAME} &lt;amount&gt;</code>
+            <code className="text-sm text-violet-500">/pay {DEPOSIT_BOT_NAME} &lt;amount&gt;</code>
           </div>
           <div className="mt-4 space-y-2 text-xs text-neutral-500">
             <p>Min: ${DEPOSIT_MIN.toLocaleString()} &mdash; Max: ${DEPOSIT_MAX.toLocaleString()}</p>
@@ -124,7 +124,7 @@ function DepositModal({ onClose }: { onClose: () => void }) {
               {copied ? '✓' : '📋'}
             </button>
           </div>
-          <p className="mt-1.5 text-xs text-violet-500/80">This code expires in ~3 hours</p>
+          <p className="mt-1.5 text-xs text-violet-600/80">This code expires in ~3 hours</p>
           <div className="mt-3 rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-3">
             <p className="text-xs font-semibold text-neutral-300">Next steps:</p>
             <ol className="mt-1 list-decimal pl-4 text-xs text-neutral-400 space-y-0.5">
@@ -298,13 +298,13 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
       <div className="mt-3 flex gap-1 border-b border-neutral-800">
         <button
           onClick={() => { setTab('money'); setGeneratedCode(null); setItemError(null); }}
-          className={`px-3 py-1.5 text-xs font-medium rounded-t ${tab === 'money' ? 'bg-white/5 text-violet-400' : 'text-neutral-500'}`}
+          className={`px-3 py-1.5 text-xs font-medium rounded-t ${tab === 'money' ? 'bg-white/5 text-violet-500' : 'text-neutral-500'}`}
         >
           Withdraw Money
         </button>
         <button
           onClick={() => { setTab('items'); setGeneratedCode(null); setItemError(null); }}
-          className={`px-3 py-1.5 text-xs font-medium rounded-t ${tab === 'items' ? 'bg-white/5 text-violet-400' : 'text-neutral-500'}`}
+          className={`px-3 py-1.5 text-xs font-medium rounded-t ${tab === 'items' ? 'bg-white/5 text-violet-500' : 'text-neutral-500'}`}
         >
           Withdraw Items
         </button>
@@ -342,7 +342,7 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             </div>
 
             {cooldownSeconds > 0 && (
-              <p className="mt-2 text-xs text-violet-400">
+              <p className="mt-2 text-xs text-violet-500">
                 Cooldown: try again in {formatCooldown(cooldownSeconds)}
               </p>
             )}
@@ -373,7 +373,7 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
               {copied ? '✓' : '📋'}
             </button>
           </div>
-          <p className="mt-1.5 text-xs text-violet-500/80">This code expires in ~3 hours</p>
+          <p className="mt-1.5 text-xs text-violet-600/80">This code expires in ~3 hours</p>
           <div className="mt-3 rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-3">
             <p className="text-xs font-semibold text-neutral-300">Next steps:</p>
             <ol className="mt-1 list-decimal pl-4 text-xs text-neutral-400 space-y-0.5">
@@ -458,7 +458,7 @@ function InventorySection() {
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-extrabold text-green-400">{item.availableQuantity}</span>
                 {item.reservedQuantity > 0 && (
-                  <span className="text-xs text-violet-400">({item.reservedQuantity} reserved)</span>
+                  <span className="text-xs text-violet-500">({item.reservedQuantity} reserved)</span>
                 )}
               </div>
               <Badge variant="neutral" className="mt-2">

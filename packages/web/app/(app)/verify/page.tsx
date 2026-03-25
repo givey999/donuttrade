@@ -167,7 +167,7 @@ export default function VerifyPage() {
       {/* Gradient glow */}
       <div
         className="pointer-events-none absolute -top-28 left-1/2 h-[500px] w-[800px] -translate-x-1/2"
-        style={{ background: 'radial-gradient(ellipse, rgba(139,92,246,0.10) 0%, rgba(139,92,246,0.03) 40%, transparent 70%)' }}
+        style={{ background: 'radial-gradient(ellipse, rgba(124,58,237,0.10) 0%, rgba(124,58,237,0.03) 40%, transparent 70%)' }}
       />
       {/* Grid */}
       <div
@@ -217,7 +217,7 @@ export default function VerifyPage() {
             {/* Countdown */}
             <div className="text-center">
               <span className="text-xs text-neutral-500">Expires in </span>
-              <span className="font-mono text-sm text-violet-400">{timeLeft}</span>
+              <span className="font-mono text-sm text-violet-500">{timeLeft}</span>
             </div>
 
             <p className="mt-4 text-center text-xs text-neutral-600">
@@ -245,7 +245,7 @@ export default function VerifyPage() {
             </p>
             <button
               onClick={handleRetry}
-              className="mt-4 rounded-lg bg-violet-500 px-4 py-2 text-sm font-semibold text-[#0a0a0f] transition-all duration-200 hover:bg-violet-600"
+              className="mt-4 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-[#0a0a0f] transition-all duration-200 hover:bg-violet-700"
             >
               Try Again
             </button>

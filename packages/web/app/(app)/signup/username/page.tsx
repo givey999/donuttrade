@@ -44,7 +44,7 @@ export default function UsernamePage() {
       {/* Gradient glow */}
       <div
         className="pointer-events-none absolute -top-28 left-1/2 h-[500px] w-[800px] -translate-x-1/2"
-        style={{ background: 'radial-gradient(ellipse, rgba(139,92,246,0.10) 0%, rgba(139,92,246,0.03) 40%, transparent 70%)' }}
+        style={{ background: 'radial-gradient(ellipse, rgba(124,58,237,0.10) 0%, rgba(124,58,237,0.03) 40%, transparent 70%)' }}
       />
       {/* Grid */}
       <div
@@ -66,11 +66,11 @@ export default function UsernamePage() {
           <h2 className="mb-4 text-center text-lg font-semibold">Minecraft Username</h2>
 
           {/* Bedrock disclaimer */}
-          <div className="mb-5 rounded-lg border border-violet-500/20 bg-violet-500/[0.06] p-3">
-            <p className="text-sm font-medium text-violet-400">Bedrock Edition</p>
-            <p className="mt-1 text-xs text-violet-200/70">
+          <div className="mb-5 rounded-lg border border-violet-600/20 bg-violet-600/[0.06] p-3">
+            <p className="text-sm font-medium text-violet-500">Bedrock Edition</p>
+            <p className="mt-1 text-xs text-violet-300/70">
               If you play on Bedrock Edition, write your username with a dot (.) in front.{' '}
-              <span className="font-mono text-violet-300">.PlayerName</span>
+              <span className="font-mono text-violet-400">.PlayerName</span>
             </p>
           </div>
 
@@ -81,7 +81,7 @@ export default function UsernamePage() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Your Minecraft username"
               maxLength={17}
-              className="w-full rounded-lg border border-[#1a1a1a] bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-neutral-600 outline-none transition-colors focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30"
+              className="w-full rounded-lg border border-[#1a1a1a] bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-neutral-600 outline-none transition-colors focus:border-violet-600/50 focus:ring-1 focus:ring-violet-600/30"
               autoFocus
               disabled={loading}
             />
@@ -93,7 +93,7 @@ export default function UsernamePage() {
             <button
               type="submit"
               disabled={loading || username.trim().length < 3}
-              className="mt-4 w-full rounded-lg bg-violet-500 px-4 py-3 text-sm font-semibold text-[#0a0a0f] transition-all duration-200 hover:bg-violet-600 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-4 w-full rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-[#0a0a0f] transition-all duration-200 hover:bg-violet-700 hover:shadow-[0_0_20px_rgba(124,58,237,0.15)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Continue'}
             </button>

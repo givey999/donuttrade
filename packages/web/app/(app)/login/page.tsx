@@ -20,7 +20,7 @@ export default function LoginPage() {
       {/* Gradient glow */}
       <div
         className="pointer-events-none absolute -top-28 left-1/2 h-[500px] w-[800px] -translate-x-1/2"
-        style={{ background: 'radial-gradient(ellipse, rgba(139,92,246,0.10) 0%, rgba(139,92,246,0.03) 40%, transparent 70%)' }}
+        style={{ background: 'radial-gradient(ellipse, rgba(124,58,237,0.10) 0%, rgba(124,58,237,0.03) 40%, transparent 70%)' }}
       />
       {/* Grid */}
       <div
@@ -31,7 +31,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-sm animate-fade-in">
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="mb-4 inline-block rounded-full border border-violet-500/30 bg-violet-500/[0.06] px-4 py-1 text-[11px] font-medium text-violet-500">
+          <div className="mb-4 inline-block rounded-full border border-violet-600/30 bg-violet-600/[0.06] px-4 py-1 text-[11px] font-medium text-violet-600">
             DonutSMP Trading Platform
           </div>
           <h1 className="text-[28px] font-extrabold tracking-tight">DonutTrade</h1>
@@ -49,7 +49,7 @@ export default function LoginPage() {
             href={`${API_URL}/auth/microsoft?redirect=${encodeURIComponent('/auth/callback')}`}
             icon={<MicrosoftIcon />}
             label="Sign in with Microsoft"
-            className="bg-violet-500 text-[#0a0a0f] font-semibold hover:bg-violet-600 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]"
+            className="bg-violet-600 text-[#0a0a0f] font-semibold hover:bg-violet-700 hover:shadow-[0_0_20px_rgba(124,58,237,0.15)]"
           />
 
           {/* Divider */}

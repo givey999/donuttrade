@@ -196,7 +196,7 @@ export default function AdminAuditLogPage() {
               <div className="mt-2 rounded-lg border border-[#1a1a1a] bg-white/[0.02] p-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-neutral-400">Details for action by {log.actorUsername}</span>
-                  <button onClick={() => setExpandedId(null)} className="text-xs text-neutral-500 transition-colors hover:text-violet-400">Close</button>
+                  <button onClick={() => setExpandedId(null)} className="text-xs text-neutral-500 transition-colors hover:text-violet-500">Close</button>
                 </div>
                 <pre className="mt-2 max-h-48 overflow-auto rounded-lg border border-[#1a1a1a] bg-[#0d0d14] p-2 text-xs text-neutral-300">
                   {JSON.stringify(log.details, null, 2)}

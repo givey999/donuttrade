@@ -79,7 +79,7 @@ function OrderDetailContent() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
-      <button onClick={() => router.back()} className="text-sm text-neutral-400 transition-colors hover:text-violet-400">
+      <button onClick={() => router.back()} className="text-sm text-neutral-400 transition-colors hover:text-violet-500">
         &larr; Back
       </button>
 
@@ -134,7 +134,7 @@ function OrderDetailContent() {
             </div>
             <div className="mt-1 h-2 rounded-full bg-[#1a1a1a]">
               <div
-                className="h-2 rounded-full bg-violet-500 transition-all"
+                className="h-2 rounded-full bg-violet-600 transition-all"
                 style={{ width: `${fillPercent}%` }}
               />
             </div>

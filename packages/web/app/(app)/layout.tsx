@@ -71,7 +71,7 @@ function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   return (
     <>
       {maintenanceMessage && (user?.role === 'admin' || user?.role === 'leader') && (
-        <div className="bg-violet-500/20 border-b border-violet-500/30 px-4 py-2 text-center text-sm text-violet-300">
+        <div className="bg-violet-600/20 border-b border-violet-600/30 px-4 py-2 text-center text-sm text-violet-400">
           Platform is in maintenance mode
         </div>
       )}

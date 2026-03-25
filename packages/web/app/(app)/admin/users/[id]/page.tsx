@@ -134,7 +134,7 @@ export default function AdminUserDetailPage() {
 
   return (
     <div className="max-w-4xl">
-      <button onClick={() => router.push('/admin/users')} className="mb-4 text-xs text-neutral-500 transition-colors hover:text-violet-400">
+      <button onClick={() => router.push('/admin/users')} className="mb-4 text-xs text-neutral-500 transition-colors hover:text-violet-500">
         &larr; Back to Users
       </button>
 
@@ -177,7 +177,7 @@ export default function AdminUserDetailPage() {
             </div>
           )}
           {isTimedOut && (
-            <div className="mt-3 rounded-lg border border-violet-500/20 bg-violet-500/[0.04] p-3 text-sm text-violet-400">
+            <div className="mt-3 rounded-lg border border-violet-600/20 bg-violet-600/[0.04] p-3 text-sm text-violet-500">
               Timed out until {new Date(userDetail.timedOutUntil!).toLocaleString()} — {userDetail.timeoutReason || 'No reason'}
             </div>
           )}
@@ -234,7 +234,7 @@ export default function AdminUserDetailPage() {
                     Remove Timeout
                   </Button>
                 ) : (
-                  <Button variant="ghost" size="sm" onClick={() => setShowTimeoutModal(true)} disabled={actionLoading} className="text-violet-400 hover:text-violet-300">
+                  <Button variant="ghost" size="sm" onClick={() => setShowTimeoutModal(true)} disabled={actionLoading} className="text-violet-500 hover:text-violet-400">
                     Timeout
                   </Button>
                 )}
@@ -318,7 +318,7 @@ export default function AdminUserDetailPage() {
                     <tr><td colSpan={5} className="px-3 py-4 text-center text-xs text-neutral-500">No deposits</td></tr>
                   ) : userDetail.recentDeposits.map((d) => (
                     <tr key={d.id}>
-                      <Td className="text-xs font-mono text-violet-400">{d.ticketLabel || '—'}</Td>
+                      <Td className="text-xs font-mono text-violet-500">{d.ticketLabel || '—'}</Td>
                       <Td className="whitespace-nowrap text-xs text-neutral-500">{new Date(d.createdAt).toLocaleDateString()}</Td>
                       <Td className="text-xs">{d.catalogItemDisplayName}</Td>
                       <Td className="text-right text-xs">{d.quantity}</Td>
@@ -344,7 +344,7 @@ export default function AdminUserDetailPage() {
                     <tr><td colSpan={5} className="px-3 py-4 text-center text-xs text-neutral-500">No withdrawals</td></tr>
                   ) : userDetail.recentWithdrawals.map((w) => (
                     <tr key={w.id}>
-                      <Td className="text-xs font-mono text-violet-400">{w.ticketLabel || '—'}</Td>
+                      <Td className="text-xs font-mono text-violet-500">{w.ticketLabel || '—'}</Td>
                       <Td className="whitespace-nowrap text-xs text-neutral-500">{new Date(w.createdAt).toLocaleDateString()}</Td>
                       <Td className="text-xs">{w.catalogItemDisplayName}</Td>
                       <Td className="text-right text-xs">{w.quantity}</Td>
@@ -413,7 +413,7 @@ export default function AdminUserDetailPage() {
                   size="sm"
                   onClick={() => handleTimeout(preset.ms)}
                   disabled={actionLoading}
-                  className="border border-violet-500/20 text-violet-400 hover:bg-violet-500/[0.06]"
+                  className="border border-violet-600/20 text-violet-500 hover:bg-violet-600/[0.06]"
                 >
                   {preset.label}
                 </Button>
@@ -426,7 +426,7 @@ export default function AdminUserDetailPage() {
                 size="sm"
                 onClick={() => { const h = parseInt(customTimeoutMs); if (h > 0) handleTimeout(h * 60 * 60 * 1000); }}
                 disabled={!customTimeoutMs || actionLoading}
-                className="border border-violet-500/20 text-violet-400 hover:bg-violet-500/[0.06]"
+                className="border border-violet-600/20 text-violet-500 hover:bg-violet-600/[0.06]"
               >
                 Apply
               </Button>

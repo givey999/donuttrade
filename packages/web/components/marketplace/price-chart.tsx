@@ -117,7 +117,7 @@ export function PriceChart({ catalogItemId }: PriceChartProps) {
               onClick={() => setPeriod(p.value)}
               className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
                 period === p.value
-                  ? 'bg-violet-500/10 text-violet-500 border border-violet-500/20'
+                  ? 'bg-violet-600/10 text-violet-600 border border-violet-600/20'
                   : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
@@ -147,8 +147,8 @@ export function PriceChart({ catalogItemId }: PriceChartProps) {
             {/* Gradient definition */}
             <defs>
               <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgb(139 92 246)" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="rgb(139 92 246)" stopOpacity="0" />
+                <stop offset="0%" stopColor="rgb(124 58 237)" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="rgb(124 58 237)" stopOpacity="0" />
               </linearGradient>
             </defs>
 
@@ -156,7 +156,7 @@ export function PriceChart({ catalogItemId }: PriceChartProps) {
             <path d={areaPath} fill="url(#areaGradient)" />
 
             {/* Line */}
-            <path d={linePath} fill="none" stroke="rgb(139 92 246)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d={linePath} fill="none" stroke="rgb(124 58 237)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 
             {/* Y-axis labels (prices) */}
             <text x={width - 5} y={padding.top + 4} textAnchor="end" className="fill-neutral-600 text-[10px]">
@@ -187,7 +187,7 @@ export function PriceChart({ catalogItemId }: PriceChartProps) {
             {hover && (
               <>
                 <line x1={hover.x} y1={padding.top} x2={hover.x} y2={padding.top + chartH} stroke="rgb(163 163 163)" strokeWidth="1" strokeDasharray="4 2" opacity="0.3" />
-                <circle cx={hover.x} cy={hover.y} r="4" fill="rgb(139 92 246)" stroke="#0d0d14" strokeWidth="2" />
+                <circle cx={hover.x} cy={hover.y} r="4" fill="rgb(124 58 237)" stroke="#0d0d14" strokeWidth="2" />
               </>
             )}
           </svg>
@@ -203,7 +203,7 @@ export function PriceChart({ catalogItemId }: PriceChartProps) {
               }}
             >
               <p className="text-neutral-400">{formatDate(hoveredPoint.timestamp, period)}</p>
-              <p className="text-violet-400">Avg: ${formatPrice(Number(hoveredPoint.avgPrice))}</p>
+              <p className="text-violet-500">Avg: ${formatPrice(Number(hoveredPoint.avgPrice))}</p>
               <p className="text-neutral-500">
                 Min: ${formatPrice(Number(hoveredPoint.minPrice))} · Max: ${formatPrice(Number(hoveredPoint.maxPrice))}
               </p>

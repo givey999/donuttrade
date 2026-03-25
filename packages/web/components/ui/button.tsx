@@ -4,7 +4,7 @@ type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
 type ButtonSize = 'sm' | 'md';
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'bg-violet-500 text-[#0a0a0f] font-semibold hover:bg-violet-600 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]',
+  primary: 'bg-violet-600 text-[#0a0a0f] font-semibold hover:bg-violet-700 hover:shadow-[0_0_20px_rgba(124,58,237,0.15)]',
   secondary: 'border border-[#1a1a1a] bg-white/[0.03] text-neutral-300 hover:bg-white/[0.06] hover:text-white',
   danger: 'border border-red-900/50 bg-red-950/20 text-red-400 hover:bg-red-950/40',
   ghost: 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200',

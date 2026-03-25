@@ -86,7 +86,7 @@ export function NotificationBell() {
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-xs text-violet-500/80 transition-colors hover:text-violet-400"
+                className="text-xs text-violet-600/80 transition-colors hover:text-violet-500"
               >
                 Mark all read
               </button>
@@ -115,7 +115,7 @@ export function NotificationBell() {
                   {/* Unread dot */}
                   <div className="mt-1.5 flex-shrink-0">
                     {!n.read ? (
-                      <span className="block h-2 w-2 rounded-full bg-violet-500" />
+                      <span className="block h-2 w-2 rounded-full bg-violet-600" />
                     ) : (
                       <span className="block h-2 w-2" />
                     )}

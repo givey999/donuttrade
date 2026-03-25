@@ -192,7 +192,7 @@ function MarketplaceContent() {
                   {/* Progress bar */}
                   <div className="mt-3 h-1.5 rounded-full bg-[#1a1a1a]">
                     <div
-                      className="h-1.5 rounded-full bg-violet-500 transition-all"
+                      className="h-1.5 rounded-full bg-violet-600 transition-all"
                       style={{ width: `${(order.filledQuantity / order.quantity) * 100}%` }}
                     />
                   </div>

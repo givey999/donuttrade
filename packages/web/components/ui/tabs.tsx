@@ -18,7 +18,7 @@ export function Tabs({ tabs, value, onChange }: TabsProps) {
           onClick={() => onChange(tab.value)}
           className={`rounded-lg px-3 py-1.5 text-sm capitalize transition-all duration-200 ${
             value === tab.value
-              ? 'border border-violet-500/20 bg-violet-500/[0.06] text-violet-500'
+              ? 'border border-violet-600/20 bg-violet-600/[0.06] text-violet-600'
               : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200'
           }`}
         >

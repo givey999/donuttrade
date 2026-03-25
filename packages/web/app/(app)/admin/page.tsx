@@ -52,8 +52,8 @@ export default function AdminDashboard() {
       <FadeIn delay={100}>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Total Users" value={stats.totalUsers} color="text-white" />
-          <StatCard label="Pending Deposits" value={stats.pendingDeposits} color="text-violet-400" />
-          <StatCard label="Pending Withdrawals" value={stats.pendingWithdrawals} color="text-violet-400" />
+          <StatCard label="Pending Deposits" value={stats.pendingDeposits} color="text-violet-500" />
+          <StatCard label="Pending Withdrawals" value={stats.pendingWithdrawals} color="text-violet-500" />
           <StatCard label="Active Orders" value={stats.activeOrders} color="text-green-400" />
         </div>
       </FadeIn>
