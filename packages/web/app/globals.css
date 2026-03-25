@@ -105,6 +105,41 @@
   animation: sparkle-3 2.5s ease-in-out infinite 1s;
 }
 
+/* Purple sparkle effect for DonutTrade logo */
+.sparkle-logo {
+  position: relative;
+  display: inline-block;
+  animation: logo-glow 3s ease-in-out infinite;
+}
+
+@keyframes logo-glow {
+  0%, 100% { text-shadow: 0 0 4px rgba(124, 58, 237, 0.2); }
+  50% { text-shadow: 0 0 10px rgba(124, 58, 237, 0.4), 0 0 20px rgba(124, 58, 237, 0.1); }
+}
+
+.sparkle-logo::before,
+.sparkle-logo::after {
+  content: '✦';
+  position: absolute;
+  pointer-events: none;
+  color: #8B5CF6;
+}
+
+.sparkle-logo::before {
+  font-size: 0.45em;
+  top: -0.3em;
+  right: -0.6em;
+  animation: sparkle-1 2.2s ease-in-out infinite;
+}
+
+.sparkle-logo::after {
+  font-size: 0.35em;
+  bottom: -0.1em;
+  left: -0.5em;
+  color: #A78BFA;
+  animation: sparkle-2 2.8s ease-in-out infinite 0.7s;
+}
+
 /* Dark scrollbar for dropdowns and panels */
 .scrollbar-dark::-webkit-scrollbar {
   width: 6px;
