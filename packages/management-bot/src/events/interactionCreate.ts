@@ -1,7 +1,7 @@
 import { Interaction } from 'discord.js';
 import { handleTicketButton, handleModalSubmit } from '../interactions/ticket-modal.js';
 import { handleCloseCommand } from '../interactions/ticket-close.js';
-import { handleAnnounceCommand } from '../interactions/announce.js';
+import { handleAnnounceCommand, handleAnnounceModal } from '../interactions/announce.js';
 
 export async function onInteractionCreate(interaction: Interaction) {
   try {
@@ -14,6 +14,9 @@ export async function onInteractionCreate(interaction: Interaction) {
     if (interaction.isModalSubmit()) {
       if (interaction.customId === 'modal_deposit' || interaction.customId === 'modal_withdrawal') {
         return await handleModalSubmit(interaction);
+      }
+      if (interaction.customId.startsWith('announce_')) {
+        return await handleAnnounceModal(interaction);
       }
     }
 

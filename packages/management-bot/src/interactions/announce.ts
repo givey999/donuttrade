@@ -4,35 +4,28 @@ import {
   SlashCommandBuilder,
   PermissionFlagsBits,
   EmbedBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  ModalSubmitInteraction,
 } from 'discord.js';
 import { config } from '../config.js';
-
-const COLOR_CHOICES = [
-  { name: 'Purple (default)', value: '7C3AED' },
-  { name: 'Green', value: '57F287' },
-  { name: 'Red', value: 'ED4245' },
-  { name: 'Blue', value: '5865F2' },
-  { name: 'Yellow', value: 'FEE75C' },
-  { name: 'White', value: 'FFFFFF' },
-];
 
 export const announceCommandData = new SlashCommandBuilder()
   .setName('announce')
   .setDescription('Post an embedded announcement in this channel')
   .addStringOption((opt) =>
-    opt.setName('title')
-      .setDescription('Announcement title')
-      .setRequired(true)
-  )
-  .addStringOption((opt) =>
-    opt.setName('message')
-      .setDescription('Announcement body (supports Discord markdown)')
-      .setRequired(true)
-  )
-  .addStringOption((opt) =>
     opt.setName('color')
       .setDescription('Embed color')
-      .addChoices(...COLOR_CHOICES.map((c) => ({ name: c.name, value: c.value })))
+      .addChoices(
+        { name: 'Purple (default)', value: '7C3AED' },
+        { name: 'Green', value: '57F287' },
+        { name: 'Red', value: 'ED4245' },
+        { name: 'Blue', value: '5865F2' },
+        { name: 'Yellow', value: 'FEE75C' },
+        { name: 'White', value: 'FFFFFF' },
+      )
   )
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages);
 
@@ -45,9 +38,38 @@ export async function handleAnnounceCommand(interaction: ChatInputCommandInterac
     return;
   }
 
-  const title = interaction.options.getString('title', true);
-  const message = interaction.options.getString('message', true);
   const colorHex = interaction.options.getString('color') || '7C3AED';
+
+  const modal = new ModalBuilder()
+    .setCustomId(`announce_${colorHex}`)
+    .setTitle('Create Announcement');
+
+  const titleInput = new TextInputBuilder()
+    .setCustomId('announce_title')
+    .setLabel('Title')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(256);
+
+  const messageInput = new TextInputBuilder()
+    .setCustomId('announce_message')
+    .setLabel('Message')
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setPlaceholder('Supports Discord markdown and line breaks');
+
+  modal.addComponents(
+    new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(messageInput),
+  );
+
+  await interaction.showModal(modal);
+}
+
+export async function handleAnnounceModal(interaction: ModalSubmitInteraction) {
+  const colorHex = interaction.customId.replace('announce_', '');
+  const title = interaction.fields.getTextInputValue('announce_title');
+  const message = interaction.fields.getTextInputValue('announce_message');
 
   const embed = new EmbedBuilder()
     .setTitle(title)
