@@ -74,8 +74,7 @@ export async function handleAnnounceModal(interaction: ModalSubmitInteraction) {
   const embed = new EmbedBuilder()
     .setTitle(title)
     .setDescription(message)
-    .setColor(parseInt(colorHex, 16))
-    .setTimestamp();
+    .setColor(parseInt(colorHex, 16));
 
   const channel = interaction.channel as TextChannel;
   await channel.send({ embeds: [embed] });
