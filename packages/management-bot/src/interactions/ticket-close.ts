@@ -61,8 +61,8 @@ export async function handleCloseCommand(interaction: ChatInputCommandInteractio
   try {
     // Read record ID from channel topic (set during channel creation)
     const recordId = channel.topic;
-    if (!recordId) {
-      await interaction.editReply({ content: 'Could not find the ticket record for this channel.' });
+    if (!recordId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId)) {
+      await interaction.editReply({ content: 'Could not find a valid ticket record for this channel.' });
       return;
     }
 

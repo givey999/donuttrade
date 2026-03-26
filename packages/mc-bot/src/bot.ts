@@ -19,6 +19,13 @@ export interface BotConfig {
 }
 
 /**
+ * Escape a string for safe use inside a RegExp.
+ */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * MinecraftBot — unified connection layer wrapping Mineflayer.
  * Handles verification payments, deposits, and withdrawal payouts.
  */
@@ -29,6 +36,7 @@ export class MinecraftBot extends EventEmitter {
   private reconnectDelay: number;
   private maxReconnectDelay: number;
   private isConnecting = false;
+  private isAlive = false;
   private shouldReconnect: boolean;
 
   constructor(config: BotConfig) {
@@ -41,13 +49,13 @@ export class MinecraftBot extends EventEmitter {
 
   connect(): void {
     if (this.isConnecting) {
-      console.log('[DepositBot] Connection already in progress');
+      console.log('[Bot] Connection already in progress');
       return;
     }
 
     this.isConnecting = true;
     const port = this.config.server.port ?? 25565;
-    console.log(`[DepositBot] Connecting to ${this.config.server.host}:${port}...`);
+    console.log(`[Bot] Connecting to ${this.config.server.host}:${port}...`);
 
     this.bot = mineflayer.createBot({
       host: this.config.server.host,
@@ -65,9 +73,10 @@ export class MinecraftBot extends EventEmitter {
 
     this.bot.on('spawn', () => {
       this.isConnecting = false;
+      this.isAlive = true;
       this.reconnectAttempts = 0;
       this.reconnectDelay = this.config.reconnect?.initialDelay ?? 5000;
-      console.log(`[DepositBot] Spawned in server as ${this.bot!.username}`);
+      console.log(`[Bot] Spawned in server as ${this.bot!.username}`);
       this.emit('connected', this.bot!.username);
     });
 
@@ -80,19 +89,21 @@ export class MinecraftBot extends EventEmitter {
 
     this.bot.on('kicked', (reason, loggedIn) => {
       const reasonText = typeof reason === 'object' ? JSON.stringify(reason) : reason;
-      console.log(`[DepositBot] Kicked: ${reasonText}`);
+      console.log(`[Bot] Kicked: ${reasonText}`);
       this.emit('kicked', reasonText, loggedIn);
-      this.handleDisconnect();
+      // Don't call handleDisconnect here — the 'end' event always fires after 'kicked'
     });
 
     this.bot.on('error', (err) => {
-      console.error(`[DepositBot] Error: ${err.message}`);
+      console.error(`[Bot] Error: ${err.message}`);
       this.emit('error', err);
     });
 
     this.bot.on('end', (reason) => {
-      console.log(`[DepositBot] Disconnected: ${reason || 'unknown reason'}`);
+      console.log(`[Bot] Disconnected: ${reason || 'unknown reason'}`);
       this.isConnecting = false;
+      this.isAlive = false;
+      this.bot = null;
       this.emit('disconnected', reason);
       this.handleDisconnect();
     });
@@ -100,7 +111,7 @@ export class MinecraftBot extends EventEmitter {
 
   private handleDisconnect(): void {
     if (!this.shouldReconnect) {
-      console.log('[DepositBot] Auto-reconnect disabled');
+      console.log('[Bot] Auto-reconnect disabled');
       return;
     }
 
@@ -110,7 +121,7 @@ export class MinecraftBot extends EventEmitter {
       this.maxReconnectDelay,
     );
 
-    console.log(`[DepositBot] Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts})...`);
+    console.log(`[Bot] Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts})...`);
 
     setTimeout(() => {
       this.connect();
@@ -122,7 +133,7 @@ export class MinecraftBot extends EventEmitter {
    */
   sendChat(message: string): void {
     if (!this.bot) {
-      console.error('[DepositBot] Cannot send chat — not connected');
+      console.error('[Bot] Cannot send chat — not connected');
       return;
     }
     this.bot.chat(message);
@@ -132,7 +143,6 @@ export class MinecraftBot extends EventEmitter {
    * Send a command to the server (e.g., /pay username amount).
    */
   sendCommand(command: string): void {
-    // Mineflayer's bot.chat() handles both messages and /commands
     this.sendChat(command);
   }
 
@@ -140,10 +150,6 @@ export class MinecraftBot extends EventEmitter {
    * Send a /pay command and wait for the server's response message.
    * Returns { success: true } if the server confirms payment,
    * or { success: false, reason } if the server rejects it or times out.
-   *
-   * Listens for common server response patterns:
-   * - Success: "You have paid <username> $<amount>"  or "$<amount> has been paid to <username>"
-   * - Failure: "That player cannot be found", "You don't have enough money", etc.
    */
   async sendPayAndWait(
     username: string,
@@ -153,6 +159,9 @@ export class MinecraftBot extends EventEmitter {
     if (!this.bot) {
       return { success: false, reason: 'Not connected' };
     }
+
+    // Escape username for safe regex interpolation
+    const safeUsername = escapeRegExp(username);
 
     return new Promise((resolve) => {
       let settled = false;
@@ -165,13 +174,13 @@ export class MinecraftBot extends EventEmitter {
 
         // Common EssentialsX / server pay success patterns
         const successPatterns = [
-          new RegExp(`paid.*${username}`, 'i'),
-          new RegExp(`sent.*\\$.*to.*${username}`, 'i'),
-          new RegExp(`\\$.*has been paid to.*${username}`, 'i'),
-          new RegExp(`You have paid.*${username}`, 'i'),
+          new RegExp(`paid.*${safeUsername}`, 'i'),
+          new RegExp(`sent.*\\$.*to.*${safeUsername}`, 'i'),
+          new RegExp(`\\$.*has been paid to.*${safeUsername}`, 'i'),
+          new RegExp(`You have paid.*${safeUsername}`, 'i'),
         ];
 
-        // Common failure patterns
+        // Common failure patterns — anchored to specific server responses
         const failurePatterns = [
           { pattern: /cannot be found/i, reason: 'Player not found' },
           { pattern: /not found/i, reason: 'Player not found' },
@@ -179,7 +188,7 @@ export class MinecraftBot extends EventEmitter {
           { pattern: /don'?t have enough/i, reason: 'Bot has insufficient funds' },
           { pattern: /not enough money/i, reason: 'Bot has insufficient funds' },
           { pattern: /cannot pay yourself/i, reason: 'Cannot pay self' },
-          { pattern: /invalid/i, reason: 'Invalid payment' },
+          { pattern: /invalid (amount|payment|number)/i, reason: 'Invalid payment' },
         ];
 
         for (const p of successPatterns) {
@@ -224,11 +233,12 @@ export class MinecraftBot extends EventEmitter {
 
   disconnect(): void {
     this.shouldReconnect = false;
+    this.isAlive = false;
     if (this.bot) {
       this.bot.quit();
       this.bot = null;
     }
-    console.log('[DepositBot] Disconnected (manual)');
+    console.log('[Bot] Disconnected (manual)');
   }
 
   getUsername(): string | null {
@@ -236,6 +246,6 @@ export class MinecraftBot extends EventEmitter {
   }
 
   isConnectedNow(): boolean {
-    return this.bot !== null && !this.isConnecting;
+    return this.isAlive && this.bot !== null && !this.isConnecting;
   }
 }

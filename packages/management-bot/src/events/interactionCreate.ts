@@ -6,19 +6,19 @@ export async function onInteractionCreate(interaction: Interaction) {
   try {
     if (interaction.isButton()) {
       if (interaction.customId === 'ticket_deposit' || interaction.customId === 'ticket_withdraw') {
-        return handleTicketButton(interaction);
+        return await handleTicketButton(interaction);
       }
     }
 
     if (interaction.isModalSubmit()) {
       if (interaction.customId === 'modal_deposit' || interaction.customId === 'modal_withdrawal') {
-        return handleModalSubmit(interaction);
+        return await handleModalSubmit(interaction);
       }
     }
 
     if (interaction.isChatInputCommand()) {
       if (interaction.commandName === 'close') {
-        return handleCloseCommand(interaction);
+        return await handleCloseCommand(interaction);
       }
     }
   } catch (err) {

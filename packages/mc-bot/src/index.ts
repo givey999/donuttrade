@@ -68,7 +68,7 @@ bot.on('rawMessage', async (text: string, position: string) => {
     }
 
     if (result.deposited) {
-      console.log(`[Deposit] Credited $${result.deposit!.amount} to ${payment.username} (balance: $${result.deposit!.balanceAfter})`);
+      console.log(`[Deposit] Credited $${result.deposit?.amount} to ${payment.username} (balance: $${result.deposit?.balanceAfter})`);
     } else if (result.refund) {
       console.log(`[Deposit] Refunding $${result.refundAmount} to ${payment.username} (deposit rejected)`);
       bot.sendCommand(`/pay ${payment.username} ${result.refundAmount}`);
@@ -90,7 +90,15 @@ async function processWithdrawals() {
     const pending = await webhookClient.fetchPendingWithdrawals();
 
     for (const withdrawal of pending) {
-      console.log(`[Withdrawal] Processing: $${withdrawal.amount} to ${withdrawal.username} (id: ${withdrawal.id})`);
+      // Validate amount is a clean number before sending /pay
+      const cleanAmount = String(withdrawal.amount).replace(/,/g, '');
+      if (!/^\d+(\.\d+)?$/.test(cleanAmount)) {
+        console.error(`[Withdrawal] Invalid amount format: "${withdrawal.amount}" for ${withdrawal.id}`);
+        await webhookClient.failWithdrawal(withdrawal.id, `Invalid amount format: ${withdrawal.amount}`);
+        continue;
+      }
+
+      console.log(`[Withdrawal] Processing: $${cleanAmount} to ${withdrawal.username} (id: ${withdrawal.id})`);
 
       try {
         // Claim the withdrawal first (mark as 'processing') to prevent duplicate processing
@@ -101,7 +109,7 @@ async function processWithdrawals() {
         }
 
         // Send /pay and wait for server to confirm or reject
-        const payResult = await bot.sendPayAndWait(withdrawal.username, withdrawal.amount);
+        const payResult = await bot.sendPayAndWait(withdrawal.username, cleanAmount);
 
         if (payResult.success) {
           const confirmed = await webhookClient.confirmWithdrawal(withdrawal.id);

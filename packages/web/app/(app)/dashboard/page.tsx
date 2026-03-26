@@ -624,6 +624,7 @@ function DashboardContent() {
   const formattedBalance = Number.isFinite(balance)
     ? balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : '0.00';
+  const shortBalance = formatShortBalance(balance);
 
   const isVerified = user.verificationStatus === 'verified';
 
@@ -645,8 +646,8 @@ function DashboardContent() {
             <p className="mt-2 text-4xl font-extrabold text-green-400">
               ${formattedBalance}
             </p>
-            {formatShortBalance(balance) && (
-              <p className="mt-1 text-sm text-neutral-500">{formatShortBalance(balance)}</p>
+            {shortBalance && (
+              <p className="mt-1 text-sm text-neutral-500">{shortBalance}</p>
             )}
 
             {/* Deposit / Withdraw buttons */}

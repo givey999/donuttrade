@@ -1,6 +1,6 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
-const BRAND_COLOR = 0xF5A623; // amber/gold
+const BRAND_COLOR = 0x7C3AED; // violet-600
 
 export function buildPanelEmbed() {
   return new EmbedBuilder()
