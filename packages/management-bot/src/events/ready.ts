@@ -2,6 +2,7 @@ import { Client, REST, Routes } from 'discord.js';
 import { config } from '../config.js';
 import { ensurePanel } from '../interactions/ticket-panel.js';
 import { closeCommandData } from '../interactions/ticket-close.js';
+import { announceCommandData } from '../interactions/announce.js';
 
 export async function onReady(client: Client<true>) {
   console.log(`Management bot logged in as ${client.user.tag}`);
@@ -12,9 +13,9 @@ export async function onReady(client: Client<true>) {
   try {
     await rest.put(
       Routes.applicationGuildCommands(client.user.id, config.DISCORD_GUILD_ID),
-      { body: [closeCommandData.toJSON()] },
+      { body: [closeCommandData.toJSON(), announceCommandData.toJSON()] },
     );
-    console.log('Registered /close slash command');
+    console.log('Registered slash commands: /close, /announce');
   } catch (err) {
     console.error('Failed to register slash commands:', err);
   }

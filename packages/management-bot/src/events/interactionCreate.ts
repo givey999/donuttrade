@@ -1,6 +1,7 @@
 import { Interaction } from 'discord.js';
 import { handleTicketButton, handleModalSubmit } from '../interactions/ticket-modal.js';
 import { handleCloseCommand } from '../interactions/ticket-close.js';
+import { handleAnnounceCommand } from '../interactions/announce.js';
 
 export async function onInteractionCreate(interaction: Interaction) {
   try {
@@ -19,6 +20,9 @@ export async function onInteractionCreate(interaction: Interaction) {
     if (interaction.isChatInputCommand()) {
       if (interaction.commandName === 'close') {
         return await handleCloseCommand(interaction);
+      }
+      if (interaction.commandName === 'announce') {
+        return await handleAnnounceCommand(interaction);
       }
     }
   } catch (err) {
