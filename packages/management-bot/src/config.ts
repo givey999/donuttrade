@@ -16,6 +16,8 @@ const envSchema = z.object({
   DISCORD_LOGS_CHANNEL_ID: z.string().min(1),
   DISCORD_BOOST_CHANNEL_ID: z.string().min(1).optional(),
   DISCORD_BOOST_BENEFITS_CHANNEL_ID: z.string().min(1).optional(),
+  DISCORD_VERIFY_CHANNEL_ID: z.string().min(1).optional(),
+  DISCORD_VERIFIED_ROLE_ID: z.string().min(1).optional(),
   API_URL: z.string().url().default('http://api:3001'),
   BOT_WEBHOOK_SECRET: z.string().min(32),
 });

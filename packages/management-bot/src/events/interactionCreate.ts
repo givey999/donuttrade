@@ -2,12 +2,16 @@ import { Interaction } from 'discord.js';
 import { handleTicketButton, handleModalSubmit } from '../interactions/ticket-modal.js';
 import { handleCloseCommand } from '../interactions/ticket-close.js';
 import { handleAnnounceCommand, handleAnnounceModal } from '../interactions/announce.js';
+import { handleVerifyButton } from '../interactions/verify-gate.js';
 
 export async function onInteractionCreate(interaction: Interaction) {
   try {
     if (interaction.isButton()) {
       if (interaction.customId === 'ticket_deposit' || interaction.customId === 'ticket_withdraw') {
         return await handleTicketButton(interaction);
+      }
+      if (interaction.customId === 'verify_gate') {
+        return await handleVerifyButton(interaction);
       }
     }
 

@@ -1,6 +1,7 @@
 import { Client, REST, Routes } from 'discord.js';
 import { config } from '../config.js';
 import { ensurePanel } from '../interactions/ticket-panel.js';
+import { ensureVerifyPanel } from '../interactions/verify-gate.js';
 import { closeCommandData } from '../interactions/ticket-close.js';
 import { announceCommandData } from '../interactions/announce.js';
 
@@ -20,6 +21,7 @@ export async function onReady(client: Client<true>) {
     console.error('Failed to register slash commands:', err);
   }
 
-  // Ensure persistent panel exists
+  // Ensure persistent panels exist
   await ensurePanel(client);
+  await ensureVerifyPanel(client);
 }
