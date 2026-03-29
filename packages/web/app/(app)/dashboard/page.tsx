@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { RequireAuth } from '@/lib/require-auth';
 import { useAuth } from '@/lib/auth';
-import { apiFetch, ApiError } from '@/lib/api';
+import { apiFetch, ApiError, getAccessToken } from '@/lib/api';
+import { useToast } from '@/lib/toast';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
@@ -613,10 +615,31 @@ function TransactionHistory() {
 
 // ─── Dashboard Content ─────────────────────────────────────────────────────────
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moldo.go.ro:9443';
+
 function DashboardContent() {
   const { user, logout, refreshUser, isTimedOut } = useAuth();
+  const { toast } = useToast();
+  const searchParams = useSearchParams();
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
+
+  // Handle account linking callback params
+  useEffect(() => {
+    const linked = searchParams.get('linked');
+    const linkError = searchParams.get('link_error');
+
+    if (linked) {
+      toast(`${linked.charAt(0).toUpperCase() + linked.slice(1)} account connected!`, 'success');
+      refreshUser();
+      // Clean URL
+      window.history.replaceState({}, '', '/dashboard');
+    } else if (linkError) {
+      toast(linkError, 'error');
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [searchParams, toast, refreshUser]);
 
   if (!user) return null;
 
@@ -681,8 +704,90 @@ function DashboardContent() {
             <p className="mt-1.5 text-sm font-medium">{new Date(user.createdAt).toLocaleDateString()}</p>
           </Card>
           <Card className="p-4 text-center">
-            <p className="text-[10px] uppercase tracking-wider text-neutral-600">Auth Provider</p>
-            <p className="mt-1.5 text-sm font-medium capitalize">{user.authProvider}</p>
+            <p className="text-[10px] uppercase tracking-wider text-neutral-600">Accounts</p>
+            <div className="mt-1.5 flex flex-col gap-1.5">
+              {/* Discord row */}
+              <div className="flex items-center justify-center gap-1.5 text-xs">
+                <span className="text-neutral-400">Discord</span>
+                {user.discordId ? (
+                  <>
+                    <Badge variant="success">Connected</Badge>
+                    {user.authProvider !== 'discord' && (
+                      <button
+                        onClick={async () => {
+                          setUnlinking(true);
+                          try {
+                            await apiFetch('/auth/link/discord', { method: 'DELETE' });
+                            toast('Discord disconnected', 'success');
+                            refreshUser();
+                          } catch { toast('Failed to disconnect', 'error'); }
+                          setUnlinking(false);
+                        }}
+                        disabled={unlinking}
+                        className="text-[10px] text-red-400 hover:text-red-300 underline"
+                      >
+                        Disconnect
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <a
+                    href={`${API_URL}/auth/link/discord`}
+                    onClick={(e) => {
+                      // Attach token as cookie-like header via redirect with token in URL
+                      const token = getAccessToken();
+                      if (token) {
+                        e.preventDefault();
+                        window.location.href = `${API_URL}/auth/link/discord?token=${encodeURIComponent(token)}`;
+                      }
+                    }}
+                    className="text-[10px] text-violet-400 hover:text-violet-300 underline"
+                  >
+                    Connect
+                  </a>
+                )}
+              </div>
+              {/* Microsoft row */}
+              <div className="flex items-center justify-center gap-1.5 text-xs">
+                <span className="text-neutral-400">Microsoft</span>
+                {user.microsoftId ? (
+                  <>
+                    <Badge variant="success">Connected</Badge>
+                    {user.authProvider !== 'microsoft' && (
+                      <button
+                        onClick={async () => {
+                          setUnlinking(true);
+                          try {
+                            await apiFetch('/auth/link/microsoft', { method: 'DELETE' });
+                            toast('Microsoft disconnected', 'success');
+                            refreshUser();
+                          } catch { toast('Failed to disconnect', 'error'); }
+                          setUnlinking(false);
+                        }}
+                        disabled={unlinking}
+                        className="text-[10px] text-red-400 hover:text-red-300 underline"
+                      >
+                        Disconnect
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <a
+                    href={`${API_URL}/auth/link/microsoft`}
+                    onClick={(e) => {
+                      const token = getAccessToken();
+                      if (token) {
+                        e.preventDefault();
+                        window.location.href = `${API_URL}/auth/link/microsoft?token=${encodeURIComponent(token)}`;
+                      }
+                    }}
+                    className="text-[10px] text-violet-400 hover:text-violet-300 underline"
+                  >
+                    Connect
+                  </a>
+                )}
+              </div>
+            </div>
           </Card>
         </div>
       </FadeIn>

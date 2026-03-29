@@ -3,6 +3,7 @@ import { userRepository } from '../../repositories/user.repository.js';
 import { logger } from '../../lib/logger.js';
 import { AppError } from '../../lib/errors.js';
 import { config } from '../../config/index.js';
+import * as redisCache from '../redis.js';
 import {
   VERIFICATION_AMOUNT_MIN,
   VERIFICATION_AMOUNT_MAX,
@@ -10,6 +11,7 @@ import {
 } from '@donuttrade/shared';
 
 const verifyLogger = logger.module('auth.verification');
+const DEDUP_TTL_SECONDS = 60;
 
 /**
  * Verification service for in-game payment verification
@@ -138,7 +140,17 @@ export const verificationService = {
    * Confirm a payment from the in-game bot.
    * Matches username + exact amount against pending verifications.
    */
-  async confirmPayment(username: string, amount: number) {
+  async confirmPayment(username: string, amount: number, timestamp?: string) {
+    // Dedup check — prevent the same verification payment from being processed twice
+    const dedupKey = `dedup:verify:${username}:${amount}:${timestamp ?? 'none'}`;
+    const cached = await redisCache.get(dedupKey);
+    if (cached) {
+      verifyLogger.info('confirmPayment.dedup', 'Duplicate verification detected, returning cached result', {
+        username, amount, timestamp,
+      });
+      return JSON.parse(cached);
+    }
+
     const user = await userRepository.findByMinecraftUsername(username);
     if (!user) {
       verifyLogger.debug('confirmPayment.noUser', 'No user found for username', { username });
@@ -185,7 +197,9 @@ export const verificationService = {
       amount,
     });
 
-    return { matched: true, userId: user.id };
+    const successResult = { matched: true, userId: user.id };
+    await redisCache.set(dedupKey, JSON.stringify(successResult), DEDUP_TTL_SECONDS);
+    return successResult;
   },
 };
 

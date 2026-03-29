@@ -54,7 +54,7 @@ export const internalDepositRoutes: FastifyPluginAsync = async (fastify) => {
       timestamp,
     });
 
-    const result = await depositService.processDeposit(username, amount);
+    const result = await depositService.processDeposit(username, amount, timestamp);
 
     return {
       success: true,

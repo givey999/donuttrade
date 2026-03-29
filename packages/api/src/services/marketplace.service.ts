@@ -386,13 +386,15 @@ export const marketplaceService = {
       });
 
       // Update trading volume for both parties
-      await tx.user.update({
+      const updatedSeller = await tx.user.update({
         where: { id: sellerUserId },
         data: { tradingVolume: { increment: totalPrice.toNumber() } },
+        select: { tradingVolume: true },
       });
-      await tx.user.update({
+      const updatedBuyer = await tx.user.update({
         where: { id: order.userId },
         data: { tradingVolume: { increment: totalPrice.toNumber() } },
+        select: { tradingVolume: true },
       });
 
       // Mark completed if fully filled
@@ -403,7 +405,7 @@ export const marketplaceService = {
         });
       }
 
-      return orderFill;
+      return { orderFill, sellerVolume: updatedSeller.tradingVolume, buyerVolume: updatedBuyer.tradingVolume };
     });
 
     mktLogger.info('fillBuyOrder.success', 'Buy order filled', {
@@ -413,21 +415,23 @@ export const marketplaceService = {
       sellerReceives: sellerReceives.toNumber(),
     });
 
-    // Notify both parties
+    // Notify both parties (include tradingVolume for auto-role checks)
     void eventBus.publish(order.userId, 'order.filled', {
       orderId: order.id,
       itemName: order.catalogItem.displayName,
       quantity: fillQuantity,
       role: 'buyer',
+      tradingVolume: fill.buyerVolume.toString(),
     });
     void eventBus.publish(sellerUserId, 'order.filled', {
       orderId: order.id,
       itemName: order.catalogItem.displayName,
       quantity: fillQuantity,
       role: 'seller',
+      tradingVolume: fill.sellerVolume.toString(),
     });
 
-    return fill;
+    return fill.orderFill;
   },
 
   /**
@@ -515,13 +519,15 @@ export const marketplaceService = {
       });
 
       // Update trading volume for both parties
-      await tx.user.update({
+      const updatedBuyer = await tx.user.update({
         where: { id: buyerUserId },
         data: { tradingVolume: { increment: totalPrice.toNumber() } },
+        select: { tradingVolume: true },
       });
-      await tx.user.update({
+      const updatedSeller = await tx.user.update({
         where: { id: order.userId },
         data: { tradingVolume: { increment: totalPrice.toNumber() } },
+        select: { tradingVolume: true },
       });
 
       // Mark completed if fully filled
@@ -532,7 +538,7 @@ export const marketplaceService = {
         });
       }
 
-      return orderFill;
+      return { orderFill, buyerVolume: updatedBuyer.tradingVolume, sellerVolume: updatedSeller.tradingVolume };
     });
 
     mktLogger.info('fillSellOrder.success', 'Sell order filled', {
@@ -542,21 +548,23 @@ export const marketplaceService = {
       sellerReceives: sellerReceives.toNumber(),
     });
 
-    // Notify both parties
+    // Notify both parties (include tradingVolume for auto-role checks)
     void eventBus.publish(order.userId, 'order.filled', {
       orderId: order.id,
       itemName: order.catalogItem.displayName,
       quantity: fillQuantity,
       role: 'seller',
+      tradingVolume: fill.sellerVolume.toString(),
     });
     void eventBus.publish(buyerUserId, 'order.filled', {
       orderId: order.id,
       itemName: order.catalogItem.displayName,
       quantity: fillQuantity,
       role: 'buyer',
+      tradingVolume: fill.buyerVolume.toString(),
     });
 
-    return fill;
+    return fill.orderFill;
   },
 
   /**

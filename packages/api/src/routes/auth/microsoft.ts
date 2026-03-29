@@ -9,6 +9,7 @@ import { config, isDevelopment } from '../../config/index.js';
 import { signPendingToken } from '../../lib/jwt.js';
 import { userRepository } from '../../repositories/user.repository.js';
 import { Cookies } from '@donuttrade/shared';
+import { parseLinkingState } from './link.js';
 
 const authLogger = logger.module('auth.routes');
 
@@ -104,6 +105,45 @@ export const microsoftAuthRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.redirect(`${frontendUrl}${callbackPath}?error=${encodeURIComponent('Invalid or expired state. Please try logging in again.')}`);
     }
 
+    // Defense-in-depth: ensure state was created for microsoft
+    if (stateResult.authMethod !== 'microsoft') {
+      authLogger.warn('oauth.callback.wrongAuthMethod', 'State was not created for Microsoft', {
+        authMethod: stateResult.authMethod,
+      });
+
+      return reply.redirect(`${frontendUrl}${callbackPath}?error=${encodeURIComponent('Invalid or expired state. Please try logging in again.')}`);
+    }
+
+    // ─── Account Linking Flow ───────────────────────────────
+    const linkingUserId = parseLinkingState(stateResult.redirectUrl, 'microsoft');
+    if (linkingUserId) {
+      const dashboardUrl = `${frontendUrl}/dashboard`;
+      try {
+        const tokens = await microsoftService.exchangeCodeForTokens(code);
+        if (!tokens.idToken) {
+          return reply.redirect(`${dashboardUrl}?link_error=${encodeURIComponent('No identity token received from Microsoft')}`);
+        }
+        const { microsoftId } = microsoftService.decodeIdToken(tokens.idToken);
+
+        const existing = await userRepository.findByMicrosoftId(microsoftId);
+        if (existing) {
+          return reply.redirect(`${dashboardUrl}?link_error=${encodeURIComponent('This Microsoft account is already linked to another DonutTrade account')}`);
+        }
+
+        await userRepository.update(linkingUserId, { microsoftId });
+
+        authLogger.info('oauth.callback.linked', 'Microsoft account linked via OAuth callback', {
+          userId: linkingUserId,
+        });
+
+        return reply.redirect(`${dashboardUrl}?linked=microsoft`);
+      } catch (err) {
+        authLogger.error('oauth.callback.linkError', 'Error during Microsoft account linking', err as Error);
+        return reply.redirect(`${dashboardUrl}?link_error=${encodeURIComponent('Failed to link Microsoft account. Please try again.')}`);
+      }
+    }
+
+    // ─── Normal Login Flow ──────────────────────────────────
     const cookieOptions = {
       httpOnly: true,
       secure: !isDevelopment,

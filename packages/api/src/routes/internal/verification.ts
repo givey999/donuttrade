@@ -50,7 +50,7 @@ export const internalVerificationRoutes: FastifyPluginAsync = async (fastify) =>
       timestamp,
     });
 
-    const result = await verificationService.confirmPayment(username, amount);
+    const result = await verificationService.confirmPayment(username, amount, timestamp);
 
     return {
       success: true,

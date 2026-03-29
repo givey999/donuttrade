@@ -3,6 +3,11 @@ import { handleTicketButton, handleModalSubmit } from '../interactions/ticket-mo
 import { handleCloseCommand } from '../interactions/ticket-close.js';
 import { handleAnnounceCommand, handleAnnounceModal } from '../interactions/announce.js';
 import { handleVerifyButton } from '../interactions/verify-gate.js';
+import { handleStatsCommand } from '../interactions/stats.js';
+import { handleBalanceCommand } from '../interactions/balance.js';
+import { handleOrdersCommand } from '../interactions/orders.js';
+import { handleHelpCommand } from '../interactions/help.js';
+import { handleLeaderboardCommand } from '../interactions/leaderboard.js';
 
 export async function onInteractionCreate(interaction: Interaction) {
   try {
@@ -25,11 +30,14 @@ export async function onInteractionCreate(interaction: Interaction) {
     }
 
     if (interaction.isChatInputCommand()) {
-      if (interaction.commandName === 'close') {
-        return await handleCloseCommand(interaction);
-      }
-      if (interaction.commandName === 'announce') {
-        return await handleAnnounceCommand(interaction);
+      switch (interaction.commandName) {
+        case 'close': return await handleCloseCommand(interaction);
+        case 'announce': return await handleAnnounceCommand(interaction);
+        case 'stats': return await handleStatsCommand(interaction);
+        case 'balance': return await handleBalanceCommand(interaction);
+        case 'orders': return await handleOrdersCommand(interaction);
+        case 'help': return await handleHelpCommand(interaction);
+        case 'leaderboard': return await handleLeaderboardCommand(interaction);
       }
     }
   } catch (err) {

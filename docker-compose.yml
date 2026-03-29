@@ -75,10 +75,12 @@ services:
     container_name: donuttrade-management-bot
     environment:
       - API_URL=http://api:3001
+      - REDIS_URL=redis://redis:6379
     env_file:
       - .env
     depends_on:
       - api
+      - redis
     restart: unless-stopped
 
   # PostgreSQL Database

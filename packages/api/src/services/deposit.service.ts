@@ -3,12 +3,15 @@ import { transactionRepository } from '../repositories/transaction.repository.js
 import { withTransaction } from './database.js';
 import { logger } from '../lib/logger.js';
 import { AppError } from '../lib/errors.js';
+import { eventBus } from './event-bus.service.js';
+import * as redisCache from './redis.js';
 import {
   DEPOSIT_MIN_AMOUNT,
   DEPOSIT_MAX_AMOUNT,
 } from '@donuttrade/shared';
 
 const depositLogger = logger.module('deposit.service');
+const DEDUP_TTL_SECONDS = 60;
 
 export const depositService = {
   /**
@@ -19,8 +22,18 @@ export const depositService = {
    * - { deposited: false, refund: true, refundAmount } when amount is out of limits (bot refunds)
    * - { deposited: false, refund: false } for unknown/unverified users (no refund)
    */
-  async processDeposit(username: string, amount: number) {
+  async processDeposit(username: string, amount: number, timestamp?: string) {
     depositLogger.info('processDeposit', 'Processing deposit', { username, amount });
+
+    // Dedup check — prevent the same payment from being credited twice
+    const dedupKey = `dedup:deposit:${username}:${amount}:${timestamp ?? 'none'}`;
+    const cached = await redisCache.get(dedupKey);
+    if (cached) {
+      depositLogger.info('processDeposit.dedup', 'Duplicate deposit detected, returning cached result', {
+        username, amount, timestamp,
+      });
+      return JSON.parse(cached);
+    }
 
     // Validate amount within limits
     if (amount < DEPOSIT_MIN_AMOUNT || amount > DEPOSIT_MAX_AMOUNT) {
@@ -103,7 +116,12 @@ export const depositService = {
       transactionId: result.transactionId,
     });
 
-    return { deposited: true, deposit: result };
+    // Emit deposit.confirmed event for SSE notifications
+    await eventBus.publish(user.id, 'deposit.confirmed', { amount: result.amount });
+
+    const successResult = { deposited: true, deposit: result };
+    await redisCache.set(dedupKey, JSON.stringify(successResult), DEDUP_TTL_SECONDS);
+    return successResult;
   },
 };
 

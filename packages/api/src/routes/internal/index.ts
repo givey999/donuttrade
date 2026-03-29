@@ -5,6 +5,7 @@ import { internalWithdrawalRoutes } from './withdrawal.js';
 import { internalItemDepositRoutes } from './item-deposit.js';
 import { internalItemWithdrawalRoutes } from './item-withdrawal.js';
 import { managementBotRoutes } from './management-bot.js';
+import { discordBotRoutes } from './discord-bot.js';
 
 /**
  * Internal routes - /internal/*
@@ -17,4 +18,5 @@ export const internalRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(internalItemDepositRoutes);
   await fastify.register(internalItemWithdrawalRoutes);
   await fastify.register(managementBotRoutes);
+  await fastify.register(discordBotRoutes);
 };

@@ -20,6 +20,11 @@ const envSchema = z.object({
   DISCORD_VERIFIED_ROLE_ID: z.string().min(1).optional(),
   API_URL: z.string().url().default('http://api:3001'),
   BOT_WEBHOOK_SECRET: z.string().min(32),
+  REDIS_URL: z.string().default('redis://localhost:6379'),
+  // Auto-role config (optional)
+  DISCORD_ROLE_ACTIVE_TRADER_ID: z.string().min(1).optional(),
+  DISCORD_ROLE_TRUSTED_TRADER_ID: z.string().min(1).optional(),
+  DISCORD_ROLE_ELITE_TRADER_ID: z.string().min(1).optional(),
 });
 
 const result = envSchema.safeParse(process.env);

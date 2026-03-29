@@ -141,7 +141,9 @@ export interface CreateUserInput {
  */
 export interface UpdateUserInput {
   minecraftUsername?: string;
-  discordUsername?: string;
+  microsoftId?: string | null;
+  discordId?: string | null;
+  discordUsername?: string | null;
   email?: string;
   passwordHash?: string;
   emailVerified?: boolean;
@@ -163,7 +165,9 @@ export interface UserProfile {
   authProvider: AuthProvider;
   minecraftUsername: string | null;
   email: string | null;
+  discordId: string | null;
   discordUsername: string | null;
+  microsoftId: string | null;
   verificationStatus: VerificationStatus;
   balance: string;  // Decimal as string
   tradingVolume: string;

@@ -9,6 +9,7 @@ import { config, isDevelopment } from '../../config/index.js';
 import { signPendingToken } from '../../lib/jwt.js';
 import { userRepository } from '../../repositories/user.repository.js';
 import { Cookies } from '@donuttrade/shared';
+import { parseLinkingState } from './link.js';
 
 const authLogger = logger.module('auth.routes');
 
@@ -113,6 +114,39 @@ export const discordAuthRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.redirect(`${frontendUrl}${callbackPath}?error=${encodeURIComponent('Invalid or expired state. Please try logging in again.')}`);
     }
 
+    // ─── Account Linking Flow ───────────────────────────────
+    // If the state encodes a linking context, handle it separately.
+    const linkingUserId = parseLinkingState(stateResult.redirectUrl, 'discord');
+    if (linkingUserId) {
+      const dashboardUrl = `${frontendUrl}/dashboard`;
+      try {
+        const tokens = await discordService.exchangeCodeForTokens(code);
+        const discordUser = await discordService.fetchUserProfile(tokens.accessToken);
+
+        // Ensure this Discord account isn't already on another user
+        const existing = await userRepository.findByDiscordId(discordUser.id);
+        if (existing) {
+          return reply.redirect(`${dashboardUrl}?link_error=${encodeURIComponent('This Discord account is already linked to another DonutTrade account')}`);
+        }
+
+        await userRepository.update(linkingUserId, {
+          discordId: discordUser.id,
+          discordUsername: discordUser.username,
+        });
+
+        authLogger.info('oauth.callback.linked', 'Discord account linked via OAuth callback', {
+          userId: linkingUserId,
+          discordUsername: discordUser.username,
+        });
+
+        return reply.redirect(`${dashboardUrl}?linked=discord`);
+      } catch (err) {
+        authLogger.error('oauth.callback.linkError', 'Error during Discord account linking', err as Error);
+        return reply.redirect(`${dashboardUrl}?link_error=${encodeURIComponent('Failed to link Discord account. Please try again.')}`);
+      }
+    }
+
+    // ─── Normal Login Flow ──────────────────────────────────
     const cookieOptions = {
       httpOnly: true,
       secure: !isDevelopment,
