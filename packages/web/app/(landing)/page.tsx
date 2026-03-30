@@ -165,15 +165,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Strip */}
-      <div className="border-y border-[#1a1a1a] bg-white/[0.01]">
-        <div className="mx-auto grid max-w-[700px] grid-cols-2 gap-4 px-6 py-7 md:grid-cols-4 md:gap-16">
-          <StatItem value={stats ? stats.itemsTraded.toLocaleString() : '—'} label="Items Traded" />
-          <StatItem value={stats ? formatVolume(stats.totalVolume) : '—'} label="Total Volume" />
-          <StatItem value={stats ? stats.activeOrders.toLocaleString() : '—'} label="Active Orders" />
-          <StatItem value={stats ? stats.totalTraders.toLocaleString() : '—'} label="Traders" />
+      {/* Stats Strip — only show when there's meaningful activity */}
+      {stats && (stats.itemsTraded > 0 || stats.activeOrders > 0) && (
+        <div className="border-y border-[#1a1a1a] bg-white/[0.01]">
+          <div className="mx-auto grid max-w-[700px] grid-cols-2 gap-4 px-6 py-7 md:grid-cols-4 md:gap-16">
+            <StatItem value={stats.itemsTraded.toLocaleString()} label="Items Traded" />
+            <StatItem value={formatVolume(stats.totalVolume)} label="Total Volume" />
+            <StatItem value={stats.activeOrders.toLocaleString()} label="Active Orders" />
+            <StatItem value={stats.totalTraders.toLocaleString()} label="Traders" />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* How it works */}
       <section className="mx-auto max-w-[1000px] px-6 py-20">
