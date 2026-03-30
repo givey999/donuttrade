@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/input';
 import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { FadeIn } from '@/components/ui/animate';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import type { PaginationMeta } from '@donuttrade/shared';
 
 interface AdminOrder {
@@ -106,8 +107,14 @@ export default function AdminOrdersPage() {
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
-  const handleCancel = async (id: string) => {
-    if (!confirm('Cancel this order? This will refund the unfilled portion.')) return;
+  const [confirmModal, setConfirmModal] = useState<{ id: string } | null>(null);
+
+  const handleCancel = (id: string) => {
+    setConfirmModal({ id });
+  };
+
+  const doCancelOrder = async (id: string) => {
+    setConfirmModal(null);
     setActionLoading(id);
     try {
       await apiFetch(`/admin/orders/${id}`, { method: 'DELETE' });
@@ -212,6 +219,16 @@ export default function AdminOrdersPage() {
 
           {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />}
         </FadeIn>
+      )}
+      {confirmModal && (
+        <ConfirmModal
+          title="Cancel Order"
+          message="Cancel this order? This will refund the unfilled portion."
+          confirmLabel="Cancel Order"
+          variant="danger"
+          onConfirm={() => doCancelOrder(confirmModal.id)}
+          onCancel={() => setConfirmModal(null)}
+        />
       )}
     </div>
   );

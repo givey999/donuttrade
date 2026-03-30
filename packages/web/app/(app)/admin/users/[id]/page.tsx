@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { Tabs } from '@/components/ui/tabs';
 import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
 import { FadeIn } from '@/components/ui/animate';
@@ -71,6 +72,17 @@ export default function AdminUserDetailPage() {
 
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Generic confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    message: string;
+    inputPlaceholder?: string;
+    inputRequired?: boolean;
+    confirmLabel?: string;
+    variant?: 'danger' | 'primary' | 'success';
+    onConfirm: (inputValue?: string) => void | Promise<void>;
+  } | null>(null);
+
   const fetchUser = useCallback(() => {
     setLoading(true);
     apiFetch<UserDetail>(`/admin/users/${params.id}`)
@@ -105,10 +117,19 @@ export default function AdminUserDetailPage() {
     setActionLoading(false);
   };
 
-  const handleBan = async () => {
-    const reason = prompt('Ban reason:');
-    if (!reason) return;
-    await doAction('/ban', { reason });
+  const handleBan = () => {
+    setConfirmModal({
+      title: 'Ban User',
+      message: `Ban ${userDetail.minecraftUsername ?? 'this user'} from the platform?`,
+      inputPlaceholder: 'Ban reason...',
+      inputRequired: true,
+      confirmLabel: 'Ban',
+      variant: 'danger',
+      onConfirm: async (reason) => {
+        setConfirmModal(null);
+        await doAction('/ban', { reason });
+      },
+    });
   };
 
   const handleTimeout = async (durationMs: number) => {
@@ -127,9 +148,17 @@ export default function AdminUserDetailPage() {
     setBalanceReason('');
   };
 
-  const handleRoleChange = async (newRole: string) => {
-    if (!confirm(`Change role to ${newRole}?`)) return;
-    await doAction('/role', { role: newRole });
+  const handleRoleChange = (newRole: string) => {
+    setConfirmModal({
+      title: 'Change Role',
+      message: `Change ${userDetail.minecraftUsername ?? 'this user'}'s role to ${newRole}?`,
+      confirmLabel: 'Change Role',
+      variant: 'primary',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await doAction('/role', { role: newRole });
+      },
+    });
   };
 
   return (
@@ -191,7 +220,12 @@ export default function AdminUserDetailPage() {
           {/* Action buttons */}
           <div className="mt-4 flex flex-wrap gap-2">
             {isManagerOrAdmin && !isSelf && userDetail.verificationStatus !== 'verified' && (
-              <Button variant="primary" size="sm" onClick={() => { if (confirm('Manually verify this user?')) doAction('/verify'); }} disabled={actionLoading}>
+              <Button variant="primary" size="sm" onClick={() => setConfirmModal({
+                title: 'Verify User',
+                message: `Manually verify ${userDetail.minecraftUsername ?? 'this user'}?`,
+                confirmLabel: 'Verify',
+                onConfirm: async () => { setConfirmModal(null); await doAction('/verify'); },
+              })} disabled={actionLoading}>
                 Verify User
               </Button>
             )}
@@ -214,7 +248,12 @@ export default function AdminUserDetailPage() {
               </Select>
             )}
             {isAdmin && !isSelf && userDetail.role !== 'leader' && !(userDetail.role === 'admin' && currentUser?.role !== 'leader') && (
-              <Button variant="secondary" size="sm" onClick={() => { if (confirm(`View the platform as ${userDetail.minecraftUsername}?`)) impersonate(userDetail.id); }} disabled={actionLoading}>
+              <Button variant="secondary" size="sm" onClick={() => setConfirmModal({
+                title: 'Impersonate User',
+                message: `View the platform as ${userDetail.minecraftUsername ?? 'this user'}? You will be logged in as them until you switch back.`,
+                confirmLabel: 'Impersonate',
+                onConfirm: async () => { setConfirmModal(null); impersonate(userDetail.id); },
+              })} disabled={actionLoading}>
                 Impersonate
               </Button>
             )}
@@ -239,6 +278,32 @@ export default function AdminUserDetailPage() {
                   </Button>
                 )}
               </>
+            )}
+            {currentUser?.role === 'leader' && !isSelf && userDetail.role !== 'leader' && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setConfirmModal({
+                  title: 'Delete User',
+                  message: `Permanently delete ${userDetail.minecraftUsername ?? 'this user'}? All data (orders, transactions, inventory) will be permanently lost. This cannot be undone.`,
+                  confirmLabel: 'Delete Permanently',
+                  variant: 'danger',
+                  onConfirm: async () => {
+                    setConfirmModal(null);
+                    setActionLoading(true);
+                    try {
+                      await apiFetch(`/admin/users/${userDetail.id}`, { method: 'DELETE' });
+                      router.push('/admin/users');
+                    } catch (e: any) {
+                      setActionError(e.message || 'Failed to delete user');
+                      setActionLoading(false);
+                    }
+                  },
+                })}
+                disabled={actionLoading}
+              >
+                Delete User
+              </Button>
             )}
           </div>
         </Card>
@@ -436,6 +501,20 @@ export default function AdminUserDetailPage() {
             Cancel
           </Button>
         </Modal>
+      )}
+
+      {/* Generic Confirm Modal */}
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.title}
+          message={confirmModal.message}
+          inputPlaceholder={confirmModal.inputPlaceholder}
+          inputRequired={confirmModal.inputRequired}
+          confirmLabel={confirmModal.confirmLabel}
+          variant={confirmModal.variant}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
       )}
     </div>
   );

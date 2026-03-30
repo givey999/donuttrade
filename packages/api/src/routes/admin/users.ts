@@ -419,4 +419,59 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
 
     return { success: true };
   });
+
+  /**
+   * DELETE /admin/users/:id
+   * Leader only — permanently delete a user and all their data.
+   */
+  fastify.delete<{ Params: { id: string } }>('/:id', async (request) => {
+    if (request.user!.role !== 'leader') {
+      throw new AppError('Only leaders can delete users', { code: 'FORBIDDEN', statusCode: 403 });
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id: request.params.id },
+      select: { id: true, role: true, minecraftUsername: true },
+    });
+
+    if (!target) {
+      throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
+    }
+
+    if (target.role === 'leader') {
+      throw new AppError('Cannot delete a leader', { code: 'HIERARCHY_VIOLATION', statusCode: 403 });
+    }
+
+    // Delete all related data in a transaction
+    await withTransaction(async (tx) => {
+      await tx.orderFill.deleteMany({ where: { filledByUserId: target.id } });
+      await tx.orderFill.deleteMany({ where: { order: { userId: target.id } } });
+      await tx.order.deleteMany({ where: { userId: target.id } });
+      await tx.transaction.deleteMany({ where: { userId: target.id } });
+      await tx.withdrawal.deleteMany({ where: { userId: target.id } });
+      await tx.inventoryItem.deleteMany({ where: { userId: target.id } });
+      await tx.itemDeposit.deleteMany({ where: { userId: target.id } });
+      await tx.itemWithdrawal.deleteMany({ where: { userId: target.id } });
+      await tx.session.deleteMany({ where: { userId: target.id } });
+      await tx.userCosmetics.deleteMany({ where: { userId: target.id } });
+      await tx.auditLog.deleteMany({ where: { actorId: target.id } });
+      await tx.user.delete({ where: { id: target.id } });
+    });
+
+    await auditService.log({
+      actorId: request.user!.id,
+      action: 'user.delete',
+      targetType: 'user',
+      targetId: target.id,
+      details: { username: target.minecraftUsername, role: target.role },
+    });
+
+    adminLogger.warn('deleteUser', 'User deleted by leader', {
+      targetId: target.id,
+      username: target.minecraftUsername,
+      deletedBy: request.user!.id,
+    });
+
+    return { success: true };
+  });
 };

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { FadeIn } from '@/components/ui/animate';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import type { PaginationMeta } from '@donuttrade/shared';
 
 interface AdminDeposit {
@@ -55,25 +56,31 @@ export default function AdminDepositsPage() {
 
   useEffect(() => { fetchDeposits(); }, [fetchDeposits]);
 
-  const handleConfirm = async (id: string) => {
-    if (!confirm('Confirm this deposit?')) return;
-    setActionLoading(id);
-    try {
-      await apiFetch(`/admin/item-deposits/${id}/confirm`, { method: 'PATCH' });
-      fetchDeposits();
-    } catch { /* error handled by apiFetch */ }
-    setActionLoading(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    type: 'confirm' | 'reject';
+    id: string;
+  } | null>(null);
+
+  const handleConfirm = (id: string) => {
+    setConfirmModal({ type: 'confirm', id });
   };
 
-  const handleReject = async (id: string) => {
-    const notes = prompt('Rejection reason (optional):');
-    if (notes === null) return;
+  const handleReject = (id: string) => {
+    setConfirmModal({ type: 'reject', id });
+  };
+
+  const doDepositAction = async (id: string, type: 'confirm' | 'reject', notes?: string) => {
+    setConfirmModal(null);
     setActionLoading(id);
     try {
-      await apiFetch(`/admin/item-deposits/${id}/reject`, {
-        method: 'PATCH',
-        body: JSON.stringify({ notes }),
-      });
+      if (type === 'confirm') {
+        await apiFetch(`/admin/item-deposits/${id}/confirm`, { method: 'PATCH' });
+      } else {
+        await apiFetch(`/admin/item-deposits/${id}/reject`, {
+          method: 'PATCH',
+          body: JSON.stringify({ notes: notes || '' }),
+        });
+      }
       fetchDeposits();
     } catch { /* error handled by apiFetch */ }
     setActionLoading(null);
@@ -158,6 +165,27 @@ export default function AdminDepositsPage() {
 
           {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />}
         </FadeIn>
+      )}
+      {confirmModal?.type === 'confirm' && (
+        <ConfirmModal
+          title="Confirm Deposit"
+          message="Confirm this item deposit? The items will be added to the user's inventory."
+          confirmLabel="Confirm Deposit"
+          variant="success"
+          onConfirm={() => doDepositAction(confirmModal.id, 'confirm')}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+      {confirmModal?.type === 'reject' && (
+        <ConfirmModal
+          title="Reject Deposit"
+          message="Reject this item deposit?"
+          inputPlaceholder="Rejection reason (optional)"
+          confirmLabel="Reject"
+          variant="danger"
+          onConfirm={(notes) => doDepositAction(confirmModal.id, 'reject', notes)}
+          onCancel={() => setConfirmModal(null)}
+        />
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Table, Thead, Tbody, Th, Td } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
 import { FadeIn } from '@/components/ui/animate';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import type { PaginationMeta } from '@donuttrade/shared';
 
 interface AdminWithdrawal {
@@ -58,18 +59,20 @@ export default function AdminWithdrawalsPage() {
 
   useEffect(() => { fetchWithdrawals(); }, [fetchWithdrawals]);
 
-  const handleAction = async (id: string, action: 'claim' | 'confirm' | 'fail') => {
-    let body = '{}';
-    if (action === 'fail') {
-      const reason = prompt('Failure reason:');
-      if (!reason) return;
-      body = JSON.stringify({ reason });
-    }
-    if (action === 'confirm' && !confirm('Confirm this withdrawal as completed?')) return;
-    if (action === 'claim' && !confirm('Claim this withdrawal for processing?')) return;
+  const [confirmModal, setConfirmModal] = useState<{
+    id: string;
+    action: 'claim' | 'confirm' | 'fail';
+  } | null>(null);
 
+  const handleAction = (id: string, action: 'claim' | 'confirm' | 'fail') => {
+    setConfirmModal({ id, action });
+  };
+
+  const doWithdrawalAction = async (id: string, action: string, reason?: string) => {
+    setConfirmModal(null);
     setActionLoading(id);
     try {
+      const body = reason ? JSON.stringify({ reason }) : '{}';
       await apiFetch(`/admin/item-withdrawals/${id}/${action}`, { method: 'PATCH', body });
       fetchWithdrawals();
     } catch { /* error handled by apiFetch */ }
@@ -170,6 +173,38 @@ export default function AdminWithdrawalsPage() {
 
           {meta && <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />}
         </FadeIn>
+      )}
+      {confirmModal?.action === 'claim' && (
+        <ConfirmModal
+          title="Claim Withdrawal"
+          message="Claim this withdrawal for processing?"
+          confirmLabel="Claim"
+          variant="primary"
+          onConfirm={() => doWithdrawalAction(confirmModal.id, 'claim')}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+      {confirmModal?.action === 'confirm' && (
+        <ConfirmModal
+          title="Confirm Withdrawal"
+          message="Confirm this withdrawal as completed?"
+          confirmLabel="Confirm"
+          variant="success"
+          onConfirm={() => doWithdrawalAction(confirmModal.id, 'confirm')}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+      {confirmModal?.action === 'fail' && (
+        <ConfirmModal
+          title="Fail Withdrawal"
+          message="Mark this withdrawal as failed? The user will be refunded."
+          inputPlaceholder="Failure reason..."
+          inputRequired
+          confirmLabel="Mark Failed"
+          variant="danger"
+          onConfirm={(reason) => doWithdrawalAction(confirmModal.id, 'fail', reason)}
+          onCancel={() => setConfirmModal(null)}
+        />
       )}
     </div>
   );

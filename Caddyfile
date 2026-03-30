@@ -33,6 +33,9 @@ moldo.go.ro:9443 {
     handle /auth/verification/* {
         reverse_proxy api:3001
     }
+    handle /auth/link/* {
+        reverse_proxy api:3001
+    }
 
     # SSE events endpoint (EventSource doesn't send Content-Type: application/json)
     handle /events/* {
