@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'DonutTrade — The trusted way to trade on DonutSMP',
+  title: 'DonutTrade',
   description: 'Secure escrow trading for Minecraft items on DonutSMP. Deposit, trade, and withdraw safely.',
   openGraph: {
-    title: 'DonutTrade — The trusted way to trade on DonutSMP',
+    title: 'DonutTrade',
     description: 'Secure escrow trading for Minecraft items on DonutSMP.',
     siteName: 'DonutTrade',
   },
