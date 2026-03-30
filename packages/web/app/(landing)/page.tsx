@@ -166,7 +166,7 @@ export default function LandingPage() {
       </section>
 
       {/* Stats Strip — only show when there's meaningful activity */}
-      {stats && (stats.itemsTraded > 0 || stats.activeOrders > 0) && (
+      {stats && (stats.itemsTraded >= 150) && (
         <div className="border-y border-[#1a1a1a] bg-white/[0.01]">
           <div className="mx-auto grid max-w-[700px] grid-cols-2 gap-4 px-6 py-7 md:grid-cols-4 md:gap-16">
             <StatItem value={stats.itemsTraded.toLocaleString()} label="Items Traded" />

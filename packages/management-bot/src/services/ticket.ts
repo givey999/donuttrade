@@ -62,7 +62,7 @@ export async function createTicketChannel(guild: Guild, opts: {
   // Store channel ID and label on the record
   await apiClient.setTicketChannel(opts.type, opts.recordId, channel.id, channelName);
 
-  // Send welcome embed
+  // Send welcome embed + ping moderator role for instant notification
   const embed = buildTicketWelcomeEmbed({
     type: opts.type,
     number,
@@ -71,7 +71,10 @@ export async function createTicketChannel(guild: Guild, opts: {
     quantity: opts.quantity,
   });
 
-  await channel.send({ embeds: [embed] });
+  await channel.send({
+    content: `<@&${config.DISCORD_MODERATOR_ROLE_ID}>`,
+    embeds: [embed],
+  });
 
   return channel;
 }

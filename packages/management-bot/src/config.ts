@@ -11,6 +11,8 @@ const envSchema = z.object({
   DISCORD_GUILD_ID: z.string().min(1),
   DISCORD_DEPOSIT_CATEGORY_ID: z.string().min(1),
   DISCORD_WITHDRAWAL_CATEGORY_ID: z.string().min(1),
+  DISCORD_SUPPORT_CATEGORY_ID: z.string().min(1).optional(),
+  DISCORD_SUPPORT_ROLE_ID: z.string().min(1).optional(),
   DISCORD_MODERATOR_ROLE_ID: z.string().min(1),
   DISCORD_PANEL_CHANNEL_ID: z.string().min(1),
   DISCORD_LOGS_CHANNEL_ID: z.string().min(1),

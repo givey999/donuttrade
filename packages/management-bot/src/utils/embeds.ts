@@ -5,7 +5,7 @@ const BRAND_COLOR = 0x7C3AED; // violet-600
 export function buildPanelEmbed() {
   return new EmbedBuilder()
     .setTitle('DonutTrade Support')
-    .setDescription('Need to deposit or withdraw items?\nClick below to create a ticket.')
+    .setDescription('Need to deposit or withdraw items, or have a question?\nClick below to create a ticket.')
     .setColor(BRAND_COLOR);
 }
 
@@ -21,7 +21,29 @@ export function buildPanelButtons() {
       .setLabel('Withdraw Items')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('\u{1F4E4}'),
+    new ButtonBuilder()
+      .setCustomId('ticket_support')
+      .setLabel('Support')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('\u{2753}'),
   );
+}
+
+export function buildSupportWelcomeEmbed(opts: {
+  number: number;
+  userTag: string;
+  subject: string;
+}) {
+  return new EmbedBuilder()
+    .setTitle(`Support #${opts.number}`)
+    .setColor(BRAND_COLOR)
+    .addFields(
+      { name: 'User', value: opts.userTag, inline: true },
+      { name: 'Subject', value: opts.subject, inline: false },
+    )
+    .setDescription('A moderator will be with you shortly.')
+    .setFooter({ text: 'Moderators: use /close to close this ticket' })
+    .setTimestamp();
 }
 
 export function buildTicketWelcomeEmbed(opts: {

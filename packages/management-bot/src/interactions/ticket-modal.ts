@@ -5,9 +5,13 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   ModalSubmitInteraction,
+  ChannelType,
+  PermissionFlagsBits,
 } from 'discord.js';
 import { apiClient } from '../api-client.js';
 import { createTicketChannel } from '../services/ticket.js';
+import { buildSupportWelcomeEmbed } from '../utils/embeds.js';
+import { config } from '../config.js';
 
 // Per-user cooldown: 1 modal per 10 seconds
 const cooldowns = new Map<string, number>();
@@ -71,5 +75,113 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction) {
         : 'Could not reach the platform. Please try again later.';
 
     await interaction.editReply({ content: message });
+  }
+}
+
+// ─── Support Ticket ──────────────────────────────────────
+
+export async function handleSupportButton(interaction: ButtonInteraction) {
+  const userId = interaction.user.id;
+
+  // Separate cooldown key so support doesn't block deposit/withdrawal and vice versa
+  const cooldownKey = `${userId}:support`;
+  const lastUse = cooldowns.get(cooldownKey) || 0;
+  if (Date.now() - lastUse < COOLDOWN_MS) {
+    const remaining = Math.ceil((COOLDOWN_MS - (Date.now() - lastUse)) / 1000);
+    await interaction.reply({ content: `Please wait ${remaining}s before creating another ticket.`, ephemeral: true });
+    return;
+  }
+  cooldowns.set(cooldownKey, Date.now());
+
+  const modal = new ModalBuilder()
+    .setCustomId('modal_support')
+    .setTitle('Support Ticket');
+
+  const subjectInput = new TextInputBuilder()
+    .setCustomId('support_subject')
+    .setLabel('What do you need help with?')
+    .setStyle(TextInputStyle.Paragraph)
+    .setPlaceholder('Describe your issue or question...')
+    .setRequired(true)
+    .setMaxLength(500);
+
+  modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(subjectInput));
+  await interaction.showModal(modal);
+}
+
+export async function handleSupportModal(interaction: ModalSubmitInteraction) {
+  await interaction.deferReply({ ephemeral: true });
+
+  const subject = interaction.fields.getTextInputValue('support_subject').trim();
+
+  if (!config.DISCORD_SUPPORT_CATEGORY_ID) {
+    await interaction.editReply({ content: 'Support tickets are not configured. Please contact a moderator directly.' });
+    return;
+  }
+
+  try {
+    const number = await apiClient.getNextTicketNumber();
+    const channelName = `support-${number}`;
+
+    const guild = interaction.guild!;
+    const supportRoleId = config.DISCORD_SUPPORT_ROLE_ID || config.DISCORD_MODERATOR_ROLE_ID;
+
+    const permissionOverwrites = [
+      {
+        id: guild.id,
+        deny: [PermissionFlagsBits.ViewChannel],
+      },
+      {
+        id: interaction.user.id,
+        allow: [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.SendMessages,
+          PermissionFlagsBits.ReadMessageHistory,
+          PermissionFlagsBits.AttachFiles,
+        ],
+      },
+      {
+        id: supportRoleId,
+        allow: [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.SendMessages,
+          PermissionFlagsBits.ReadMessageHistory,
+          PermissionFlagsBits.ManageMessages,
+          PermissionFlagsBits.AttachFiles,
+        ],
+      },
+      {
+        id: interaction.client.user!.id,
+        allow: [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.SendMessages,
+          PermissionFlagsBits.ManageChannels,
+          PermissionFlagsBits.ReadMessageHistory,
+        ],
+      },
+    ];
+
+    const channel = await guild.channels.create({
+      name: channelName,
+      type: ChannelType.GuildText,
+      parent: config.DISCORD_SUPPORT_CATEGORY_ID,
+      permissionOverwrites,
+    });
+
+    const embed = buildSupportWelcomeEmbed({
+      number,
+      userTag: interaction.user.toString(),
+      subject,
+    });
+
+    await channel.send({
+      content: `<@&${supportRoleId}>`,
+      embeds: [embed],
+    });
+
+    await interaction.editReply({ content: `Ticket created: ${channel}` });
+  } catch (err) {
+    console.error('Support ticket creation failed:', err);
+    await interaction.editReply({ content: 'Failed to create support ticket. Please try again later.' });
   }
 }
