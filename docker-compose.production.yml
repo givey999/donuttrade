@@ -1,0 +1,21 @@
+# Production overrides for donuttrade.com
+# Usage: docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+
+services:
+  caddy:
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./Caddyfile.production:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  api:
+    environment:
+      - CORS_ORIGIN=https://donuttrade.com
+
+  web:
+    build:
+      args:
+        - NEXT_PUBLIC_API_URL=https://donuttrade.com

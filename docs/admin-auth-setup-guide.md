@@ -5,7 +5,7 @@ This guide walks you through setting up the three authentication methods for Don
 **Prerequisites:**
 - The DonutTrade API is deployed and running (or you have a local dev environment)
 - You have access to the `.env` file at the project root
-- You know your domain (e.g., `moldo.go.ro:9443` for production, `localhost:3000` for dev)
+- You know your domain (e.g., `donuttrade.com` for production, `moldo.go.ro:9443` for dev)
 
 ---
 

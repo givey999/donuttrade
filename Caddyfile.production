@@ -1,0 +1,65 @@
+# Production Caddyfile - HTTPS reverse proxy for donuttrade.com
+# Caddy automatically provisions Let's Encrypt certificates on standard port 443.
+
+donuttrade.com {
+    # API auth routes (specific paths, not /auth/callback which is a frontend page)
+    handle /auth/microsoft* {
+        reverse_proxy api:3001
+    }
+    handle /auth/discord* {
+        reverse_proxy api:3001
+    }
+    handle /auth/me {
+        reverse_proxy api:3001
+    }
+    handle /auth/refresh {
+        reverse_proxy api:3001
+    }
+    handle /auth/logout* {
+        reverse_proxy api:3001
+    }
+    handle /auth/set-username {
+        reverse_proxy api:3001
+    }
+    handle /auth/verification/* {
+        reverse_proxy api:3001
+    }
+    handle /auth/link/* {
+        reverse_proxy api:3001
+    }
+
+    # SSE events endpoint (EventSource doesn't send Content-Type: application/json)
+    handle /events/* {
+        reverse_proxy api:3001
+    }
+
+    # Public stats/settings (browser fetches without Content-Type on initial load)
+    handle /public/* {
+        reverse_proxy api:3001
+    }
+
+    # Note: /internal/* routes are NOT exposed through Caddy.
+    # The bot-bridge calls http://api:3001 directly on the Docker network.
+
+    # JSON API requests (from apiFetch / XHR) → API backend
+    @api_request header Content-Type "application/json*"
+    handle @api_request {
+        reverse_proxy api:3001
+    }
+
+    handle /api/* {
+        reverse_proxy api:3001
+    }
+
+    # Frontend
+    handle {
+        reverse_proxy web:3000
+    }
+
+    encode gzip
+
+    log {
+        output stdout
+        format console
+    }
+}

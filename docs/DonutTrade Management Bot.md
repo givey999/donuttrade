@@ -189,7 +189,7 @@ The flow mirrors the existing Microsoft OAuth2 implementation:
 
 1. User clicks "Sign in with Discord" on the login page
 2. Redirected to Discord OAuth2 authorization URL
-3. Discord redirects back to `https://moldo.go.ro:9443/auth/discord/callback` with an authorization code
+3. Discord redirects back to `https://donuttrade.com/auth/discord/callback` with an authorization code
 4. API exchanges the code for Discord tokens
 5. API fetches the user's Discord profile (id, username, email)
 6. Three branches:
@@ -213,7 +213,7 @@ The flow mirrors the existing Microsoft OAuth2 implementation:
 2. **Discord auth route** (`packages/api/src/routes/auth/discord.ts`) — Two endpoints: `GET /auth/discord` (initiate) and `GET /auth/discord/callback` (handle callback). Mirrors `microsoft.ts`.
 3. **Register the route** in `packages/api/src/routes/auth/index.ts`
 4. **Enable the login button** on the frontend (`packages/web/app/(app)/login/page.tsx`)
-5. **Fill in env vars** — Create OAuth2 credentials in Discord Developer Portal (same app as the bot), set redirect URI to `https://moldo.go.ro:9443/auth/discord/callback`
+5. **Fill in env vars** — Create OAuth2 credentials in Discord Developer Portal (same app as the bot), set redirect URI to `https://donuttrade.com/auth/discord/callback`
 
 ### Discord OAuth2 Details
 

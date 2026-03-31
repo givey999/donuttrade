@@ -5,66 +5,83 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm install          # Install dependencies
-npm start            # Run the bot (production)
-npm run dev          # Run with file watching (development)
+# Install all workspace dependencies
+pnpm install
 
-# 24/7 operation with PM2
-pm2 start ecosystem.config.js
-pm2 logs miau-minecraft-bot
+# Development (local)
+docker compose up -d                  # Start all services (dev)
+docker compose logs -f                # Follow all logs
+docker compose logs -f api            # Follow one service
+
+# Production (on Droplet)
+docker compose -f docker-compose.yml -f docker-compose.production.yml up -d --build
+
+# Individual packages
+pnpm --filter @donuttrade/api dev     # API with hot reload
+pnpm --filter @donuttrade/web dev     # Web with hot reload
+pnpm --filter @donuttrade/api db:generate  # Regenerate Prisma client
 ```
 
 ## Architecture
 
-This is a Minecraft chat listener module built on Mineflayer. It connects to a Minecraft server, listens to chat, and can send commands.
+DonutTrade is a Minecraft trading platform. Players deposit/withdraw in-game money and items, then trade on a web marketplace. The system has 5 services orchestrated with Docker Compose.
 
-### Core Components
+### Services
 
-**MinecraftChatBot** (`src/bot.js`) - Connection layer wrapping Mineflayer
-- Manages connection lifecycle and Microsoft authentication
-- Auto-reconnects with exponential backoff (5s initial → 5min max)
-- Emits events: `connected`, `disconnected`, `kicked`, `error`, `chat`, `whisper`, `rawMessage`
-- Exposes underlying `this.bot` (mineflayer instance) for direct access
+| Service | Package | Port | Description |
+|---------|---------|------|-------------|
+| **API** | `packages/api/` | 3001 | Fastify REST API, Prisma ORM, PostgreSQL + Redis |
+| **Web** | `packages/web/` | 3000 | Next.js 15 frontend (App Router, React 19, Tailwind) |
+| **MC-Bot** | `packages/mc-bot/` | — | Mineflayer bot: payment verification, deposits, withdrawals |
+| **Management-Bot** | `packages/management-bot/` | — | Discord.js bot: tickets, notifications, role assignment |
+| **Caddy** | `Caddyfile` | 443/80 | Reverse proxy, auto Let's Encrypt TLS |
 
-**ChatHandler** (`src/chat.js`) - Higher-level chat interface
-- Wraps MinecraftChatBot events, not mineflayer directly
-- Command system with configurable prefix (default: `!`)
-- Message filtering via `addFilter(fn)` before event emission
-- Emits `message` objects with `{ username, message, type, timestamp }`
-
-**PaymentHandler** (`src/payments.js`) - Payment tracking
-- Parses incoming payments from system messages (`username paid you $amount`)
-- Logs to `logs/payments-in.log` as JSON lines
-- Handles K/M/B/T suffixes (e.g., `1.5K.` = 1500, `2M.` = 2000000)
-- Note: Incoming amounts are approximate due to server rounding
-
-**Console Input** (`src/index.js`) - Stdin command handler
-- Type commands directly in console to send to Minecraft
-- Outgoing `/pay` commands logged to `logs/payments-out.log`
-- Parses K/M/B/T suffixes case-insensitively
+**Shared types** live in `packages/shared/` (TypeScript types + constants).
 
 ### Data Flow
 
 ```
-Minecraft Server → mineflayer → MinecraftChatBot → ChatHandler → your handlers
-                                    (events)          (filtering, commands)
+User Browser ──→ Caddy ──→ Web (Next.js)     ← pages, SSR
+                   │
+                   └──→ API (Fastify)         ← JSON, SSE
+                         │
+               ┌─────────┼─────────┐
+               ▼         ▼         ▼
+           PostgreSQL   Redis    MC-Bot ──→ Minecraft Server
+                         │
+                         └──→ Management-Bot ──→ Discord
 ```
+
+### Key Patterns
+
+- **Internal routes** (`/internal/*`): Bot-to-API communication, authenticated with `BOT_WEBHOOK_SECRET` Bearer token. NOT exposed through Caddy — bots call `http://api:3001` directly on Docker network.
+- **Content-Type routing**: Caddy routes `application/json` requests to API, everything else to Web frontend. No `/api/` prefix needed.
+- **Event system**: Redis Pub/Sub for real-time notifications. API publishes, Management-Bot subscribes for Discord DMs, Web uses SSE (`/events/stream`).
+- **Code signing**: Deposit/withdrawal codes use HMAC-SHA256 (`CODE_SIGNING_SECRET`).
+
+### Database
+
+PostgreSQL 16 via Prisma ORM. Schema at `packages/api/prisma/schema.prisma`.
+
+Key tables: `users`, `sessions`, `transactions`, `withdrawals`, `catalog_items`, `inventory_items`, `item_deposits`, `item_withdrawals`, `orders`, `order_fills`, `audit_logs`, `platform_settings`, `user_cosmetics`.
 
 ### Configuration
 
-Config lives in `config/config.json` (copy from `config.example.json`). Required fields:
-- `server.host` - Server address
-- `auth.username` - Microsoft account email
-- `auth.type` - Should be `"microsoft"` for authenticated servers
+Environment variables loaded from `.env` at project root. Templates:
+- `.env.example` — local development (moldo.go.ro:9443)
+- `.env.production.example` — production (donuttrade.com)
 
-First run prompts for Microsoft OAuth in browser; tokens are cached in `%APPDATA%\.minecraft\nmp-cache\` (Windows).
+Config validated with Zod on startup (`packages/api/src/config/index.ts`).
 
-### Log Files
+### Deployment
 
-- `logs/payments-in.log` - Incoming payments (JSON lines)
-- `logs/payments-out.log` - Outgoing payments (JSON lines)
+- **Domain:** `donuttrade.com` (Namecheap)
+- **Hosting:** DigitalOcean Droplet (Ubuntu 24.04, Docker Compose)
+- **Dev domain:** `moldo.go.ro:9443` (local testing)
+- **Production config:** `docker-compose.production.yml` overrides + `Caddyfile.production`
+- **Deploy plan:** `docs/superpowers/plans/2026-03-30-digitalocean-deployment.md`
+- **Repo:** Private GitHub (`meya420/donuttrade`)
 
-Log entry format:
-```json
-{"timestamp":"...","username":"player","amount":1000,"amountRaw":"1K."}
-```
+### Legacy Bot
+
+The `src/` directory contains the original standalone Minecraft chat bot (pre-platform). It is superseded by `packages/mc-bot/` but kept for reference. The `ecosystem.config.js` (PM2) is for this legacy bot only.
