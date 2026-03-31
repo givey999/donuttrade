@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Footer } from '@/components/footer';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moldo.go.ro:9443';
 
@@ -209,7 +210,7 @@ export default function LandingPage() {
             <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
             <div className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]" />
             <div className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-            <span className="ml-2 text-[11px] text-neutral-600">moldo.go.ro:9443/marketplace</span>
+            <span className="ml-2 text-[11px] text-neutral-600">donuttrade.com/marketplace</span>
           </div>
           {/* Table */}
           <div className="overflow-x-auto p-5">
@@ -247,10 +248,7 @@ export default function LandingPage() {
         </Link>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-[#1a1a1a] py-6 text-center text-xs text-neutral-600">
-        &copy; 2026 DonutTrade. All rights reserved.
-      </footer>
+      <Footer />
     </>
   );
 }

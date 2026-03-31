@@ -8,6 +8,7 @@ import { TimeoutBanner } from '@/components/timeout-banner';
 import { MaintenanceScreen } from '@/components/maintenance-screen';
 import { NotificationProvider } from '@/lib/notifications';
 import { BackgroundStars } from '@/components/background-stars';
+import { Footer } from '@/components/footer';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moldo.go.ro:9443';
 
@@ -96,6 +97,7 @@ export default function AppLayout({
             <Navbar />
             <TimeoutBanner />
             {children}
+            <Footer />
           </MaintenanceGuard>
         </NotificationProvider>
       </ToastProvider>
