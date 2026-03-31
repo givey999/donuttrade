@@ -22,7 +22,7 @@ services:
 
   postgres:
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-donuttrade}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-donuttrade} -d donuttrade"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dev} -d donuttrade"]
