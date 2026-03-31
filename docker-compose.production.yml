@@ -19,3 +19,10 @@ services:
     build:
       args:
         - NEXT_PUBLIC_API_URL=https://donuttrade.com
+
+  postgres:
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-donuttrade}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-donuttrade} -d donuttrade"]
