@@ -19,9 +19,9 @@ import type { TransactionRecord, TransactionType, PaginationMeta, InventoryItemR
 
 const DEPOSIT_BOT_NAME = process.env.NEXT_PUBLIC_MC_BOT_NAME || 'DonutTrade';
 const DEPOSIT_MIN = 1_000;
-const DEPOSIT_MAX = 10_000_000;
+const DEPOSIT_MAX = 100_000_000_000;
 const WITHDRAWAL_MIN = 1;
-const WITHDRAWAL_MAX = 10_000_000;
+const WITHDRAWAL_MAX = 100_000_000_000;
 const DISCORD_INVITE_URL = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || '#';
 
 const SUFFIXES: Record<string, number> = {
@@ -148,7 +148,7 @@ function DepositModal({ onClose }: { onClose: () => void }) {
             <code className="text-sm text-violet-500">/pay {DEPOSIT_BOT_NAME} &lt;amount&gt;</code>
           </div>
           <div className="mt-4 space-y-2 text-xs text-neutral-500">
-            <p>Min: ${DEPOSIT_MIN.toLocaleString()} &mdash; Max: ${DEPOSIT_MAX.toLocaleString()}</p>
+            <p>Min: ${DEPOSIT_MIN.toLocaleString()} &mdash; Max: ${DEPOSIT_MAX.toLocaleString()} (100B)</p>
             <p>Your balance updates automatically after payment.</p>
             <p>Amounts over the limit will be refunded in full.</p>
           </div>
@@ -269,7 +269,7 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   const handleMoneySubmit = useCallback(async () => {
     const num = parseAmount(amount);
     if (!num || num < WITHDRAWAL_MIN || num > WITHDRAWAL_MAX) {
-      setError(`Amount must be between $${WITHDRAWAL_MIN.toLocaleString()} and $${WITHDRAWAL_MAX.toLocaleString()}`);
+      setError(`Amount must be between $${WITHDRAWAL_MIN.toLocaleString()} and $${WITHDRAWAL_MAX.toLocaleString()} (100B)`);
       return;
     }
 
@@ -360,7 +360,7 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         ) : (
           <>
             <p className="mt-3 text-xs text-neutral-500">
-              Min: ${WITHDRAWAL_MIN.toLocaleString()} &mdash; Max: ${WITHDRAWAL_MAX.toLocaleString()}
+              Min: ${WITHDRAWAL_MIN.toLocaleString()} &mdash; Max: ${WITHDRAWAL_MAX.toLocaleString()} (100B)
             </p>
 
             <div className="mt-3">

@@ -92,9 +92,9 @@ export const RateLimits = {
  * Deposit & Withdrawal limits (Phase 7)
  */
 export const DEPOSIT_MIN_AMOUNT = 1_000;
-export const DEPOSIT_MAX_AMOUNT = 10_000_000;
+export const DEPOSIT_MAX_AMOUNT = 100_000_000_000;
 export const WITHDRAWAL_MIN_AMOUNT = 1;
-export const WITHDRAWAL_MAX_AMOUNT = 10_000_000;
+export const WITHDRAWAL_MAX_AMOUNT = 100_000_000_000;
 export const WITHDRAWAL_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
