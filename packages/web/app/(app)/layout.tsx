@@ -94,10 +94,12 @@ export default function AppLayout({
           <BackgroundStars />
           <ImpersonationBanner />
           <MaintenanceGuard>
-            <Navbar />
-            <TimeoutBanner />
-            {children}
-            <Footer />
+            <div className="flex min-h-screen flex-col">
+              <Navbar />
+              <TimeoutBanner />
+              <div className="flex-1">{children}</div>
+              <Footer />
+            </div>
           </MaintenanceGuard>
         </NotificationProvider>
       </ToastProvider>

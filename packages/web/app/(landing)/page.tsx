@@ -44,7 +44,7 @@ export default function LandingPage() {
   const ctaHref = isLoggedIn ? '/dashboard' : '/login';
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
       <style>{`
         @keyframes float-up {
           0% { transform: translateY(0) translateX(0); opacity: 0; }
@@ -248,8 +248,10 @@ export default function LandingPage() {
         </Link>
       </section>
 
-      <Footer />
-    </>
+      <div className="mt-auto">
+        <Footer />
+      </div>
+    </div>
   );
 }
 
