@@ -105,6 +105,15 @@ function MarketplaceContent() {
         </PageHeader>
       </FadeIn>
 
+      {/* Buy/Sell explanation */}
+      <FadeIn delay={50}>
+        <div className="mt-4 flex items-center justify-center gap-4 text-xs text-neutral-500">
+          <span><Badge variant="violet">sell</Badge> <span className="ml-1">= you buy their items</span></span>
+          <span className="text-neutral-700">·</span>
+          <span><Badge variant="emerald">buy</Badge> <span className="ml-1">= you sell your items</span></span>
+        </div>
+      </FadeIn>
+
       {/* Filters */}
       <FadeIn delay={100}>
         <div className="mt-6 flex flex-wrap gap-3">
