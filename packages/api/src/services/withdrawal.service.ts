@@ -61,7 +61,7 @@ export const withdrawalService = {
     const result = await withTransaction(async (tx) => {
       // Block if there's already a pending or processing withdrawal
       const activeWithdrawal = await tx.withdrawal.findFirst({
-        where: { userId, status: { in: ['pending', 'processing'] } },
+        where: { userId, status: { in: ['pending', 'approved', 'processing'] } },
       });
       if (activeWithdrawal) {
         throw new AppError('You already have a withdrawal in progress', {
@@ -151,7 +151,7 @@ export const withdrawalService = {
       throw new AppError('Withdrawal not found', { code: 'WITHDRAWAL_NOT_FOUND', statusCode: 404 });
     }
 
-    if (withdrawal.status !== 'pending' && withdrawal.status !== 'processing') {
+    if (withdrawal.status !== 'approved' && withdrawal.status !== 'processing') {
       throw new AppError('Withdrawal is not in a confirmable state', {
         code: 'INVALID_WITHDRAWAL_STATE',
         statusCode: 400,

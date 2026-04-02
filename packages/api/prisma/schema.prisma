@@ -126,7 +126,7 @@ model Withdrawal {
   userId        String    @map("user_id")
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   amount        Decimal   @db.Decimal(20, 2)
-  status        String    @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
+  status        String    @default("pending") // 'pending' | 'approved' | 'processing' | 'completed' | 'denied' | 'failed'
   transactionId String?   @unique @map("transaction_id")
   failReason    String?   @map("fail_reason")
   createdAt     DateTime  @default(now()) @map("created_at")

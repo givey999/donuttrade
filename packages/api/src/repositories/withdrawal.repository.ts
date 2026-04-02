@@ -40,32 +40,6 @@ export const withdrawalRepository = {
   },
 
   /**
-   * Find all pending withdrawals (for bot polling).
-   * Joins with User to get the Minecraft username.
-   */
-  async findPending() {
-    const startTime = Date.now();
-
-    try {
-      const withdrawals = await prisma.withdrawal.findMany({
-        where: { status: 'pending' },
-        include: { user: { select: { minecraftUsername: true } } },
-        orderBy: { createdAt: 'asc' },
-      });
-
-      wdLogger.debug('findPending', 'Pending withdrawals fetched', {
-        count: withdrawals.length,
-        duration: Date.now() - startTime,
-      });
-
-      return withdrawals;
-    } catch (error) {
-      wdLogger.error('findPending.failed', 'Failed to fetch pending withdrawals', error);
-      throw error;
-    }
-  },
-
-  /**
    * Find all approved withdrawals (for bot polling).
    * Joins with User to get the Minecraft username.
    */
@@ -243,35 +217,6 @@ export const withdrawalRepository = {
       return true;
     } catch (error) {
       wdLogger.error('markApproved.failed', 'Failed to approve withdrawal', error, { id });
-      throw error;
-    }
-  },
-
-  /**
-   * Deny a pending withdrawal (admin action).
-   */
-  async markDenied(id: string, reason: string) {
-    const startTime = Date.now();
-
-    try {
-      const withdrawal = await prisma.withdrawal.update({
-        where: { id },
-        data: {
-          status: 'denied',
-          failReason: reason,
-          completedAt: new Date(),
-        },
-      });
-
-      wdLogger.info('markDenied', 'Withdrawal denied', {
-        withdrawalId: id,
-        reason,
-        duration: Date.now() - startTime,
-      });
-
-      return withdrawal;
-    } catch (error) {
-      wdLogger.error('markDenied.failed', 'Failed to deny withdrawal', error, { id });
       throw error;
     }
   },

@@ -25,6 +25,7 @@ interface AdminMoneyWithdrawal {
 
 const STATUS_TABS = [
   { label: 'Pending', value: 'pending' },
+  { label: 'Approved', value: 'approved' },
   { label: 'Processing', value: 'processing' },
   { label: 'Completed', value: 'completed' },
   { label: 'Denied', value: 'denied' },
