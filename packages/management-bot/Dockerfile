@@ -19,9 +19,6 @@ RUN pnpm install --frozen-lockfile --filter @donuttrade/management-bot
 # Copy source code
 COPY packages/management-bot/ ./packages/management-bot/
 
-# Copy compliance panel images into the package assets
-COPY docs/rules.png docs/proof.png ./packages/management-bot/assets/
-
 # Build
 RUN pnpm --filter @donuttrade/management-bot build
 
