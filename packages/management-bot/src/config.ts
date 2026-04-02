@@ -21,6 +21,7 @@ const envSchema = z.object({
   DISCORD_VERIFY_CHANNEL_ID: z.string().min(1).optional(),
   DISCORD_VERIFIED_ROLE_ID: z.string().min(1).optional(),
   DISCORD_ABOUT_CHANNEL_ID: z.string().min(1).optional(),
+  DISCORD_COMPLIANCE_CHANNEL_ID: z.string().min(1).optional(),
   API_URL: z.string().url().default('http://api:3001'),
   BOT_WEBHOOK_SECRET: z.string().min(32),
   REDIS_URL: z.string().default('redis://localhost:6379'),

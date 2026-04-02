@@ -36,4 +36,7 @@ COPY package.json pnpm-workspace.yaml ./
 
 WORKDIR /app/packages/management-bot
 
+# Copy compliance panel images
+COPY docs/rules.png docs/proof.png ./assets/
+
 CMD ["node", "dist/index.js"]

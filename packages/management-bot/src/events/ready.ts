@@ -3,6 +3,7 @@ import { config } from '../config.js';
 import { ensurePanel } from '../interactions/ticket-panel.js';
 import { ensureVerifyPanel } from '../interactions/verify-gate.js';
 import { ensureAboutPanel } from '../interactions/about-panel.js';
+import { ensureCompliancePanel } from '../interactions/compliance-panel.js';
 import { closeCommandData } from '../interactions/ticket-close.js';
 import { announceCommandData } from '../interactions/announce.js';
 import { statsCommandData } from '../interactions/stats.js';
@@ -40,4 +41,5 @@ export async function onReady(client: Client<true>) {
   await ensurePanel(client);
   await ensureVerifyPanel(client);
   await ensureAboutPanel(client);
+  await ensureCompliancePanel(client);
 }
