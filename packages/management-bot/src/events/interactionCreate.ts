@@ -8,6 +8,7 @@ import { handleBalanceCommand } from '../interactions/balance.js';
 import { handleOrdersCommand } from '../interactions/orders.js';
 import { handleHelpCommand } from '../interactions/help.js';
 import { handleLeaderboardCommand } from '../interactions/leaderboard.js';
+import { apiClient } from '../api-client.js';
 
 export async function onInteractionCreate(interaction: Interaction) {
   try {
@@ -20,6 +21,20 @@ export async function onInteractionCreate(interaction: Interaction) {
       }
       if (interaction.customId === 'verify_gate') {
         return await handleVerifyButton(interaction);
+      }
+      if (interaction.customId.startsWith('dm_unsubscribe:')) {
+        const userId = interaction.customId.split(':')[1];
+        try {
+          await apiClient.disableDmNotifications(userId);
+          await interaction.update({
+            content: 'You have been unsubscribed from notifications.',
+            embeds: [],
+            components: [],
+          });
+        } catch {
+          await interaction.reply({ content: 'Failed to unsubscribe. Please try again.', ephemeral: true });
+        }
+        return;
       }
     }
 
