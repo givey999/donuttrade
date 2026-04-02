@@ -18,6 +18,8 @@ import { FadeIn } from '@/components/ui/animate';
 interface UserDetail {
   id: string;
   minecraftUsername: string | null;
+  discordUsername: string | null;
+  discordId: string | null;
   email: string | null;
   authProvider: string;
   balance: string;
@@ -173,7 +175,7 @@ export default function AdminUserDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-[28px] font-extrabold tracking-tight">{userDetail.minecraftUsername ?? 'Unknown'}</h1>
-              <p className="mt-0.5 text-xs text-neutral-500">{userDetail.email ?? 'No email'} &middot; {userDetail.authProvider}</p>
+              <p className="mt-0.5 text-xs text-neutral-500">{userDetail.email ?? 'No email'} &middot; {userDetail.authProvider}{userDetail.discordUsername ? ` · Discord: ${userDetail.discordUsername}` : ''}</p>
             </div>
             <Badge variant={ROLE_VARIANT[userDetail.role] as 'danger'}>
               {userDetail.role}

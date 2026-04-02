@@ -108,6 +108,8 @@ export const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         id: user.id,
         minecraftUsername: user.minecraftUsername,
+        discordUsername: user.discordUsername,
+        discordId: user.discordId,
         email: user.email,
         authProvider: user.authProvider,
         balance: user.balance.toString(),
