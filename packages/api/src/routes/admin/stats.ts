@@ -11,11 +11,13 @@ export const adminStatsRoutes: FastifyPluginAsync = async (fastify) => {
       totalUsers,
       pendingDeposits,
       pendingWithdrawals,
+      pendingMoneyWithdrawals,
       activeOrders,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.itemDeposit.count({ where: { status: 'pending' } }),
       prisma.itemWithdrawal.count({ where: { status: { in: ['pending', 'processing'] } } }),
+      prisma.withdrawal.count({ where: { status: 'pending' } }),
       prisma.order.count({ where: { status: 'active' } }),
     ]);
 
@@ -42,6 +44,7 @@ export const adminStatsRoutes: FastifyPluginAsync = async (fastify) => {
         totalUsers,
         pendingDeposits,
         pendingWithdrawals,
+        pendingMoneyWithdrawals,
         activeOrders,
         volumeByItem: volumeByItem.map((row) => ({
           id: row.id,
