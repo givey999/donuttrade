@@ -10,6 +10,7 @@ import { adminAuditLogRoutes } from './audit-logs.js';
 import { adminSettingsRoutes } from './settings.js';
 import { adminRevenueRoutes } from './revenue.js';
 import { adminImpersonateRoutes } from './impersonate.js';
+import { adminWithdrawalRoutes } from './withdrawals.js';
 
 /**
  * Admin routes — /admin/*
@@ -30,4 +31,5 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(adminSettingsRoutes, { prefix: '/settings' });
   await fastify.register(adminRevenueRoutes, { prefix: '/revenue' });
   await fastify.register(adminImpersonateRoutes, { prefix: '/impersonate' });
+  await fastify.register(adminWithdrawalRoutes, { prefix: '/withdrawals' });
 };
