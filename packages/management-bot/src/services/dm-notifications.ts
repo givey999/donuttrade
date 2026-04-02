@@ -42,6 +42,16 @@ function buildDmEmbed(event: UserEvent): EmbedBuilder | null {
         .setDescription(`Your withdrawal of **$${Number(amount).toLocaleString()}** has been sent in-game!`);
       return embed;
     }
+    case 'withdrawal.denied': {
+      const amount = event.data.amount ?? '?';
+      const reason = event.data.reason ?? 'No reason provided';
+      embed
+        .setColor(0xDC2626) // Red accent for denial
+        .setTitle('Withdrawal Denied')
+        .setDescription(`Your withdrawal of **$${Number(amount).toLocaleString()}** has been denied. Your balance has been refunded.`)
+        .addFields({ name: 'Reason', value: String(reason) });
+      return embed;
+    }
     case 'item_withdrawal.completed': {
       const qty = event.data.quantity ?? '?';
       const item = event.data.itemName ?? 'items';
