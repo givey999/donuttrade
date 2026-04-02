@@ -11,6 +11,7 @@ export type EventType =
   | 'order.expired'
   | 'deposit.confirmed'
   | 'withdrawal.completed'
+  | 'withdrawal.denied'
   | 'item_withdrawal.completed'
   | 'order.price_updated';
 

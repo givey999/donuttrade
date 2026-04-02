@@ -248,11 +248,89 @@ export const withdrawalService = {
     return claimed;
   },
 
+  async approveWithdrawal(withdrawalId: string) {
+    wdLogger.info('approveWithdrawal', 'Approving withdrawal', { withdrawalId });
+
+    const approved = await withdrawalRepository.markApproved(withdrawalId);
+
+    if (!approved) {
+      throw new AppError('Withdrawal is not in pending state', {
+        code: 'INVALID_WITHDRAWAL_STATE',
+        statusCode: 400,
+      });
+    }
+
+    wdLogger.info('approveWithdrawal.success', 'Withdrawal approved', { withdrawalId });
+  },
+
+  async denyWithdrawal(withdrawalId: string, reason: string) {
+    wdLogger.info('denyWithdrawal', 'Denying withdrawal', { withdrawalId, reason });
+
+    const withdrawal = await withdrawalRepository.findById(withdrawalId);
+    if (!withdrawal) {
+      throw new AppError('Withdrawal not found', { code: 'WITHDRAWAL_NOT_FOUND', statusCode: 404 });
+    }
+
+    if (withdrawal.status !== 'pending') {
+      throw new AppError('Withdrawal is not in pending state', {
+        code: 'INVALID_WITHDRAWAL_STATE',
+        statusCode: 400,
+        details: { currentStatus: withdrawal.status },
+      });
+    }
+
+    const amount = withdrawal.amount.toNumber();
+
+    // Refund: re-increment balance + create reversal transaction + mark denied — ALL atomic
+    await withTransaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: withdrawal.userId }, select: { balance: true } });
+      if (!user) {
+        throw new AppError('User not found', { code: 'USER_NOT_FOUND', statusCode: 404 });
+      }
+      const balanceBefore = user.balance.toNumber();
+      const balanceAfter = balanceBefore + amount;
+
+      await userRepository.incrementBalance(withdrawal.userId, amount, tx);
+
+      await transactionRepository.create({
+        userId: withdrawal.userId,
+        type: 'deposit',
+        amount,
+        balanceBefore,
+        balanceAfter,
+        description: `Withdrawal denied: ${reason}`,
+        metadata: { withdrawalId, denied: true } as Record<string, unknown>,
+      }, tx);
+
+      await tx.withdrawal.update({
+        where: { id: withdrawalId },
+        data: {
+          status: 'denied',
+          failReason: reason,
+          completedAt: new Date(),
+        },
+      });
+    });
+
+    wdLogger.info('denyWithdrawal.refunded', 'Withdrawal denied and refunded', {
+      withdrawalId,
+      userId: withdrawal.userId,
+      amount,
+      reason,
+    });
+
+    void eventBus.publish(withdrawal.userId, 'withdrawal.denied', {
+      withdrawalId,
+      amount: amount.toString(),
+      reason,
+    });
+  },
+
   /**
    * Get pending withdrawals with usernames (for bot polling).
    */
   async getPendingWithdrawals() {
-    const withdrawals = await withdrawalRepository.findPending();
+    const withdrawals = await withdrawalRepository.findApproved();
 
     return withdrawals
       .filter((w) => w.user.minecraftUsername)
