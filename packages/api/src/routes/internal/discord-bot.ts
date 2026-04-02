@@ -190,13 +190,43 @@ export const discordBotRoutes: FastifyPluginAsync = async (fastify) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { discordId: true },
+      select: { discordId: true, dmNotifications: true },
     });
 
     if (!user || !user.discordId) {
       throw new AppError('No Discord ID for this user', { code: 'NOT_FOUND', statusCode: 404 });
     }
 
-    return { success: true, data: { discordId: user.discordId } };
+    return { success: true, data: { discordId: user.discordId, dmNotifications: user.dmNotifications } };
+  });
+
+  /**
+   * PATCH /internal/discord-bot/dm-notifications/:userId
+   * Update a user's DM notification preference.
+   */
+  fastify.patch<{
+    Params: { userId: string };
+    Body: { enabled: boolean };
+  }>('/discord-bot/dm-notifications/:userId', {
+    preHandler: authenticateBot,
+    schema: {
+      body: {
+        type: 'object',
+        required: ['enabled'],
+        properties: {
+          enabled: { type: 'boolean' },
+        },
+      },
+    },
+  }, async (request) => {
+    const { userId } = request.params;
+    const { enabled } = request.body;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { dmNotifications: enabled },
+    });
+
+    return { success: true };
   });
 };
