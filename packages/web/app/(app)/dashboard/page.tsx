@@ -282,7 +282,7 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         method: 'POST',
         body: JSON.stringify({ amount: num }),
       });
-      setSuccess(`Withdrawal requested! The bot will send you $${num.toLocaleString()} in-game shortly.`);
+      setSuccess('Withdrawal requested! A moderator will review and process your withdrawal shortly.');
       setAmount('');
       onSuccess();
     } catch (err) {

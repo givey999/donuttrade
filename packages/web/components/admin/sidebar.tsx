@@ -9,6 +9,7 @@ import { apiFetch } from '@/lib/api';
 interface AdminStats {
   pendingDeposits: number;
   pendingWithdrawals: number;
+  pendingMoneyWithdrawals: number;
 }
 
 const SECTIONS = [
@@ -23,6 +24,7 @@ const SECTIONS = [
     links: [
       { href: '/admin/deposits', label: 'Item Deposits', badge: 'pendingDeposits' as const },
       { href: '/admin/withdrawals', label: 'Item Withdrawals', badge: 'pendingWithdrawals' as const },
+      { href: '/admin/money-withdrawals', label: 'Money Withdrawals', badge: 'pendingMoneyWithdrawals' as const },
       { href: '/admin/orders', label: 'Orders' },
     ],
   },
