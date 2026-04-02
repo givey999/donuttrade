@@ -144,12 +144,27 @@ export const apiClient = {
     return res.data;
   },
 
-  async getDiscordIdByUserId(userId: string): Promise<string | null> {
+  async getDiscordIdByUserId(userId: string): Promise<{ discordId: string; dmNotifications: boolean } | null> {
     try {
-      const res = await discordBotRequest<{ data: { discordId: string } }>('GET', `/discord-id/${userId}`);
-      return res.data.discordId;
+      const res = await discordBotRequest<{ data: { discordId: string; dmNotifications: boolean } }>('GET', `/discord-id/${userId}`);
+      return res.data;
     } catch {
       return null;
+    }
+  },
+
+  async disableDmNotifications(userId: string): Promise<void> {
+    const url = `${config.API_URL}/internal/discord-bot/dm-notifications/${userId}`;
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.BOT_WEBHOOK_SECRET}`,
+      },
+      body: JSON.stringify({ enabled: false }),
+    });
+    if (!res.ok) {
+      console.error(`[API] Failed to disable DM notifications: ${res.status}`);
     }
   },
 };
