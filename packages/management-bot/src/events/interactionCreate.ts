@@ -23,7 +23,7 @@ export async function onInteractionCreate(interaction: Interaction) {
         return await handleVerifyButton(interaction);
       }
       if (interaction.customId.startsWith('dm_unsubscribe:')) {
-        const userId = interaction.customId.split(':')[1];
+        const userId = interaction.customId.split(':')[1]!;
         try {
           await apiClient.disableDmNotifications(userId);
           await interaction.update({
