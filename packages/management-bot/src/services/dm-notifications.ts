@@ -1,9 +1,18 @@
-import { Client, EmbedBuilder } from 'discord.js';
+import { Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { Redis } from 'ioredis';
 import { config } from '../config.js';
 import { apiClient } from '../api-client.js';
 
 const BRAND_COLOR = 0x7C3AED;
+
+function buildUnsubscribeRow(userId: string) {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`dm_unsubscribe:${userId}`)
+      .setLabel('Unsubscribe')
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
 
 interface UserEvent {
   id: string;
@@ -96,16 +105,20 @@ export function initDmNotifications(client: Client) {
       const userId = channel.replace('notifications:', '');
       const event: UserEvent = JSON.parse(message);
 
-      // Look up discordId once for both DM and auto-role
+      // Look up discordId + DM preference once for both DM and auto-role
       const embed = buildDmEmbed(event);
       const needsDiscord = embed || (event.type === 'order.filled' && event.data.tradingVolume);
-      const discordId = needsDiscord ? await apiClient.getDiscordIdByUserId(userId) : null;
+      const userInfo = needsDiscord ? await apiClient.getDiscordIdByUserId(userId) : null;
+      const discordId = userInfo?.discordId ?? null;
 
       // ── DM Notification ──────────────────────────────────
-      if (embed && discordId) {
+      if (embed && discordId && userInfo?.dmNotifications !== false) {
         try {
           const discordUser = await client.users.fetch(discordId);
-          await discordUser.send({ embeds: [embed] });
+          await discordUser.send({
+            embeds: [embed],
+            components: [buildUnsubscribeRow(userId)],
+          });
         } catch {
           // User may have DMs disabled — silently skip
         }
