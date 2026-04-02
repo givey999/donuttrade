@@ -184,7 +184,7 @@ export const withdrawalService = {
       throw new AppError('Withdrawal not found', { code: 'WITHDRAWAL_NOT_FOUND', statusCode: 404 });
     }
 
-    if (withdrawal.status === 'completed' || withdrawal.status === 'failed') {
+    if (withdrawal.status === 'completed' || withdrawal.status === 'failed' || withdrawal.status === 'denied') {
       throw new AppError('Withdrawal is already finalized', {
         code: 'INVALID_WITHDRAWAL_STATE',
         statusCode: 400,
@@ -302,14 +302,20 @@ export const withdrawalService = {
         metadata: { withdrawalId, denied: true } as Record<string, unknown>,
       }, tx);
 
-      await tx.withdrawal.update({
-        where: { id: withdrawalId },
+      const result = await tx.withdrawal.updateMany({
+        where: { id: withdrawalId, status: 'pending' },
         data: {
           status: 'denied',
           failReason: reason,
           completedAt: new Date(),
         },
       });
+      if (result.count === 0) {
+        throw new AppError('Withdrawal is no longer in pending state', {
+          code: 'INVALID_WITHDRAWAL_STATE',
+          statusCode: 409,
+        });
+      }
     });
 
     wdLogger.info('denyWithdrawal.refunded', 'Withdrawal denied and refunded', {

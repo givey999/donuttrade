@@ -26,7 +26,7 @@ export const internalWithdrawalRoutes: FastifyPluginAsync = async (fastify) => {
 
   /**
    * GET /internal/withdrawals/pending
-   * Returns list of pending withdrawals for the bot to process.
+   * Returns list of approved withdrawals for the bot to process.
    */
   fastify.get('/withdrawals/pending', {
     preHandler: authenticateBot,
@@ -54,7 +54,7 @@ export const internalWithdrawalRoutes: FastifyPluginAsync = async (fastify) => {
     const claimed = await withdrawalService.claimWithdrawal(id);
 
     if (!claimed) {
-      throw new AppError('Withdrawal already claimed or not pending', {
+      throw new AppError('Withdrawal already claimed or not approved', {
         code: 'ALREADY_CLAIMED',
         statusCode: 409,
       });
