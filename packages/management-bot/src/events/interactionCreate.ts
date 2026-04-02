@@ -1,5 +1,5 @@
 import { Interaction } from 'discord.js';
-import { handleTicketButton, handleModalSubmit, handleSupportButton, handleSupportModal } from '../interactions/ticket-modal.js';
+import { handleTicketButton, handleModalSubmit, handleSupportButton, handleSupportModal, handleOwnerButton } from '../interactions/ticket-modal.js';
 import { handleCloseCommand } from '../interactions/ticket-close.js';
 import { handleAnnounceCommand, handleAnnounceModal } from '../interactions/announce.js';
 import { handleVerifyButton } from '../interactions/verify-gate.js';
@@ -18,6 +18,9 @@ export async function onInteractionCreate(interaction: Interaction) {
       }
       if (interaction.customId === 'ticket_support') {
         return await handleSupportButton(interaction);
+      }
+      if (interaction.customId === 'ticket_owner') {
+        return await handleOwnerButton(interaction);
       }
       if (interaction.customId === 'verify_gate') {
         return await handleVerifyButton(interaction);

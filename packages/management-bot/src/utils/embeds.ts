@@ -26,6 +26,11 @@ export function buildPanelButtons() {
       .setLabel('Support')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('\u{2753}'),
+    new ButtonBuilder()
+      .setCustomId('ticket_owner')
+      .setLabel('Owner')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('\u{1F4BC}'),
   );
 }
 
