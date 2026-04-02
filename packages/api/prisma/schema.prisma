@@ -50,6 +50,7 @@ model User {
   lastLoginAt                 DateTime? @map("last_login_at")
   bannedAt                    DateTime? @map("banned_at")
   banReason                   String?   @map("ban_reason")
+  dmNotifications              Boolean   @default(true) @map("dm_notifications")
   tradingVolume               Decimal   @default(0) @map("trading_volume") @db.Decimal(20, 2)
 
   // Relations
