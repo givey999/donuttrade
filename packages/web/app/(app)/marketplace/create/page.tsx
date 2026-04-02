@@ -295,7 +295,7 @@ function CreateOrderContent() {
                     : 'border-[#1a1a1a] bg-white/[0.02] text-neutral-400 hover:bg-white/[0.04]'
                 }`}
               >
-                24h (Free)
+                3 days (Free)
               </button>
               <button
                 onClick={() => setIsPremium(true)}
@@ -305,7 +305,7 @@ function CreateOrderContent() {
                     : 'border-[#1a1a1a] bg-white/[0.02] text-neutral-400 hover:bg-white/[0.04]'
                 }`}
               >
-                48h ($10M)
+                5 days ($10M)
               </button>
             </div>
           </div>
