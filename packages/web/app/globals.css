@@ -162,3 +162,16 @@
     transform: none !important;
   }
 }
+
+@keyframes cursor-blink {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
+.animate-cursor-blink {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+.font-vt323 {
+  font-family: var(--font-vt323), 'VT323', ui-monospace, monospace;
+}
