@@ -161,7 +161,46 @@ Same shell as landing: dark background, shared nav (or unstyled marketing nav), 
 - Tagline: "How escrow, audits, and admin accountability actually work."
 - Star field (subtle variant) in background
 
-**1 · The escrow flow**
+**1 · Source code — announcement (opening section)**
+- Section label: `// source.open`
+- H2: `NOW SOURCE-OPEN`
+- Body: "**We're happy to announce that DonutTrade is source-open.** The full platform — API, web frontend, bots, escrow logic, admin tooling — lives on GitHub under the Functional Source License (FSL 1.1). Every endpoint, every admin check, every cryptographic operation: all readable, all verifiable."
+- Link: `→ github.com/givey999/donuttrade` (outline button, VT323 font, violet border)
+- License subnote (small, tertiary text): "Available today for reading, learning, and non-commercial use. Auto-converts to Apache 2.0 two years after each release. See `LICENSE` in the repo for the exact terms."
+- *Framing note*: this is the opening section of `/transparency` intentionally — it sets the tone that the rest of the page is "here's exactly what 'source-open' means in practice." Visually prominent: slightly larger H2, optional subtle violet glow behind the headline, generous padding above/below. The GitHub link should be the most clickable thing on the page at this point.
+
+**2 · How we manage your data**
+- Section label: `// data.policy`
+- H2: `YOUR DATA`
+- Four sub-blocks, laid out as a two-column grid on desktop (first two on left, last two on right) or stacked on mobile:
+
+  **What we store**
+  - Minecraft UUID + username (from Microsoft auth — proves you own the account)
+  - Discord user ID (only if you link Discord for notifications)
+  - Your server-side session token (short-lived, expires on logout)
+  - Deposit, withdrawal, and trade history (required for the audit log)
+  - Your current escrow inventory (required to know what's yours)
+  - Notification preferences (DM opt-in / opt-out, etc.)
+
+  **What we receive from Microsoft**
+  - When you sign in with Microsoft, we receive your **Minecraft UUID** and **Minecraft username** — enough to prove you own the account.
+  - We do **not** receive your Microsoft email, real name, profile picture, or any other Microsoft account data.
+  - The Microsoft access token is used once at sign-in and never stored.
+
+  **What we receive from Discord**
+  - If you link Discord (optional, for DM notifications), we receive your **Discord user ID** and **username**. Nothing else.
+  - We do not read your messages, your server list, your friend list, or any other Discord content.
+  - You can unlink Discord at any time from `/dashboard`.
+
+  **What we never touch**
+  - Real names, addresses, phone numbers
+  - Payment cards or real-money financial data — DonutTrade only handles in-game DonutSMP currency. We never custody fiat.
+  - Browser fingerprints, tracking cookies, ad-targeting profiles
+  - Your Microsoft password or account credentials (handled entirely by Microsoft)
+
+- *Implementation note*: verify each claim above against `packages/api/prisma/schema.prisma` (user-related tables) and the actual OAuth scope requests in the Microsoft and Discord auth routes before shipping. If anything is stored that isn't listed here, either add it to the section or stop storing it. This section is the single most legally-sensitive part of the page — over-claim and you have a liability problem.
+
+**3 · The escrow flow**
 - Section label: `// escrow.flow`
 - H2: `HOW AN ESCROW TRADE WORKS`
 - Content: Sequential terminal trace styled as timestamped log lines. Target structure:
@@ -178,7 +217,7 @@ Same shell as landing: dark background, shared nav (or unstyled marketing nav), 
 - Annotation below: "Every line above corresponds to a real function call. Grep `packages/api/src/` in the public repo to find them — starting with `packages/api/src/lib/deposit-code.ts` for the HMAC generation."
 - *Implementation note*: the function names above are illustrative. During implementation, read the actual routes and update the trace to match real function names. Do not invent names that don't exist in code.
 
-**2 · What admins can and can't do**
+**4 · What admins can and can't do**
 - Section label: `// admin.acl`
 - H2: `ADMIN POWERS`
 - Two columns:
@@ -199,7 +238,7 @@ Same shell as landing: dark background, shared nav (or unstyled marketing nav), 
 
 - *Implementation note*: verify each claim matches the actual RBAC in the admin routes before shipping. If a claim can't be verified in code, remove it or soften it.
 
-**3 · The audit log (static mockup — day 1)**
+**5 · The audit log (static mockup — day 1)**
 - Section label: `// audit.log`
 - H2: `EVERY ACTION IS LOGGED`
 - Content: Static, terminal-table-styled mockup of an audit log. ~8 illustrative rows with realistic shape but clearly labeled "Example."
@@ -207,7 +246,7 @@ Same shell as landing: dark background, shared nav (or unstyled marketing nav), 
 - Footnote: "The audit log is append-only at the database level. Admins — including the platform owner — cannot edit or delete rows. Your real activity lives at `/dashboard`."
 - Inline comment in the TSX: `{/* TODO(followup): swap for real read-only query — see docs/superpowers/plans backlog */}`
 
-**4 · Dispute process**
+**6 · Dispute process**
 - Section label: `// dispute.flow`
 - H2: `IF SOMETHING GOES WRONG`
 - Numbered steps:
@@ -218,7 +257,7 @@ Same shell as landing: dark background, shared nav (or unstyled marketing nav), 
   5. Chargebacks and refunds are paid from the platform's reserve, not from other users' escrow.
 - *Implementation note*: confirm the "24 hours" claim is something the operator is willing to actually commit to. If not, soften to "usually within 24 hours" or "as quickly as we can."
 
-**5 · The code signing math (collapsible)**
+**7 · The code signing math (collapsible)**
 - Section label: `// crypto.math`
 - H2: `HOW DEPOSIT CODES WORK` (collapsed by default, expandable — use a `<details>` element, no JS)
 - Plain-English paragraph: "Deposit and withdrawal codes are signed with HMAC-SHA256 using a secret that lives only on the server. Only the server can create a valid code. Even an admin, without the secret, cannot forge one."
@@ -234,7 +273,7 @@ Same shell as landing: dark background, shared nav (or unstyled marketing nav), 
 - Link: "See `packages/api/src/lib/deposit-code.ts` in the public repo."
 - *Implementation note*: read the actual `deposit-code.ts` during implementation and paste the real snippet. Don't invent code.
 
-**6 · How we make money**
+**8 · How we make money**
 - Section label: `// revenue.model`
 - H2: `HOW WE MAKE MONEY`
 - Content (honest, ads acknowledged):
@@ -243,18 +282,11 @@ Same shell as landing: dark background, shared nav (or unstyled marketing nav), 
   - **Ad placements:** Occasional banner ads from DonutSMP-adjacent services, arranged through Discord tickets. Not programmatic; we know every advertiser.
 - Tagline: "We don't sell your data. We don't profile users. We don't tax trades hidden in the spread."
 
-**7 · Who runs this**
+**9 · Who runs this**
 - Section label: `// operator.id`
 - H2: `WHO RUNS THIS`
 - Content: Short founder line — name or handle, one or two sentences, Discord contact.
 - `TODO(user)`: placeholder comment in the TSX until the operator supplies real text.
-
-**8 · Source code**
-- Section label: `// source.code`
-- H2: `READ THE CODE`
-- Body: "This platform's source is public on GitHub under FSL 1.1. Every API endpoint, every admin check, every cryptographic operation is readable."
-- Link: `github.com/givey999/donuttrade`
-- License subnote: "Available today for reading, learning, and non-commercial use. Auto-converts to Apache 2.0 two years after each release. See `LICENSE` in the repo for the exact terms."
 
 **Footer** — same as landing, transparency link highlighted as the current page.
 
