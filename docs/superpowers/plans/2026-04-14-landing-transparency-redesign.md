@@ -828,6 +828,12 @@ export default function TransparencyPage() {
       <section className="mb-24">
         <SectionLabel>data.policy</SectionLabel>
         <SectionTitle>YOUR DATA</SectionTitle>
+        <div className="mt-6 rounded-xl border border-violet-600/30 bg-violet-600/[0.04] px-6 py-4 text-center">
+          <p className="text-[13px] leading-relaxed text-neutral-300">
+            <span className="font-bold text-white">We don&apos;t — and don&apos;t want to — store any passwords.</span>{' '}
+            Sign-in goes through Microsoft OAuth. DonutTrade never sees your Microsoft password, and there is no DonutTrade password to set, forget, or leak.
+          </p>
+        </div>
         <div className="mt-10 grid gap-6 md:grid-cols-2">
           <DataBlock
             title="What we store"

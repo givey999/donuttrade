@@ -172,7 +172,8 @@ Same shell as landing: dark background, shared nav (or unstyled marketing nav), 
 **2 · How we manage your data**
 - Section label: `// data.policy`
 - H2: `YOUR DATA`
-- Four sub-blocks, laid out as a two-column grid on desktop (first two on left, last two on right) or stacked on mobile:
+- **Prominent callout above the grid** (violet-outlined box, full-width, single paragraph): "**We don't — and don't want to — store any passwords.** Sign-in goes through Microsoft OAuth. DonutTrade never sees your Microsoft password, and there is no DonutTrade password to set, forget, or leak."
+- Four sub-blocks below the callout, laid out as a two-column grid on desktop (first two on left, last two on right) or stacked on mobile:
 
   **What we store**
   - Minecraft UUID + username (from Microsoft auth — proves you own the account)
