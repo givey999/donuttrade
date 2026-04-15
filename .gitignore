@@ -43,3 +43,9 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+
+# Claude Code local state (not source)
+.claude/
+
+# Superpowers brainstorm artifacts (ephemeral)
+.superpowers/
