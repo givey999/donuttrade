@@ -1,6 +1,11 @@
 # Production Caddyfile - HTTPS reverse proxy for donuttrade.com
 # Caddy automatically provisions Let's Encrypt certificates on standard port 443.
 
+# Canonical URL is the apex (donuttrade.com). Redirect www → apex permanently.
+www.donuttrade.com {
+    redir https://donuttrade.com{uri} permanent
+}
+
 donuttrade.com {
     # API auth routes (specific paths, not /auth/callback which is a frontend page)
     handle /auth/microsoft* {
