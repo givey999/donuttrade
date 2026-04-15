@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { SectionLabel } from '@/components/landing/SectionLabel';
 import { SectionTitle } from '@/components/landing/SectionTitle';
 import { TerminalCursor } from '@/components/landing/TerminalCursor';
@@ -169,8 +170,155 @@ export default function TransparencyPage() {
         </div>
       </section>
 
-      {/* Sections 5-9 added in Task 8 */}
+      {/* Section 5 — Audit log */}
+      <section className="mb-24">
+        <SectionLabel>audit.log</SectionLabel>
+        <SectionTitle>EVERY ACTION IS LOGGED</SectionTitle>
+        <div className="mt-10 overflow-hidden rounded-xl border border-neutral-800 bg-[#05050a]">
+          <div className="border-b border-neutral-800 bg-white/[0.02] px-4 py-[10px] text-[11px] text-neutral-600">
+            audit.log — example entries
+          </div>
+          <table className="w-full font-vt323 text-[14px]">
+            <thead>
+              <tr className="border-b border-neutral-800 text-left text-[11px] uppercase tracking-wider text-neutral-600">
+                <th className="px-5 py-3 font-normal">TIMESTAMP</th>
+                <th className="px-5 py-3 font-normal">USER</th>
+                <th className="px-5 py-3 font-normal">ACTION</th>
+                <th className="px-5 py-3 font-normal">TARGET</th>
+                <th className="px-5 py-3 font-normal">METADATA</th>
+              </tr>
+            </thead>
+            <tbody className="text-neutral-400">
+              <AuditRow ts="2026-04-14 14:32:01" user="xDarkKnight" action="deposit_code_issued" target="zombie_spawner ×3" meta="DT-DEP-xJk...Lm" />
+              <AuditRow ts="2026-04-14 14:35:47" user="admin@platform" action="deposit_approved" target="DT-DEP-xJk...Lm" meta="verified_in_game" />
+              <AuditRow ts="2026-04-14 14:40:12" user="xDarkKnight" action="order_created" target="order_id=42" meta="price=45000" />
+              <AuditRow ts="2026-04-14 15:12:08" user="CraftMaster99" action="order_filled" target="order_id=42" meta="hmac=OK" />
+              <AuditRow ts="2026-04-14 15:12:08" user="escrow.service" action="funds_released" target="CraftMaster99" meta="amount=44100" />
+              <AuditRow ts="2026-04-14 15:45:30" user="CraftMaster99" action="withdrawal_requested" target="DT-WTH-p8Q...Rn" meta="amount=44100" />
+              <AuditRow ts="2026-04-14 16:02:11" user="admin@platform" action="withdrawal_confirmed" target="DT-WTH-p8Q...Rn" meta="delivered_in_game" />
+              <AuditRow ts="2026-04-14 16:02:12" user="system" action="trade_completed" target="order_id=42" meta="fee=900" />
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-4 text-[12px] leading-relaxed text-neutral-500">
+          The audit log is append-only at the database level. Admins — including the platform owner — cannot edit or delete rows. Your real activity lives at <Link href="/dashboard" className="text-violet-400 hover:underline">/dashboard</Link>. Example rows shown above are illustrative.
+          {/* TODO(followup): swap for real read-only query — see docs/superpowers/plans backlog */}
+        </p>
+      </section>
+
+      {/* Section 6 — Dispute flow */}
+      <section className="mb-24">
+        <SectionLabel>dispute.flow</SectionLabel>
+        <SectionTitle>IF SOMETHING GOES WRONG</SectionTitle>
+        <ol className="mt-10 space-y-4 text-[13px] leading-relaxed text-neutral-300">
+          <DisputeStep num="01">Open a ticket in our Discord.</DisputeStep>
+          <DisputeStep num="02">An admin reviews the audit log for your account and the counterparty.</DisputeStep>
+          <DisputeStep num="03">Decision rendered within 24 hours.</DisputeStep>
+          <DisputeStep num="04">If you disagree, escalate to the platform owner in Discord — same 24-hour window.</DisputeStep>
+          <DisputeStep num="05">Chargebacks and refunds are paid from the platform&apos;s reserve, not from other users&apos; escrow.</DisputeStep>
+        </ol>
+      </section>
+
+      {/* Section 7 — Code signing math (collapsible) */}
+      <section className="mb-24">
+        <SectionLabel>crypto.math</SectionLabel>
+        <details className="mt-6 rounded-xl border border-neutral-800 bg-white/[0.018]">
+          <summary className="cursor-pointer px-6 py-5 font-vt323 text-[24px] tracking-wide text-white transition-colors hover:text-violet-400">
+            HOW DEPOSIT CODES WORK <span className="text-[14px] text-neutral-600">(click to expand)</span>
+          </summary>
+          <div className="border-t border-neutral-800 px-6 py-6">
+            <p className="mb-5 text-[13px] leading-relaxed text-neutral-400">
+              Deposit and withdrawal codes are signed with HMAC-SHA256 using a secret that lives only on the server. Only the server can create a valid code. Even an admin, without the secret, cannot forge one.
+            </p>
+            <div className="mb-4 overflow-x-auto rounded-lg border border-neutral-800 bg-[#05050a] p-5">
+              <pre className="font-vt323 text-[15px] leading-[1.6] text-neutral-300">
+{`// packages/api/src/lib/deposit-code.ts
+const payloadStr = Buffer.from(JSON.stringify(fullPayload)).toString('base64url');
+const signature = createHmac('sha256', config.CODE_SIGNING_SECRET)
+  .update(payloadStr)
+  .digest('base64url');
+
+return {
+  code: \`\${prefix}\${payloadStr}.\${signature}\`,
+  expiresAt,
+};`}
+              </pre>
+            </div>
+            <p className="text-[12px] leading-relaxed text-neutral-500">
+              The full implementation (including <code>verifyCode</code> with timing-safe comparison) is in <code>packages/api/src/lib/deposit-code.ts</code> in the public repo.
+            </p>
+          </div>
+        </details>
+      </section>
+
+      {/* Section 8 — How we make money */}
+      <section className="mb-24">
+        <SectionLabel>revenue.model</SectionLabel>
+        <SectionTitle>HOW WE MAKE MONEY</SectionTitle>
+        <div className="mt-10 space-y-5 text-[13px] leading-relaxed text-neutral-300">
+          <div className="rounded-xl border border-neutral-800 bg-white/[0.018] p-6">
+            <h3 className="mb-2 font-vt323 text-[20px] tracking-wide text-violet-400">TRADE FEES</h3>
+            <p className="text-neutral-400">2% of each completed trade, shown in the UI at order creation. Split between buyer and seller.</p>
+          </div>
+          <div className="rounded-xl border border-neutral-800 bg-white/[0.018] p-6">
+            <h3 className="mb-2 font-vt323 text-[20px] tracking-wide text-violet-400">SPONSORED LISTINGS — COMING SOON</h3>
+            <p className="text-neutral-400">Item sellers will be able to pay for top placement on the marketplace. Sponsored rows will be tagged <code className="text-violet-400">SPONSORED</code>. Not yet live.</p>
+          </div>
+          <div className="rounded-xl border border-neutral-800 bg-white/[0.018] p-6">
+            <h3 className="mb-2 font-vt323 text-[20px] tracking-wide text-violet-400">AD PLACEMENTS</h3>
+            <p className="text-neutral-400">Occasional banner ads from DonutSMP-adjacent services, arranged through Discord tickets. Not programmatic; we know every advertiser.</p>
+          </div>
+          <p className="pt-2 text-center text-[12px] font-semibold uppercase tracking-[1px] text-neutral-500">
+            We don&apos;t sell your data · We don&apos;t profile users · We don&apos;t tax trades hidden in the spread
+          </p>
+        </div>
+      </section>
+
+      {/* Section 9 — Who runs this */}
+      <section className="mb-24">
+        <SectionLabel>operator.id</SectionLabel>
+        <SectionTitle>WHO RUNS THIS</SectionTitle>
+        <div className="mt-10 rounded-xl border border-neutral-800 bg-white/[0.018] p-8 text-center">
+          {/* TODO(user): supply real founder text. Until the operator provides text, this placeholder stays. */}
+          <p className="text-[13px] leading-relaxed text-neutral-400">
+            DonutTrade is run by <span className="font-bold text-white">givey999</span>. Reach out directly on Discord — the link is in the footer.
+          </p>
+        </div>
+      </section>
     </div>
+  );
+}
+
+function AuditRow({
+  ts,
+  user,
+  action,
+  target,
+  meta,
+}: {
+  ts: string;
+  user: string;
+  action: string;
+  target: string;
+  meta: string;
+}) {
+  return (
+    <tr className="border-b border-neutral-900">
+      <td className="px-5 py-[10px] text-neutral-500">{ts}</td>
+      <td className="px-5 py-[10px]">{user}</td>
+      <td className="px-5 py-[10px] text-violet-400">{action}</td>
+      <td className="px-5 py-[10px]">{target}</td>
+      <td className="px-5 py-[10px] text-neutral-500">{meta}</td>
+    </tr>
+  );
+}
+
+function DisputeStep({ num, children }: { num: string; children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-4 rounded-lg border border-neutral-800 bg-white/[0.018] p-5">
+      <span className="font-vt323 text-[28px] leading-none text-violet-600">{num}</span>
+      <span className="pt-[4px]">{children}</span>
+    </li>
   );
 }
 
