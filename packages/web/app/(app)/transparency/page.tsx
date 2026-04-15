@@ -69,8 +69,8 @@ export default function TransparencyPage() {
         <SectionTitle>YOUR DATA</SectionTitle>
         <div className="mt-6 rounded-xl border border-violet-600/30 bg-violet-600/[0.04] px-6 py-4 text-center">
           <p className="text-[13px] leading-relaxed text-neutral-300">
-            <span className="font-bold text-white">Sign-in is handled by OAuth — no DonutTrade-specific password is required.</span>{' '}
-            You can sign in with Microsoft, Discord, or email. For OAuth paths, DonutTrade never sees your Microsoft or Discord password. If you use the email path, your password is stored as a bcrypt hash — never in plaintext. Either way, we don&apos;t want your credentials.
+            <span className="font-bold text-white">We don&apos;t want to store passwords — so we don&apos;t.</span>{' '}
+            Sign-in goes through Microsoft or Discord OAuth. DonutTrade never sees your password. You&apos;ll notice scaffolding for an email+password sign-in path in the repo — we&apos;re intentionally not shipping it, precisely because we don&apos;t want to be in the business of storing credentials.
           </p>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-2">
@@ -80,8 +80,7 @@ export default function TransparencyPage() {
               'Minecraft username (entered during sign-up)',
               'Microsoft account ID (if you sign in with Microsoft)',
               'Discord user ID + username (if you link or sign in with Discord)',
-              'Email address (if you sign in with email, or if Microsoft/Discord provides one during OAuth)',
-              'bcrypt password hash (only if you use the email sign-in path — never for OAuth users)',
+              'Email address (from Microsoft or Discord OAuth, when your account has one — stored in users.email, nullable)',
               'Your server-side session token, IP address, and user-agent (short-lived, expires on logout)',
               'Deposit, withdrawal, and trade history (required for the audit log)',
               'Your current escrow inventory (required to know what\u2019s yours)',
