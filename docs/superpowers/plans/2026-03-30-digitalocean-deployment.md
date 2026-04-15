@@ -25,7 +25,7 @@ You will need:
 
 ## Task 1: Push Code to GitHub
 
-**Status: DONE** — Repo at `https://github.com/meya420/donuttrade` (private).
+**Status: DONE** — Repo at `https://github.com/givey999/donuttrade` (private).
 
 ---
 
@@ -213,7 +213,7 @@ If this works, you can disable root SSH login later for extra security.
 ssh root@YOUR_DROPLET_IP   # or deploy@YOUR_DROPLET_IP
 
 cd /opt
-git clone https://github.com/meya420/donuttrade.git
+git clone https://github.com/givey999/donuttrade.git
 cd donuttrade
 ```
 

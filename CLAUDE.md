@@ -80,7 +80,7 @@ Config validated with Zod on startup (`packages/api/src/config/index.ts`).
 - **Dev domain:** `moldo.go.ro:9443` (local testing)
 - **Production config:** `docker-compose.production.yml` overrides + `Caddyfile.production`
 - **Deploy plan:** `docs/superpowers/plans/2026-03-30-digitalocean-deployment.md`
-- **Repo:** Private GitHub (`meya420/donuttrade`)
+- **Repo:** GitHub (`givey999/donuttrade`), source-available under FSL 1.1
 
 ### Legacy Bot
 
