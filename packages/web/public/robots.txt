@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Allow: /transparency
+Allow: /rules
+Allow: /terms
+Allow: /marketplace
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /orders
+Disallow: /signup
+Disallow: /verify
+Disallow: /login
+Disallow: /auth
+
+Sitemap: https://donuttrade.com/sitemap.xml

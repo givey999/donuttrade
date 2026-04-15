@@ -9,6 +9,23 @@ import { PixelLogo } from '@/components/landing/PixelLogo';
 export default function LandingPage() {
   return (
     <div className="relative flex min-h-screen flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'DonutTrade',
+            url: 'https://donuttrade.com',
+            logo: 'https://donuttrade.com/opengraph-image',
+            description: 'Secure escrow trading for Minecraft items on DonutSMP.',
+            sameAs: [
+              'https://github.com/givey999/donuttrade',
+              process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || 'https://discord.gg/donuttrade',
+            ],
+          }),
+        }}
+      />
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-neutral-800 bg-[#0a0a0f]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-[1100px] items-center justify-between px-6">
