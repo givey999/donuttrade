@@ -162,7 +162,7 @@ export default function TransparencyPage() {
               <li>Move items a user didn&apos;t deposit</li>
               <li>Edit or delete audit log rows (append-only)</li>
               <li>Drain escrow without a matching order</li>
-              <li>Read user passwords — OAuth users have none; email users have only a bcrypt hash</li>
+              <li>See your password — Microsoft and Discord handle sign-in entirely; we never receive your credentials</li>
               <li>Block a user&apos;s withdrawal on their own authority — all withdrawals require a recorded admin action</li>
             </ul>
           </div>
