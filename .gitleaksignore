@@ -1,0 +1,19 @@
+# False positives — verified documentation examples, not real secrets.
+# Format: <commit>:<file>:<rule>:<line>
+# Each fingerprint below was manually reviewed on 2026-04-15.
+
+# "abc123def456" — literal example string in the plan's secret-audit instructions.
+# The plan file tells implementers "if you see CODE_SIGNING_SECRET=abc123def456,
+# that's a real leak" — gitleaks matched on the warning itself.
+14859a97e61a853e6fc83ee7a46b777f14aaded4:docs/superpowers/plans/2026-04-14-landing-transparency-redesign.md:generic-api-key:1807
+
+# JWT/JWE structure examples in an old platform spec doc. All three are truncated
+# with "..." and show only the token HEADER (algorithm name), which is public info
+# by design. They are not real tokens.
+fd58af2bdc629df800efaac68a1c036f3ef2bd39:docs/DonutTrade-Platform-Specification.md:generic-api-key:613
+fd58af2bdc629df800efaac68a1c036f3ef2bd39:docs/DonutTrade-Platform-Specification.md:generic-api-key:645
+fd58af2bdc629df800efaac68a1c036f3ef2bd39:docs/DonutTrade-Platform-Specification.md:generic-api-key:670
+
+# "32-byte-hex-key-for-aes-256-gcm" — literal English placeholder text describing
+# what format an AES-256-GCM key should be. Not a key.
+fd58af2bdc629df800efaac68a1c036f3ef2bd39:docs/DonutTrade-Platform-Specification.md:generic-api-key:2069
