@@ -68,3 +68,20 @@ donuttrade.com {
         format console
     }
 }
+
+# Static landing page for dst (Windows Electron app).
+# Source lives at R:\dst.givey.zip; deployed via rsync to /srv/dst-site on this droplet.
+dst.givey.zip {
+    root * /srv/dst-site
+    file_server
+    encode gzip
+
+    @media path *.mp3 *.mp4 *.weba *.webm *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico
+    header @media Cache-Control "public, max-age=2592000, immutable"
+    header /*.html Cache-Control "public, max-age=60"
+
+    log {
+        output stdout
+        format console
+    }
+}
