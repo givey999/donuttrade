@@ -85,3 +85,19 @@ dst.givey.zip {
         format console
     }
 }
+
+# Personal site — givey.zip. Static, deployed to /srv/givey.
+www.givey.zip {
+    redir https://givey.zip{uri} permanent
+}
+
+givey.zip {
+    root * /srv/givey
+    file_server
+    encode gzip
+
+    log {
+        output stdout
+        format console
+    }
+}
